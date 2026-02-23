@@ -38,3 +38,12 @@ export interface UsageStats {
   freeRemaining: number
   hasActiveSubscription: boolean
 }
+
+export interface Conversation {
+  id: string
+  title: string
+  messages: ChatMessage[]
+  lastQr: QrResult | null
+  createdAt: number
+  updatedAt: number
+}
