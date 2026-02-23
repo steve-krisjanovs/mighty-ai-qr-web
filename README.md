@@ -1,17 +1,39 @@
-# mighty_ai_qr_web
+# Mighty AI QR — Web & Desktop Client
 
-A new Flutter project.
+Flutter web and desktop client for Mighty AI QR. Describe a guitar tone in natural language and get a scannable NUX MightyAmp QR code back.
 
-## Getting Started
+Works in any modern browser. Installable as a PWA on mobile and desktop.
 
-This project is a starting point for a Flutter application.
+## Stack
 
-A few resources to get you started if this is your first Flutter project:
+- Flutter web (PWA, offline-first service worker)
+- Responsive layout — side-by-side on desktop, stacked on mobile
+- nginx serves the compiled web build and proxies `/api/*` to the backend
+- Docker multi-stage build: `flutter:stable` → `nginx:alpine`
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Requirements
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Docker
+- `proxy_net` Docker network (shared with other services)
+- `mighty-ai-qr-server` container running on `proxy_net`
+
+## Run
+
+```bash
+docker compose up -d
+```
+
+Runs on port `3005`. Access via `https://mighty-qr.linux.internal` (requires Caddy + internal DNS).
+
+## Development
+
+To iterate locally without Docker, point the API at the server directly by changing `_base` in `lib/services/api_service.dart` to `http://localhost:3003/api` and run:
+
+```bash
+flutter run -d chrome
+```
+
+## Related
+
+- [`mighty-ai-qr-server`](https://github.com/steve-krisjanovs/mighty-ai-qr-server) — Node.js/Fastify backend (auth, AI, QR encoding)
+- [`mighty-ai-qr-client`](https://github.com/steve-krisjanovs/mighty-ai-qr-client) — Flutter mobile client (iOS + Android)
