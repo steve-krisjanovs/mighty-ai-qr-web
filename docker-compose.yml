@@ -1,0 +1,13 @@
+services:
+  mighty-ai-qr-web:
+    build: .
+    container_name: mighty-ai-qr-web
+    restart: unless-stopped
+    ports:
+      - "3005:80"
+    networks:
+      - proxy_net
+
+networks:
+  proxy_net:
+    external: true
