@@ -14,7 +14,24 @@ const SUGGESTIONS = [
   'Modern metal rhythm, tight and aggressive',
 ]
 
-// ─── Icons ───────────────────────────────────────────────────────────────────
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+const AppIcon = () => (
+  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <rect x="2" y="2" width="6" height="6" rx="1.5" fill="white" />
+      <rect x="3.5" y="3.5" width="3" height="3" rx="0.5" fill="#1a73e8" />
+      <rect x="12" y="2" width="6" height="6" rx="1.5" fill="white" />
+      <rect x="13.5" y="3.5" width="3" height="3" rx="0.5" fill="#1a73e8" />
+      <rect x="2" y="12" width="6" height="6" rx="1.5" fill="white" />
+      <rect x="3.5" y="13.5" width="3" height="3" rx="0.5" fill="#1a73e8" />
+      <rect x="12" y="12" width="2.5" height="2.5" rx="0.5" fill="white" />
+      <rect x="15.5" y="12" width="2.5" height="2.5" rx="0.5" fill="white" />
+      <rect x="12" y="15.5" width="2.5" height="2.5" rx="0.5" fill="white" />
+      <rect x="15.5" y="15.5" width="2.5" height="2.5" rx="0.5" fill="white" />
+    </svg>
+  </div>
+)
 
 const SendIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -23,7 +40,7 @@ const SendIcon = () => (
 )
 
 const HistoryIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
   </svg>
 )
@@ -53,6 +70,88 @@ const ChevronIcon = ({ open }: { open: boolean }) => (
   </svg>
 )
 
+// ─── Inline QR Card (chat + mobile) ──────────────────────────────────────────
+
+function QrCard({ qr, className = '' }: { qr: QrResult; className?: string }) {
+  const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(qr.presetName + ' guitar tone')}`
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
+  const download = () => {
+    const a = document.createElement('a')
+    a.href = qr.imageBase64
+    a.download = `${qr.presetName.replace(/[^a-z0-9]/gi, '_')}.png`
+    a.click()
+  }
+
+  return (
+    <div className={`rounded-2xl border border-white/10 bg-surface-2 overflow-hidden ${className}`}>
+      {/* QR image */}
+      <div className="flex items-center justify-center bg-white p-5">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={qr.imageBase64} alt={qr.presetName} className="h-44 w-44 object-contain" />
+      </div>
+
+      {/* Info + actions */}
+      <div className="p-4 space-y-3">
+        <div>
+          <p className="text-sm font-medium text-[#e8eaed] leading-tight">{qr.presetName}</p>
+          <p className="text-xs text-[#9aa0a6] mt-0.5">{qr.deviceName}</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={download}
+            className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-surface-3 py-2 text-sm text-[#e8eaed] hover:bg-[#444] transition-colors"
+          >
+            <DownloadIcon />
+            Download
+          </button>
+          <a
+            href={youtubeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-surface-3 py-2 text-sm text-[#e8eaed] hover:bg-[#444] transition-colors"
+          >
+            <YoutubeIcon />
+            Reference
+          </a>
+        </div>
+
+        {/* Tone settings */}
+        <div className="border-t border-white/10 pt-3">
+          <button
+            onClick={() => setSettingsOpen(o => !o)}
+            className="flex w-full items-center justify-between text-xs text-[#9aa0a6] hover:text-[#e8eaed] transition-colors"
+          >
+            <span>Tone settings</span>
+            <ChevronIcon open={settingsOpen} />
+          </button>
+          {settingsOpen && (
+            <div className="mt-2 space-y-1.5">
+              {qr.settings.map((slot, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${slot.enabled ? 'bg-green-400' : 'bg-[#5f6368]'}`} />
+                  <div className="min-w-0">
+                    <span className="text-[11px] text-[#9aa0a6]">{slot.slot}: </span>
+                    <span className="text-[11px] text-[#e8eaed]">{slot.selection}</span>
+                    {slot.params && Object.keys(slot.params).length > 0 && (
+                      <div className="mt-0.5 flex flex-wrap gap-x-3">
+                        {Object.entries(slot.params).slice(0, 4).map(([k, v]) => (
+                          <span key={k} className="text-[10px] text-[#5f6368]">{k}: {v}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Page() {
@@ -64,7 +163,6 @@ export default function Page() {
   const [usage, setUsage] = useState<UsageStats>({ generationsUsed: 0, generationsLimit: 10, freeRemaining: 10, hasActiveSubscription: false })
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [showHistory, setShowHistory] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const chatRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -98,7 +196,6 @@ export default function Page() {
       setUsage(res.usage)
       if (res.qr) {
         setCurrentQr(res.qr)
-        setSettingsOpen(false)
         const item = saveToHistory(res.qr)
         setHistory(prev => [item, ...prev].slice(0, 20))
       }
@@ -121,43 +218,30 @@ export default function Page() {
     }
   }
 
-  const downloadQr = () => {
-    if (!currentQr) return
-    const a = document.createElement('a')
-    a.href = currentQr.imageBase64
-    a.download = `${currentQr.presetName.replace(/[^a-z0-9]/gi, '_')}.png`
-    a.click()
-  }
-
-  const youtubeUrl = currentQr
-    ? `https://www.youtube.com/results?search_query=${encodeURIComponent(currentQr.presetName + ' guitar tone')}`
-    : '#'
-
   return (
     <div className="flex h-full flex-col bg-bg">
+
       {/* ── Header ── */}
-      <header className="flex items-center justify-between border-b border-violet-900/20 bg-surface/60 px-4 py-3 backdrop-blur-sm">
+      <header className="flex items-center justify-between border-b border-white/10 bg-surface px-4 py-2.5">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-cyan-500 text-xs font-bold text-white shadow-lg">
-            QR
-          </div>
+          <AppIcon />
           <div>
-            <h1 className="gradient-text text-base font-bold leading-none">Mighty AI QR</h1>
-            <p className="text-[10px] text-purple-400/60">NUX MightyAmp tone generator</p>
+            <h1 className="text-sm font-medium text-[#e8eaed] leading-none">Mighty AI QR</h1>
+            <p className="text-[11px] text-[#9aa0a6] mt-0.5">NUX MightyAmp tone generator</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {usage.hasActiveSubscription ? (
-            <span className="rounded-full bg-violet-900/40 px-2.5 py-0.5 text-xs font-medium text-violet-300">Pro</span>
+            <span className="rounded-full bg-blue-600/20 px-2.5 py-0.5 text-xs font-medium text-primary">Pro</span>
           ) : (
-            <span className={`text-xs ${usage.freeRemaining <= 2 ? 'text-red-400' : 'text-purple-400/60'}`}>
+            <span className={`text-xs ${usage.freeRemaining <= 2 ? 'text-red-400' : 'text-[#9aa0a6]'}`}>
               {usage.freeRemaining} free remaining
             </span>
           )}
           <button
             onClick={() => setShowHistory(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-violet-800/30 bg-surface-2 px-3 py-1.5 text-xs text-purple-300 transition-all hover:border-violet-600/50 hover:bg-surface-3 hover:text-white"
+            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-surface-2 px-3 py-1.5 text-xs text-[#bdc1c6] hover:bg-surface-3 hover:text-[#e8eaed] transition-colors"
           >
             <HistoryIcon />
             History
@@ -169,7 +253,7 @@ export default function Page() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* ── Chat Panel ── */}
-        <div className="flex flex-1 flex-col overflow-hidden border-r border-violet-900/20">
+        <div className="flex flex-1 flex-col overflow-hidden">
 
           {/* Messages */}
           <div ref={chatRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
@@ -177,15 +261,15 @@ export default function Page() {
               <div className="flex h-full flex-col items-center justify-center gap-6 animate-fade-in">
                 <div className="text-center">
                   <div className="mb-3 text-4xl">🎸</div>
-                  <h2 className="gradient-text text-xl font-bold">What tone are you after?</h2>
-                  <p className="mt-1 text-sm text-purple-400/50">Describe it in plain English, get a scannable QR code for your amp.</p>
+                  <h2 className="text-xl font-medium text-[#e8eaed]">What tone are you after?</h2>
+                  <p className="mt-1 text-sm text-[#9aa0a6]">Describe it in plain English, get a scannable QR code for your amp.</p>
                 </div>
                 <div className="flex flex-wrap justify-center gap-2">
                   {SUGGESTIONS.map(s => (
                     <button
                       key={s}
                       onClick={() => send(s)}
-                      className="rounded-full border border-violet-800/40 bg-surface-2 px-4 py-1.5 text-sm text-purple-300 transition-all hover:border-violet-500/60 hover:bg-surface-3 hover:text-white"
+                      className="rounded-full border border-white/10 bg-surface-2 px-4 py-1.5 text-sm text-[#bdc1c6] hover:bg-surface-3 hover:text-[#e8eaed] transition-colors"
                     >
                       {s}
                     </button>
@@ -194,24 +278,25 @@ export default function Page() {
               </div>
             ) : (
               messages.map(msg => (
-                <div key={msg.id} className={`flex animate-slide-up ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div key={msg.id} className={`flex flex-col animate-slide-up ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                   {msg.role === 'user' ? (
-                    <div className="max-w-[75%] rounded-2xl rounded-br-sm bg-gradient-to-br from-violet-600 to-violet-700 px-4 py-2.5 text-sm text-white shadow-lg glow-violet-sm">
+                    <div className="max-w-[75%] rounded-2xl rounded-br-sm bg-blue-600 px-4 py-2.5 text-sm text-white">
                       {msg.content}
                     </div>
                   ) : (
-                    <div className="max-w-[85%]">
-                      <div className="rounded-2xl rounded-bl-sm border border-violet-900/30 bg-surface-2 px-4 py-3">
+                    <>
+                      <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-surface-2 px-4 py-3">
                         <div className="prose-ai">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                         </div>
                       </div>
+                      {/* QR card — shown inline on mobile, desktop panel handles it */}
                       {msg.qr && (
-                        <p className="mt-1.5 px-1 text-[11px] text-purple-400/50">
-                          ✦ QR code generated — see panel →
-                        </p>
+                        <div className="mt-2 w-full max-w-xs lg:hidden animate-fade-in">
+                          <QrCard qr={msg.qr} />
+                        </div>
                       )}
-                    </div>
+                    </>
                   )}
                 </div>
               ))
@@ -219,12 +304,12 @@ export default function Page() {
 
             {loading && (
               <div className="flex justify-start animate-fade-in">
-                <div className="rounded-2xl rounded-bl-sm border border-violet-900/30 bg-surface-2 px-4 py-3.5">
+                <div className="rounded-2xl rounded-bl-sm bg-surface-2 px-4 py-3.5">
                   <div className="flex items-center gap-1.5">
                     {[0, 1, 2].map(i => (
-                      <div key={i} className="typing-dot h-2 w-2 rounded-full bg-violet-500" />
+                      <div key={i} className="typing-dot h-2 w-2 rounded-full bg-[#9aa0a6]" />
                     ))}
-                    <span className="ml-2 text-xs text-purple-400/50">Generating tone...</span>
+                    <span className="ml-2 text-xs text-[#9aa0a6]">Generating tone…</span>
                   </div>
                 </div>
               </div>
@@ -240,25 +325,25 @@ export default function Page() {
           )}
 
           {/* Input */}
-          <div className="border-t border-violet-900/20 bg-surface/40 p-4 backdrop-blur-sm">
-            <div className="flex items-end gap-3">
-              <div className="flex-1 rounded-2xl border border-violet-800/30 bg-surface-2 focus-within:border-violet-600/60 focus-within:glow-violet transition-all">
+          <div className="border-t border-white/10 bg-surface p-3">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 rounded-2xl border border-white/10 bg-surface-2 focus-within:border-primary/50 transition-colors">
                 <textarea
                   ref={inputRef}
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   disabled={loading}
-                  placeholder="Describe your tone... (Enter to send, Shift+Enter for newline)"
+                  placeholder="Describe your tone…"
                   rows={1}
-                  className="w-full resize-none rounded-2xl bg-transparent px-4 py-3 text-sm text-white placeholder-purple-400/30 outline-none disabled:opacity-50"
+                  className="w-full resize-none rounded-2xl bg-transparent px-4 py-3 text-sm text-[#e8eaed] placeholder-[#5f6368] outline-none disabled:opacity-50"
                   style={{ maxHeight: '120px', overflowY: 'auto' }}
                 />
               </div>
               <button
                 onClick={() => send(input)}
                 disabled={loading || !input.trim()}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-cyan-500 text-white shadow-lg transition-all hover:opacity-90 hover:shadow-violet-500/30 disabled:opacity-40 glow-violet-sm"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 <SendIcon />
               </button>
@@ -266,93 +351,24 @@ export default function Page() {
           </div>
         </div>
 
-        {/* ── QR Panel ── */}
-        <div className="hidden w-[380px] shrink-0 flex-col overflow-y-auto bg-bg p-5 lg:flex">
+        {/* ── QR Panel (desktop only) ── */}
+        <div className="hidden w-[360px] shrink-0 flex-col overflow-y-auto border-l border-white/10 bg-bg p-5 lg:flex">
           {!currentQr ? (
-            <div className="flex h-full flex-col items-center justify-center text-center">
-              <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-dashed border-violet-900/30 text-violet-900/40">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <div className="flex h-full flex-col items-center justify-center text-center gap-3">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 text-[#5f6368]">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
                   <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="3" height="3" rx="0.5" />
                   <rect x="19" y="14" width="2" height="2" rx="0.5" /><rect x="14" y="19" width="2" height="2" rx="0.5" />
                   <rect x="18" y="18" width="3" height="3" rx="0.5" />
                 </svg>
               </div>
-              <p className="text-sm font-medium text-purple-400/40">Your QR code will appear here</p>
-              <p className="mt-1 text-xs text-purple-400/25">Describe your tone in the chat</p>
+              <p className="text-sm text-[#9aa0a6]">QR code will appear here</p>
+              <p className="text-xs text-[#5f6368]">Describe your tone in the chat</p>
             </div>
           ) : (
-            <div className="space-y-4 animate-fade-in">
-
-              {/* Preset header */}
-              <div>
-                <h2 className="gradient-text text-lg font-bold leading-tight">{currentQr.presetName}</h2>
-                <p className="mt-0.5 text-xs text-purple-400/50">{currentQr.deviceName}</p>
-              </div>
-
-              {/* QR image */}
-              <div className="gradient-border">
-                <div className="gradient-border-inner flex items-center justify-center p-5">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={currentQr.imageBase64}
-                    alt={currentQr.presetName}
-                    className="h-48 w-48 rounded-lg"
-                  />
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={downloadQr}
-                  className="flex items-center justify-center gap-2 rounded-xl border border-violet-800/40 bg-surface-2 py-2.5 text-sm text-purple-300 transition-all hover:border-violet-600/60 hover:bg-surface-3 hover:text-white"
-                >
-                  <DownloadIcon />
-                  Download
-                </button>
-                <a
-                  href={youtubeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-xl border border-red-900/40 bg-red-950/20 py-2.5 text-sm text-red-400 transition-all hover:border-red-700/60 hover:bg-red-950/40 hover:text-red-300"
-                >
-                  <YoutubeIcon />
-                  Reference
-                </a>
-              </div>
-
-              {/* Tone settings */}
-              <div className="rounded-xl border border-violet-900/25 bg-surface-2 overflow-hidden">
-                <button
-                  onClick={() => setSettingsOpen(o => !o)}
-                  className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-purple-300 hover:text-white transition-colors"
-                >
-                  <span>Tone Settings</span>
-                  <ChevronIcon open={settingsOpen} />
-                </button>
-                {settingsOpen && (
-                  <div className="border-t border-violet-900/25 px-4 py-3 space-y-1.5">
-                    {currentQr.settings.map((slot, i) => (
-                      <div key={i} className="flex items-start gap-2">
-                        <span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${slot.enabled ? 'bg-emerald-500' : 'bg-zinc-600'}`} />
-                        <div className="min-w-0">
-                          <span className="text-[11px] text-purple-400/50">{slot.slot}: </span>
-                          <span className="text-[11px] text-purple-200">{slot.selection}</span>
-                          {slot.params && Object.keys(slot.params).length > 0 && (
-                            <div className="mt-0.5 flex flex-wrap gap-x-3">
-                              {Object.entries(slot.params).slice(0, 4).map(([k, v]) => (
-                                <span key={k} className="text-[10px] text-purple-400/40">{k}: {v}</span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
+            <div className="animate-fade-in">
+              <QrCard qr={currentQr} />
             </div>
           )}
         </div>
@@ -362,20 +378,20 @@ export default function Page() {
       {/* ── History Drawer ── */}
       {showHistory && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setShowHistory(false)} />
-          <aside className="fixed right-0 top-0 z-50 flex h-full w-80 flex-col border-l border-violet-900/30 bg-surface shadow-2xl shadow-violet-950/50 animate-fade-in">
-            <div className="flex items-center justify-between border-b border-violet-900/20 px-5 py-4">
-              <h2 className="text-sm font-semibold text-white">Generation History</h2>
+          <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setShowHistory(false)} />
+          <aside className="fixed right-0 top-0 z-50 flex h-full w-80 flex-col border-l border-white/10 bg-surface shadow-2xl animate-fade-in">
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+              <h2 className="text-sm font-medium text-[#e8eaed]">History</h2>
               <div className="flex items-center gap-3">
                 {history.length > 0 && (
                   <button
                     onClick={() => { clearHistory(); setHistory([]) }}
-                    className="text-xs text-purple-400/50 hover:text-red-400 transition-colors"
+                    className="text-xs text-[#9aa0a6] hover:text-red-400 transition-colors"
                   >
                     Clear all
                   </button>
                 )}
-                <button onClick={() => setShowHistory(false)} className="text-purple-400/50 hover:text-white transition-colors">
+                <button onClick={() => setShowHistory(false)} className="text-[#9aa0a6] hover:text-[#e8eaed] transition-colors">
                   <CloseIcon />
                 </button>
               </div>
@@ -383,25 +399,25 @@ export default function Page() {
 
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
               {history.length === 0 ? (
-                <div className="flex h-40 flex-col items-center justify-center text-center">
-                  <p className="text-sm text-purple-400/30">No history yet</p>
-                  <p className="mt-1 text-xs text-purple-400/20">Generated QR codes will appear here</p>
+                <div className="flex h-40 flex-col items-center justify-center text-center gap-1">
+                  <p className="text-sm text-[#5f6368]">No history yet</p>
+                  <p className="text-xs text-[#3c4043]">Generated QR codes will appear here</p>
                 </div>
               ) : (
                 history.map(item => (
                   <button
                     key={item.id}
-                    onClick={() => { setCurrentQr(item.qr); setShowHistory(false); setSettingsOpen(false) }}
-                    className="flex w-full items-center gap-3 rounded-xl border border-violet-900/20 bg-surface-2 p-3 text-left transition-all hover:border-violet-700/40 hover:bg-surface-3"
+                    onClick={() => { setCurrentQr(item.qr); setShowHistory(false) }}
+                    className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-surface-2 p-3 text-left hover:bg-surface-3 transition-colors"
                   >
                     <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white p-1">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={item.imageBase64} alt={item.presetName} className="h-full w-full object-contain" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-white">{item.presetName}</p>
-                      <p className="text-xs text-purple-400/40">{item.deviceName}</p>
-                      <p className="text-[10px] text-purple-400/25">{new Date(item.timestamp).toLocaleDateString()}</p>
+                      <p className="truncate text-sm font-medium text-[#e8eaed]">{item.presetName}</p>
+                      <p className="text-xs text-[#9aa0a6]">{item.deviceName}</p>
+                      <p className="text-[10px] text-[#5f6368]">{new Date(item.timestamp).toLocaleDateString()}</p>
                     </div>
                   </button>
                 ))

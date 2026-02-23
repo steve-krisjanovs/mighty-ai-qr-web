@@ -2,86 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg: #05050F;
-  --surface: #0B0B20;
-}
-
-* {
-  box-sizing: border-box;
-}
-
 html, body {
   height: 100%;
   margin: 0;
   padding: 0;
-  background: var(--bg);
-  color: #F1F0FF;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  background: #202124;
+  color: #e8eaed;
+  font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Thin violet scrollbar */
+* { box-sizing: border-box; }
+
+/* Thin scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(124, 58, 237, 0.35); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(124, 58, 237, 0.6); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 
-/* Gradient text utility */
-.gradient-text {
-  background: linear-gradient(135deg, #A78BFA 0%, #38BDF8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Gradient border card */
-.gradient-border {
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.5), rgba(6, 182, 212, 0.5));
-  padding: 1px;
-  border-radius: 16px;
-}
-
-.gradient-border-inner {
-  background: #111128;
-  border-radius: 15px;
-  height: 100%;
-}
-
-/* Glow effects */
-.glow-violet {
-  box-shadow: 0 0 20px rgba(124, 58, 237, 0.25);
-}
-
-.glow-violet-sm {
-  box-shadow: 0 0 10px rgba(124, 58, 237, 0.2);
-}
-
-/* Prose styles for markdown */
-.prose-ai h2 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-top: 0.75rem;
-  margin-bottom: 0.4rem;
-  background: linear-gradient(135deg, #A78BFA 0%, #38BDF8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.prose-ai h3 {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #C4B5FD;
-  margin-top: 0.6rem;
-  margin-bottom: 0.3rem;
-}
-
+/* Prose styles for AI markdown */
 .prose-ai p {
   font-size: 0.9rem;
   line-height: 1.7;
-  color: #D4D3F0;
+  color: #e8eaed;
   margin-bottom: 0.5rem;
+}
+
+.prose-ai p:last-child { margin-bottom: 0; }
+
+.prose-ai h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e8eaed;
+  margin-top: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.prose-ai h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #bdc1c6;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .prose-ai ul {
@@ -92,21 +54,21 @@ html, body {
 
 .prose-ai ul li {
   font-size: 0.875rem;
-  color: #B4B3D0;
-  padding: 0.15rem 0;
-  padding-left: 1rem;
+  color: #bdc1c6;
+  padding: 0.15rem 0 0.15rem 1rem;
   position: relative;
 }
 
 .prose-ai ul li::before {
-  content: '›';
+  content: '·';
   position: absolute;
-  left: 0;
-  color: #7C3AED;
+  left: 0.25rem;
+  color: #8ab4f8;
+  font-weight: bold;
 }
 
 .prose-ai strong {
-  color: #E2E1FF;
+  color: #e8eaed;
   font-weight: 600;
 }
 
