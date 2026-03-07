@@ -75,6 +75,10 @@ npm run dev
 
 Runs on `http://localhost:3000`. SQLite is created at `./data/mighty.db`.
 
+## Credits
+
+QR format reverse-engineered from the NUX MightyAmp ecosystem. Special thanks to [tuntorius](https://github.com/tuntorius) for the open-source [mightier_amp](https://github.com/tuntorius/mightier_amp) Flutter app, which was an invaluable reference for the QR encoding format.
+
 ## Related
 
 - [`mighty-ai-qr-client`](https://github.com/steve-krisjanovs/mighty-ai-qr-client) — Flutter mobile client (iOS + Android)
