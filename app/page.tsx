@@ -1006,13 +1006,13 @@ function ModelBar({ settingsVersion, compact = false }: { settingsVersion: numbe
 
   return (
     <div className="border-b border-white/10 bg-surface px-4 py-2">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-2">
         <span className="shrink-0 text-[11px] text-fg-4">{providerLabel}</span>
-        <div className="flex-1">
+        <div className="w-full sm:max-w-xs">
           <ModelDropdown value={selectedModel} onChange={handleModelChange} models={models} loading={loadingModels} />
         </div>
       </div>
-      {warn && <p className="mt-1 text-[11px] text-amber-400">"{selectedModel}" may not support chat — select a text generation model.</p>}
+      {warn && <p className="mt-1 text-center text-[11px] text-amber-400">"{selectedModel}" may not support chat — select a text generation model.</p>}
     </div>
   )
 }
