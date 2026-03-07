@@ -615,7 +615,7 @@ function QrModal({ item, onClose, onDeleteRequest, onRename, onRefine }: {
     <>
       <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
 
           {/* QR Image */}
           <div className="relative flex justify-center bg-white p-4 shrink-0">
@@ -721,7 +721,7 @@ function ChatQrModal({ qr, description, onClose, onRefine }: { qr: QrResult; des
     <>
       <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
 
           {/* QR Image */}
           <div className="relative flex justify-center bg-white p-4 shrink-0">
