@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getDeviceIdFromRequest } from '@/lib/server/jwt'
 import { runChat, runChatOpenAI } from '@/lib/server/ai-tools'
+import { checkAndIncrementQuota } from '@/lib/server/quota'
 
 const DEFAULT_MODELS: Record<string, string> = {
   openai: 'gpt-4o', gemini: 'gemini-2.0-flash', grok: 'grok-3-mini', mistral: 'mistral-small-latest', groq: 'llama-3.3-70b-versatile',
@@ -43,7 +44,18 @@ export async function POST(request: NextRequest) {
     let result
 
     if (!isByok) {
-      return NextResponse.json({ error: 'No API key configured. Add your key in Settings.' }, { status: 400 })
+      const serverKey = process.env.ANTHROPIC_API_KEY
+      if (!serverKey) {
+        return NextResponse.json({ error: 'No API key configured. Add your key in Settings.' }, { status: 400 })
+      }
+      const quota = checkAndIncrementQuota()
+      if (!quota.allowed) {
+        return NextResponse.json({
+          error: "Today's free request limit has been reached. Add your own API key in Settings to keep going — Anthropic gives free credits on signup.",
+        }, { status: 429 })
+      }
+      const serverClient = new Anthropic({ apiKey: serverKey })
+      result = await runChat(serverClient, messages)
     } else if (userProvider === 'anthropic') {
       const byokClient = new Anthropic({ apiKey: userApiKey })
       result = await runChat(byokClient, messages, userModel || undefined)

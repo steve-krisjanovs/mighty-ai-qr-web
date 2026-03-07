@@ -9,7 +9,7 @@ Installable as a PWA on mobile and desktop.
 ## Stack
 
 - **Next.js 15** (App Router, TypeScript, Tailwind CSS)
-- **SQLite** via `node:sqlite` — conversations and QR history persisted on-device
+- **SQLite** via `node:sqlite` — conversations and QR history persisted server-side (Docker volume)
 - **JWT auth** — device-scoped, no accounts required
 - **AI providers** — BYOK for Anthropic, OpenAI, Gemini, Grok, Mistral, Groq, Ollama, LM Studio, Open WebUI
 - **Docker** — single container, SQLite volume, `proxy_net`
@@ -44,6 +44,8 @@ Runs on port `3005`. Access via `https://mighty-qr.linux.internal` (requires Cad
 | Variable | Required | Description |
 |---|---|---|
 | `JWT_SECRET` | Yes | Secret for signing device tokens |
+| `ANTHROPIC_API_KEY` | No | Server-side Anthropic key for free-tier requests. If unset, all users must supply their own key. |
+| `FREE_DAILY_LIMIT` | No | Max free requests per day across all users (default `100`). Resets at midnight UTC. |
 | `RUNNING_IN_DOCKER` | Auto | Set to `"true"` by docker-compose — rewrites `localhost` → `host.docker.internal` for local LLMs |
 | `DB_PATH` | No | SQLite path (default `./data/mighty.db`) |
 

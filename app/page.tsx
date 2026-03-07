@@ -487,6 +487,12 @@ function QrCard({ qr, description, className = '' }: { qr: QrResult; description
 
 const ERROR_EXPLANATIONS: { match: (msg: string) => boolean; title: string; body: string; fix: string }[] = [
   {
+    match: m => m.includes('free request limit'),
+    title: "Today's free requests used up",
+    body: "This app offers a limited number of free AI requests per day shared across all users. Today's quota has been reached.",
+    fix: "Add your own API key in Settings to keep going. Anthropic gives free credits on signup at console.anthropic.com — no payment method required.",
+  },
+  {
     match: m => m.includes('429') || m.includes('quota') || m.includes('rate'),
     title: 'Too many requests or quota exceeded (429)',
     body: 'Your API key has hit a limit. This can mean:\n• You\'ve run out of credits on this account\n• You\'re on a free tier with low rate limits\n• You\'re sending requests too fast',
@@ -899,8 +905,31 @@ const PROVIDER_GROUPS = [
   { label: 'Local', ids: ['ollama', 'openwebui', 'lmstudio'] as AiProvider[] },
 ]
 
+function LocalLlmInfoModal({ onClose }: { onClose: () => void }) {
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
+        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up p-6 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm font-semibold text-fg">Local LLMs — Self-Hosting Required</p>
+            <button onClick={onClose} className="text-fg-4 hover:text-fg-2 transition-colors shrink-0"><CloseIcon /></button>
+          </div>
+          <p className="text-xs text-fg-3">Ollama, LM Studio, and Open WebUI run on your own machine. They are only reachable when you self-host this app via Docker on the same network as your LLM server.</p>
+          <div className="rounded-lg border border-white/10 bg-surface-2 px-3 py-2.5 space-y-1">
+            <p className="text-[11px] font-medium text-fg-2">How to self-host</p>
+            <p className="text-[11px] text-fg-3">Clone the repo, run <code className="font-mono bg-white/5 px-1 rounded">docker compose up -d</code>, and point your browser at the container. Your local LLMs will be reachable at <code className="font-mono bg-white/5 px-1 rounded">localhost</code> URLs.</p>
+          </div>
+          <p className="text-[11px] text-fg-4">On the public hosted version, requests to localhost addresses will fail — the server has no access to your machine.</p>
+        </div>
+      </div>
+    </>
+  )
+}
+
 function ProviderDropdown({ value, onChange }: { value: AiProvider; onChange: (p: AiProvider) => void }) {
   const [open, setOpen] = useState(false)
+  const [showLocalInfo, setShowLocalInfo] = useState(false)
   const current = PROVIDERS.find(p => p.id === value)!
 
   return (
@@ -918,7 +947,20 @@ function ProviderDropdown({ value, onChange }: { value: AiProvider; onChange: (p
           <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-white/10 bg-surface-2 shadow-xl overflow-hidden">
             {PROVIDER_GROUPS.map(group => (
               <div key={group.label}>
-                <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-fg-4">{group.label}</p>
+                <div className="flex items-center justify-between px-3 py-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-fg-4">{group.label}</p>
+                  {group.label === 'Local' && (
+                    <button
+                      onClick={e => { e.stopPropagation(); setOpen(false); setShowLocalInfo(true) }}
+                      className="text-fg-4 hover:text-fg-2 transition-colors"
+                      title="Self-hosting required"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
                 {group.ids.map(id => {
                   const p = PROVIDERS.find(x => x.id === id)!
                   return (
@@ -939,6 +981,7 @@ function ProviderDropdown({ value, onChange }: { value: AiProvider; onChange: (p
           </div>
         </>
       )}
+      {showLocalInfo && <LocalLlmInfoModal onClose={() => setShowLocalInfo(false)} />}
     </div>
   )
 }

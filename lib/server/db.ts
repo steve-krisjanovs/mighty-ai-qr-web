@@ -15,6 +15,11 @@ db.exec(`
     has_active_subscription INTEGER NOT NULL DEFAULT 0,
     created_at              TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS daily_quota (
+    date  TEXT PRIMARY KEY,
+    count INTEGER NOT NULL DEFAULT 0
+  );
 `)
 
 export default db
