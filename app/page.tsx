@@ -295,7 +295,7 @@ const QrImage = forwardRef<HTMLCanvasElement, { imageBase64: string; presetName:
 
       const guitarParts = [
         guitar?.pickup ? `${guitar.pickup}${guitar.pickupType ? ` (${guitar.pickupType})` : ''}` : null,
-        ...(guitar?.controls ?? []).map(c => `${c.label}: ${c.value}/10`),
+        ...(Array.isArray(guitar?.controls) ? guitar.controls : []).map(c => `${c.label}: ${c.value}/10`),
       ].filter(Boolean) as string[]
       const guitarLine = guitarParts.join('  ·  ')
 
@@ -1497,7 +1497,7 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
                       {[msg.qr.guitar.pickup, msg.qr.guitar.pickupType].filter(Boolean).join(' · ')}
                     </span>
                   )}
-                  {msg.qr.guitar.controls?.map(c => (
+                  {Array.isArray(msg.qr.guitar.controls) && msg.qr.guitar.controls.map(c => (
                     <span key={c.label} className="rounded-full border border-white/10 bg-surface-2 px-2.5 py-1 text-[11px] text-fg-3">
                       {c.label}: {c.value}/10
                     </span>
