@@ -1004,7 +1004,11 @@ function HeaderModelPill({ settingsVersion }: { settingsVersion: number }) {
     return () => { cancelled = true }
   }, [config?.provider, config?.apiKey, config?.baseUrl])
 
-  if (!config) return null
+  if (!config) return (
+    <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-4 select-none">
+      Sonnet · Free
+    </div>
+  )
 
   const handleChange = (model: string) => {
     const settings = getApiSettings()
@@ -1831,6 +1835,7 @@ export default function Page() {
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
   const [popupQr, setPopupQr] = useState<{ qr: QrResult; description: string } | null>(null)
+  const [showQrPanel, setShowQrPanel] = useState(false)
 
   const requestDelete = useCallback((label: string, onConfirm: () => void) => {
     setPendingDelete({ label, onConfirm })
@@ -1898,6 +1903,7 @@ export default function Page() {
     setMessages([])
     setCurrentQr(null)
     setCurrentQrDescription('')
+    setShowQrPanel(false)
     setSuggestions(getRandomSuggestions())
     setError(null)
     setInput('')
@@ -1916,6 +1922,7 @@ export default function Page() {
     setActiveConvId(id)
     setMessages(conv.messages)
     setCurrentQr(conv.lastQr)
+    setShowQrPanel(!!conv.lastQr)
     const lastQrMsg = [...conv.messages].reverse().find(m => m.qr)
     setCurrentQrDescription(lastQrMsg?.content ?? '')
     setError(null)
@@ -2051,6 +2058,7 @@ export default function Page() {
         if (res.qr) {
           setCurrentQr(res.qr)
           setCurrentQrDescription(res.message)
+          setShowQrPanel(true)
           if (historyItem) setQrHistory(prev => [historyItem, ...prev].slice(0, 20))
         }
       })
@@ -2191,7 +2199,7 @@ export default function Page() {
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                 </button>
               )}
-              <button onClick={startNewChat} title="New chat" className="flex items-center justify-center h-9 w-9 rounded-xl bg-surface-2 border border-white/10 text-fg-2 hover:bg-surface-3 hover:text-fg transition-colors"><NewChatIcon /></button>
+              <button onClick={startNewChat} title="New chat" className="flex items-center justify-center h-8 w-8 rounded-xl bg-surface-2 border border-white/10 text-fg-2 hover:bg-surface-3 hover:text-fg transition-colors"><NewChatIcon /></button>
               <button onClick={() => setShowSettings(true)} title="Settings" className="flex items-center justify-center h-8 w-8 rounded-lg text-fg-3 hover:text-fg transition-colors"><GearIcon /></button>
             </div>
           </div>
@@ -2330,26 +2338,17 @@ export default function Page() {
           </div>
 
           {/* QR Panel — desktop */}
-          <div className="hidden w-[360px] shrink-0 flex-col overflow-y-auto bg-bg p-5 lg:flex">
-            {!currentQr ? (
-              <div className="flex h-full flex-col items-center justify-center text-center gap-3">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 text-fg-4">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
-                    <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="3" height="3" rx="0.5" />
-                    <rect x="19" y="14" width="2" height="2" rx="0.5" /><rect x="14" y="19" width="2" height="2" rx="0.5" />
-                    <rect x="18" y="18" width="3" height="3" rx="0.5" />
-                  </svg>
-                </div>
-                <p className="text-sm text-fg-3">QR code will appear here</p>
-                <p className="text-xs text-fg-4">Describe your tone in the chat</p>
+          {showQrPanel && currentQr && (
+            <div className="hidden w-[360px] shrink-0 flex-col overflow-y-auto bg-bg p-5 lg:flex border-l border-white/5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-fg-4">QR Code</p>
+                <button onClick={() => setShowQrPanel(false)} className="text-fg-4 hover:text-fg-2 transition-colors"><CloseIcon /></button>
               </div>
-            ) : (
               <div className="animate-fade-in">
                 <QrCard qr={currentQr} description={currentQrDescription} />
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
         </div>
       </div>
