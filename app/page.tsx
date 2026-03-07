@@ -174,6 +174,12 @@ const YoutubeIcon = () => (
   </svg>
 )
 
+const FacebookIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
+  </svg>
+)
+
 const CloseIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 6L6 18M6 6l12 12" />
@@ -663,12 +669,15 @@ function QrModal({ item, onClose, onDeleteRequest, onRename, onRefine }: {
               Refine tone
             </button>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <DownloadIcon /> Download
               </button>
               <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <YoutubeIcon /> Reference
+              </a>
+              <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://github.com/steve-krisjanovs/mighty-ai-qr-web')}&quote=${encodeURIComponent(`🎸 ${qr.presetName} — created with Mighty AI QR`)}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
+                <FacebookIcon /> Share
               </a>
             </div>
 
@@ -757,12 +766,15 @@ function ChatQrModal({ qr, description, onClose, onRefine }: { qr: QrResult; des
               Refine tone
             </button>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <DownloadIcon /> Download
               </button>
               <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <YoutubeIcon /> Reference
+              </a>
+              <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://github.com/steve-krisjanovs/mighty-ai-qr-web')}&quote=${encodeURIComponent(`🎸 ${qr.presetName} — created with Mighty AI QR`)}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
+                <FacebookIcon /> Share
               </a>
             </div>
 
@@ -796,6 +808,46 @@ function ChatQrModal({ qr, description, onClose, onRefine }: { qr: QrResult; des
             </div>
           </div>
 
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ─── About Modal ──────────────────────────────────────────────────────────────
+
+function AboutModal({ onClose }: { onClose: () => void }) {
+  return (
+    <>
+      <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
+        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up p-6 space-y-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-fg">Mighty AI QR</p>
+              <p className="text-[11px] text-fg-4 mt-1 leading-relaxed">
+                Describe a guitar tone in plain English — get a scannable QR code for your NUX MightyAmp, instantly.
+              </p>
+            </div>
+            <button onClick={onClose} className="shrink-0 text-fg-4 hover:text-fg transition-colors"><CloseIcon /></button>
+          </div>
+
+          <div className="border-t border-white/10 pt-4 space-y-1">
+            <p className="text-[11px] font-medium text-fg-3 uppercase tracking-wider">Author</p>
+            <a href="https://github.com/steve-krisjanovs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+              steve-krisjanovs
+            </a>
+          </div>
+
+          <div className="border-t border-white/10 pt-4 space-y-1">
+            <p className="text-[11px] font-medium text-fg-3 uppercase tracking-wider">Credits</p>
+            <p className="text-[11px] text-fg-4">QR format based on NUX MightyAmp. Special thanks to:</p>
+            <a href="https://github.com/tuntorius/mightier_amp" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+              tuntorius/mightier_amp
+            </a>
+          </div>
         </div>
       </div>
     </>
@@ -1106,6 +1158,7 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [didSave, setDidSave] = useState(false)
   const [closing, setClosing] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
+  const [showAboutModal, setShowAboutModal] = useState(false)
   const [availableModels, setAvailableModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<Theme>(() => getTheme())
@@ -1323,25 +1376,14 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
           {/* About */}
           <div className="border-t border-white/10 pt-4">
             <button
-              onClick={() => setShowAbout(o => !o)}
+              onClick={() => setShowAboutModal(true)}
               className="flex w-full items-center justify-between text-xs text-fg-3 hover:text-fg transition-colors"
             >
               <span>About</span>
-              <ChevronIcon open={showAbout} />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
             </button>
-            {showAbout && (
-              <div className="mt-3 space-y-2 animate-slide-in-bottom">
-                <p className="text-xs font-medium text-fg">Mighty AI QR</p>
-                <p className="text-[11px] text-fg-4 leading-relaxed">
-                  Describe a guitar tone in plain English, get a scannable QR code for your NUX MightyAmp.
-                </p>
-                <p className="text-[11px] text-fg-4 leading-relaxed">
-                  Your API key is stored locally in your browser and sent to the server to process your request. It is never logged or retained.
-                </p>
-                <p className="text-[11px] text-fg-4">v1.0.0</p>
-              </div>
-            )}
           </div>
+          {showAboutModal && <AboutModal onClose={() => setShowAboutModal(false)} />}
         </div>
       </aside>
     </>
