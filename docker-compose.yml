@@ -13,6 +13,8 @@ services:
       DB_PATH: /data/mighty.db
     volumes:
       - mighty-qr-data:/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - proxy_net
 
