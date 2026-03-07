@@ -956,7 +956,13 @@ function ModelDropdown({
   )
 }
 
-function ModelBar({ settingsVersion }: { settingsVersion: number }) {
+const NON_CHAT_KEYWORDS = ['vision', 'embed', 'audio', 'whisper', 'tts', 'ocr', 'rerank', 'clip']
+function isNonChatModel(model: string) {
+  const m = model.toLowerCase()
+  return NON_CHAT_KEYWORDS.some(k => m.includes(k))
+}
+
+function ModelBar({ settingsVersion, compact = false }: { settingsVersion: number; compact?: boolean }) {
   const [config, setConfig] = useState<ReturnType<typeof getActiveConfig>>(null)
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
@@ -970,7 +976,7 @@ function ModelBar({ settingsVersion }: { settingsVersion: number }) {
     setLoadingModels(true)
     fetchModels(config.provider, config.apiKey, config.baseUrl ?? '').then(m => {
       if (!cancelled) { setModels(m); setLoadingModels(false) }
-    })
+    }).catch(() => { if (!cancelled) setLoadingModels(false) })
     return () => { cancelled = true }
   }, [config?.provider, config?.apiKey, config?.baseUrl])
 
@@ -986,12 +992,27 @@ function ModelBar({ settingsVersion }: { settingsVersion: number }) {
     setConfig((prev): typeof prev => prev ? { ...prev, model } : prev)
   }
 
-  return (
-    <div className="flex items-center gap-2 border-b border-white/10 bg-surface px-4 py-2">
-      <span className="shrink-0 text-[11px] text-fg-4">{providerLabel}</span>
-      <div className="flex-1">
-        <ModelDropdown value={config.model ?? ''} onChange={handleModelChange} models={models} loading={loadingModels} />
+  const selectedModel = config.model ?? ''
+  const warn = selectedModel && isNonChatModel(selectedModel)
+
+  if (compact) {
+    return (
+      <div className="px-4 pb-1.5 pt-0.5">
+        <ModelDropdown value={selectedModel} onChange={handleModelChange} models={models} loading={loadingModels} />
+        {warn && <p className="mt-1 text-[11px] text-amber-400">"{selectedModel}" may not support chat — select a text generation model.</p>}
       </div>
+    )
+  }
+
+  return (
+    <div className="border-b border-white/10 bg-surface px-4 py-2">
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 text-[11px] text-fg-4">{providerLabel}</span>
+        <div className="flex-1">
+          <ModelDropdown value={selectedModel} onChange={handleModelChange} models={models} loading={loadingModels} />
+        </div>
+      </div>
+      {warn && <p className="mt-1 text-[11px] text-amber-400">"{selectedModel}" may not support chat — select a text generation model.</p>}
     </div>
   )
 }
@@ -2013,6 +2034,7 @@ export default function Page() {
             )}
 
             <div className="border-t border-white/10 bg-surface px-4 pb-5 pt-3">
+              <ModelBar settingsVersion={settingsVersion} compact />
               <div className="rounded-3xl border border-white/10 bg-surface-2 transition-colors focus-within:border-primary/40">
                 <textarea
                   ref={textareaRef}
@@ -2043,7 +2065,7 @@ export default function Page() {
                     </button>
                     {loading ? (
                       <button
-                        onClick={() => abortRef.current?.abort()}
+                        onClick={() => { abortRef.current?.abort(); setLoading(false) }}
                         title="Cancel"
                         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-600/80 text-white hover:bg-red-600 transition-colors"
                       >
