@@ -2225,7 +2225,8 @@ export default function Page() {
 
           {/* Chat */}
           <div className="flex flex-1 flex-col overflow-hidden">
-            <div ref={chatRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4" onClick={() => setActiveMessageId(null)}>
+            <div ref={chatRef} className="flex-1 overflow-y-auto px-4 py-6" onClick={() => setActiveMessageId(null)}>
+              <div className="mx-auto w-full max-w-2xl space-y-4">
               {messages.length === 0 && input.trim() ? (
                 <div className="flex h-full flex-col items-center justify-center animate-fade-in">
                   <p className="text-sm text-fg-4">Edit your message below and send to continue from here.</p>
@@ -2258,6 +2259,7 @@ export default function Page() {
                   </div>
                 </div>
               )}
+              </div>
             </div>
 
             {error && (
