@@ -1538,7 +1538,7 @@ function QrHistoryItem({ item, onOpen, onDeleteRequest, onRename }: {
 }
 
 function Sidebar({
-  conversations, activeId, onSelect, onNew, onDelete, onRenameConv, qrHistory, onQrSelect, onQrDelete, onRenameQr, onDeleteRequest, visible, onClose, onQrImported, onSettings, onDeleteAllChats, onDeleteAllQr,
+  conversations, activeId, onSelect, onNew, onDelete, onRenameConv, qrHistory, onQrSelect, onQrDelete, onRenameQr, onDeleteRequest, visible, collapsed, onClose, onQrImported, onSettings, onDeleteAllChats, onDeleteAllQr,
 }: {
   conversations: Conversation[]
   activeId: string | null
@@ -1552,6 +1552,7 @@ function Sidebar({
   onRenameQr: (id: string, name: string) => void
   onDeleteRequest: (label: string, onConfirm: () => void) => void
   visible: boolean
+  collapsed: boolean
   onClose: () => void
   onQrImported: (file: File) => void
   onSettings: () => void
@@ -1570,8 +1571,9 @@ function Sidebar({
       <aside className={`
         fixed top-0 left-0 z-50 h-full w-[260px] bg-surface shadow-[4px_0_16px_rgba(0,0,0,0.35)]
         flex flex-col transition-transform duration-200
-        lg:relative lg:translate-x-0 lg:z-auto
+        lg:relative lg:z-auto
         ${visible ? 'translate-x-0' : '-translate-x-full'}
+        ${collapsed ? 'lg:-translate-x-full lg:hidden' : 'lg:translate-x-0'}
       `}>
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
@@ -1596,12 +1598,12 @@ function Sidebar({
             </button>
           ))}
           {tab === 'chats' && conversations.length > 0 && (
-            <button onClick={onDeleteAllChats} title="Delete all chats" className="ml-1 p-1 text-fg-4 hover:text-fg-2 transition-colors">
+            <button onClick={onDeleteAllChats} title="Delete all chats" className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
               <TrashIcon />
             </button>
           )}
           {tab === 'qr' && qrHistory.length > 0 && (
-            <button onClick={onDeleteAllQr} title="Delete all QR codes" className="ml-1 p-1 text-fg-4 hover:text-fg-2 transition-colors">
+            <button onClick={onDeleteAllQr} title="Delete all QR codes" className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
               <TrashIcon />
             </button>
           )}
@@ -1850,6 +1852,7 @@ export default function Page() {
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null)
   const [qrHistory, setQrHistory] = useState<HistoryItem[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [settingsVersion, setSettingsVersion] = useState(0)
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
@@ -2162,6 +2165,7 @@ export default function Page() {
         onRenameQr={handleRenameHistoryItem}
         onDeleteRequest={requestDelete}
         visible={sidebarOpen}
+        collapsed={sidebarCollapsed}
         onClose={() => setSidebarOpen(false)}
         onQrImported={async (file) => {
           const bitmap = await createImageBitmap(file)
@@ -2206,16 +2210,18 @@ export default function Page() {
         {/* Header */}
         <header className="bg-surface shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
 
-          {/* ── Desktop: single row, title left · model centre · buttons right ── */}
-          <div className="hidden md:grid md:grid-cols-[1fr_auto_1fr] md:items-center px-4 py-2.5">
+          {/* ── Desktop: flex row, title left · model centre (absolute) · buttons right ── */}
+          <div className="hidden md:flex md:items-center relative px-4 py-2.5">
             <div className="flex items-center gap-3">
-              <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-fg-3 hover:text-fg transition-colors"><MenuIcon /></button>
+              <button onClick={() => { sidebarCollapsed ? setSidebarCollapsed(false) : (window.innerWidth >= 1024 ? setSidebarCollapsed(true) : setSidebarOpen(true)) }} className="text-fg-3 hover:text-fg transition-colors"><MenuIcon /></button>
               <button onClick={startNewChat} className="text-sm font-semibold text-fg hover:text-fg-2 transition-colors">Mighty AI QR</button>
             </div>
-            <HeaderModelPill settingsVersion={settingsVersion} />
-            <div className="flex items-center justify-end gap-2">
+            <div className="absolute left-1/2 -translate-x-1/2">
+              <HeaderModelPill settingsVersion={settingsVersion} />
+            </div>
+            <div className="ml-auto flex items-center gap-2">
               {activeConvId && (
-                <button onClick={() => { handleDeleteConversation(activeConvId); startNewChat() }} title="Delete conversation" className="flex items-center justify-center h-9 w-9 rounded-xl text-fg-4 hover:text-red-400 transition-colors">
+                <button onClick={() => { handleDeleteConversation(activeConvId); startNewChat() }} title="Delete conversation" className="flex items-center justify-center h-8 w-8 rounded-xl text-fg-4 hover:text-red-400 transition-colors">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                 </button>
               )}
