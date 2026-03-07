@@ -863,12 +863,13 @@ function ProviderDropdown({ value, onChange }: { value: AiProvider; onChange: (p
 }
 
 function ModelDropdown({
-  value, onChange, models, loading,
+  value, onChange, models, loading, compact = false,
 }: {
   value: string
   onChange: (m: string) => void
   models: string[]
   loading: boolean
+  compact?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState(value)
@@ -904,7 +905,7 @@ function ModelDropdown({
 
   return (
     <div className="relative">
-      <div className="flex items-center rounded-lg border border-white/10 bg-surface-2 px-3 py-2.5 focus-within:border-primary/50 transition-colors">
+      <div className={`flex items-center rounded-lg border border-white/10 bg-surface-2 focus-within:border-primary/50 transition-colors ${compact ? 'px-2.5 py-1' : 'px-3 py-2.5'}`}>
         <input
           type="text"
           value={query}
@@ -912,7 +913,7 @@ function ModelDropdown({
           onFocus={() => setOpen(true)}
           onBlur={handleBlur}
           placeholder="Select or type model…"
-          className="flex-1 bg-transparent text-sm text-fg placeholder-fg-4 outline-none"
+          className={`flex-1 bg-transparent placeholder-fg-4 outline-none ${compact ? 'text-xs text-fg-2' : 'text-sm text-fg'}`}
         />
         {loading
           ? <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-fg-4 border-t-primary" />
@@ -962,7 +963,7 @@ function isNonChatModel(model: string) {
   return NON_CHAT_KEYWORDS.some(k => m.includes(k))
 }
 
-function ModelBar({ settingsVersion, compact = false, inline = false }: { settingsVersion: number; compact?: boolean; inline?: boolean }) {
+function ModelBar({ settingsVersion, compact = false, inline = false, compactDropdown = false }: { settingsVersion: number; compact?: boolean; inline?: boolean; compactDropdown?: boolean }) {
   const [config, setConfig] = useState<ReturnType<typeof getActiveConfig>>(null)
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
@@ -998,7 +999,7 @@ function ModelBar({ settingsVersion, compact = false, inline = false }: { settin
   if (compact) {
     return (
       <div className="px-4 pb-1.5 pt-0.5">
-        <ModelDropdown value={selectedModel} onChange={handleModelChange} models={models} loading={loadingModels} />
+        <ModelDropdown value={selectedModel} onChange={handleModelChange} models={models} loading={loadingModels} compact={compactDropdown} />
         {warn && <p className="mt-1 text-[11px] text-amber-400">"{selectedModel}" may not support chat — select a text generation model.</p>}
       </div>
     )
@@ -1009,7 +1010,7 @@ function ModelBar({ settingsVersion, compact = false, inline = false }: { settin
       <div className="flex items-center justify-center gap-2">
         <span className="shrink-0 text-[11px] text-fg-4">{providerLabel}</span>
         <div className="flex-1">
-          <ModelDropdown value={selectedModel} onChange={handleModelChange} models={models} loading={loadingModels} />
+          <ModelDropdown value={selectedModel} onChange={handleModelChange} models={models} loading={loadingModels} compact={compactDropdown} />
         </div>
       </div>
       {warn && <p className="mt-1 text-center text-[11px] text-amber-400">"{selectedModel}" may not support chat — select a text generation model.</p>}
@@ -1948,7 +1949,7 @@ export default function Page() {
           {/* ── Desktop: single row, title left · model centre · buttons right ── */}
           <div className="hidden lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center px-4 py-2.5">
             <span className="text-sm font-semibold text-fg">Mighty AI QR</span>
-            <div className="px-6 w-72"><ModelBar settingsVersion={settingsVersion} inline /></div>
+            <div className="px-6 w-52"><ModelBar settingsVersion={settingsVersion} inline compactDropdown /></div>
             <div className="flex items-center justify-end gap-2">
               {activeConvId && (
                 <button onClick={() => { handleDeleteConversation(activeConvId); startNewChat() }} title="Delete conversation" className="flex items-center justify-center h-9 w-9 rounded-xl text-fg-4 hover:text-red-400 transition-colors">
