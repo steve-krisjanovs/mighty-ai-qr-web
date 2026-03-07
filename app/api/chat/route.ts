@@ -3,8 +3,6 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getDeviceIdFromRequest } from '@/lib/server/jwt'
 import { runChat, runChatOpenAI } from '@/lib/server/ai-tools'
 
-const serverClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
 const DEFAULT_MODELS: Record<string, string> = {
   openai: 'gpt-4o', gemini: 'gemini-2.0-flash', grok: 'grok-3-mini', mistral: 'mistral-small-latest', groq: 'llama-3.3-70b-versatile',
   ollama: 'llama3.2', lmstudio: 'llama3.2', openwebui: 'llama3.2',
@@ -44,15 +42,15 @@ export async function POST(request: NextRequest) {
   try {
     let result
 
-    if (isByok && userProvider === 'anthropic') {
+    if (!isByok) {
+      return NextResponse.json({ error: 'No API key configured. Add your key in Settings.' }, { status: 400 })
+    } else if (userProvider === 'anthropic') {
       const byokClient = new Anthropic({ apiKey: userApiKey })
       result = await runChat(byokClient, messages, userModel || undefined)
-    } else if (isByok) {
+    } else {
       const baseUrl = normalizeBaseUrl(userBaseUrl, userProvider)
       const model   = userModel || DEFAULT_MODELS[userProvider] || 'llama3.2'
       result = await runChatOpenAI(baseUrl, userApiKey || 'none', model, messages)
-    } else {
-      result = await runChat(serverClient, messages)
     }
 
     return NextResponse.json(result)

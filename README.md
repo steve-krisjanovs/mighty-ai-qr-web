@@ -30,7 +30,6 @@ Installable as a PWA on mobile and desktop.
 
 - Docker
 - `proxy_net` external Docker network
-- `ANTHROPIC_API_KEY` for the default server-side provider (optional if users bring their own keys)
 
 ## Run
 
@@ -45,7 +44,6 @@ Runs on port `3005`. Access via `https://mighty-qr.linux.internal` (requires Cad
 | Variable | Required | Description |
 |---|---|---|
 | `JWT_SECRET` | Yes | Secret for signing device tokens |
-| `ANTHROPIC_API_KEY` | No | Server-side Claude key (users can BYOK) |
 | `RUNNING_IN_DOCKER` | Auto | Set to `"true"` by docker-compose — rewrites `localhost` → `host.docker.internal` for local LLMs |
 | `DB_PATH` | No | SQLite path (default `./data/mighty.db`) |
 
