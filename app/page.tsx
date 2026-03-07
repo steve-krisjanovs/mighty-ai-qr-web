@@ -2013,7 +2013,7 @@ export default function Page() {
         <header className="bg-surface shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
 
           {/* ── Desktop: single row, title left · model centre · buttons right ── */}
-          <div className="hidden lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center px-4 py-2.5">
+          <div className="hidden md:grid md:grid-cols-[1fr_auto_1fr] md:items-center px-4 py-2.5">
             <span className="text-sm font-semibold text-fg">Mighty AI QR</span>
             <HeaderModelPill settingsVersion={settingsVersion} />
             <div className="flex items-center justify-end gap-2">
@@ -2028,7 +2028,7 @@ export default function Page() {
           </div>
 
           {/* ── Mobile: row 1 title + buttons, row 2 full-width model ── */}
-          <div className="lg:hidden">
+          <div className="md:hidden">
             <div className="flex items-center justify-between px-4 py-2.5">
               <div className="flex items-center gap-3">
                 <button onClick={() => setSidebarOpen(true)} className="text-fg-3 hover:text-fg transition-colors"><MenuIcon /></button>
