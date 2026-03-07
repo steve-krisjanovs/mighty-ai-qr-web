@@ -962,7 +962,7 @@ function isNonChatModel(model: string) {
   return NON_CHAT_KEYWORDS.some(k => m.includes(k))
 }
 
-function ModelBar({ settingsVersion, compact = false }: { settingsVersion: number; compact?: boolean }) {
+function ModelBar({ settingsVersion, compact = false, inline = false }: { settingsVersion: number; compact?: boolean; inline?: boolean }) {
   const [config, setConfig] = useState<ReturnType<typeof getActiveConfig>>(null)
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
@@ -1004,15 +1004,23 @@ function ModelBar({ settingsVersion, compact = false }: { settingsVersion: numbe
     )
   }
 
-  return (
-    <div className="border-b border-white/10 bg-surface px-4 py-2">
+  const inner = (
+    <>
       <div className="flex items-center justify-center gap-2">
         <span className="shrink-0 text-[11px] text-fg-4">{providerLabel}</span>
-        <div className="w-full sm:max-w-xs">
+        <div className="flex-1">
           <ModelDropdown value={selectedModel} onChange={handleModelChange} models={models} loading={loadingModels} />
         </div>
       </div>
       {warn && <p className="mt-1 text-center text-[11px] text-amber-400">"{selectedModel}" may not support chat — select a text generation model.</p>}
+    </>
+  )
+
+  if (inline) return <>{inner}</>
+
+  return (
+    <div className="border-b border-white/10 bg-surface px-4 py-2">
+      {inner}
     </div>
   )
 }
@@ -1942,6 +1950,9 @@ export default function Page() {
             </button>
             <span className="text-sm font-medium text-fg lg:hidden">Mighty AI QR</span>
           </div>
+          <div className="hidden lg:flex flex-1 justify-center px-4">
+            <div className="w-72"><ModelBar settingsVersion={settingsVersion} inline /></div>
+          </div>
           <div className="flex items-center gap-2">
             {activeConvId && (
               <button
@@ -1972,7 +1983,7 @@ export default function Page() {
           </div>
         </header>
 
-        <ModelBar settingsVersion={settingsVersion} />
+        <div className="lg:hidden"><ModelBar settingsVersion={settingsVersion} /></div>
 
         {/* Chat + QR */}
         <div className="flex flex-1 overflow-hidden">
