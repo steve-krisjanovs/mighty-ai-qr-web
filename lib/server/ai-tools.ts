@@ -171,6 +171,72 @@ export async function runChat(client: Anthropic, messages: ChatMessage[], model 
   return { message: textBlock?.type === 'text' ? textBlock.text : '' }
 }
 
+const VALID_DEVICES = new Set(['plugpro','space','litemk2','8btmk2','plugair_v1','plugair_v2','lite','8bt','2040bt'])
+
+function n(v: unknown, fallback: number): number {
+  const x = Number(v)
+  return isFinite(x) ? x : fallback
+}
+
+function b(v: unknown, fallback: boolean): boolean {
+  if (typeof v === 'boolean') return v
+  if (v === 'true' || v === 1) return true
+  if (v === 'false' || v === 0) return false
+  return fallback
+}
+
+// Normalises raw LLM tool-call arguments into a valid ProPresetParams.
+// Local models often ignore the JSON schema and use different field names.
+function coerceParams(raw: Record<string, unknown>): ProPresetParams {
+  const amp = (raw.amp as Record<string, unknown>) ?? {}
+  const cab = (raw.cabinet as Record<string, unknown>) ?? {}
+  const ng  = (raw.noise_gate as Record<string, unknown>) ?? {}
+
+  const coerced: ProPresetParams = {
+    device:      VALID_DEVICES.has(raw.device as string) ? raw.device as ProPresetParams['device'] : 'plugpro',
+    preset_name: (raw.preset_name as string) || 'My Tone',
+    amp: {
+      id:     n(amp.id, 2),
+      gain:   n(amp.gain, 50),
+      master: n(amp.master ?? amp.volume ?? amp.master_volume, 70),
+      bass:   n(amp.bass, 50),
+      mid:    n(amp.mid, 50),
+      treble: n(amp.treble, 50),
+      ...(amp.param6  !== undefined ? { param6: n(amp.param6, 50) }  : {}),
+      ...(amp.param7  !== undefined ? { param7: n(amp.param7, 50) }  : {}),
+    },
+    cabinet: {
+      id:          n(cab.id, 2),
+      level_db:    n(cab.level_db ?? cab.level, 0),
+      low_cut_hz:  n(cab.low_cut_hz ?? cab.low_cut, 80),
+      high_cut:    n(cab.high_cut, 50),
+    },
+    noise_gate: {
+      enabled:     b(ng.enabled ?? ng.active, false),
+      sensitivity: n(ng.sensitivity, 50),
+      decay:       n(ng.decay ?? ng.release, 50),
+    },
+    master_db: n(raw.master_db, 0),
+  }
+
+  // Optional effects — only include if present and has an id
+  for (const key of ['efx','compressor','modulation','delay','reverb'] as const) {
+    const e = raw[key] as Record<string, unknown> | undefined
+    if (!e || n(e.id, 0) === 0) continue
+    ;(coerced as unknown as Record<string, unknown>)[key] = {
+      id: n(e.id, 1), enabled: b(e.enabled ?? e.active, false),
+      p1: n(e.p1 ?? e.param1, 50), p2: n(e.p2 ?? e.param2, 50),
+      ...(e.p3 !== undefined ? { p3: n(e.p3, 50) } : {}),
+      ...(e.p4 !== undefined ? { p4: n(e.p4, 50) } : {}),
+      ...(e.p5 !== undefined ? { p5: n(e.p5, 50) } : {}),
+    }
+  }
+
+  if (raw.guitar && typeof raw.guitar === 'object') coerced.guitar = raw.guitar as ProPresetParams['guitar']
+
+  return coerced
+}
+
 const generateQRToolOpenAI: OpenAI.ChatCompletionTool = {
   type: 'function',
   function: { name: generateQRTool.name, description: generateQRTool.description, parameters: generateQRTool.input_schema as Record<string, unknown> },
@@ -192,7 +258,7 @@ export async function runChatOpenAI(baseUrl: string, apiKey: string, model: stri
   if (choice.finish_reason === 'tool_calls' && choice.message.tool_calls?.length) {
     const toolCall = choice.message.tool_calls[0]
     if (toolCall.type !== 'function') throw new Error('Expected function tool call')
-    const params = JSON.parse(toolCall.function.arguments) as ProPresetParams
+    const params = coerceParams(JSON.parse(toolCall.function.arguments))
     const qrResult = await generateQR(params)
 
     const followUp = await client.chat.completions.create({
@@ -209,8 +275,8 @@ export async function runChatOpenAI(baseUrl: string, apiKey: string, model: stri
 
 // Some reasoning models (e.g. gpt-oss, DeepSeek-R1) return empty content with text in a
 // non-standard `reasoning` field. Fall back to it when content is empty.
-function textContent(msg: { content?: string | null; [k: string]: unknown }): string {
+function textContent(msg: { content?: string | null }): string {
   if (msg.content) return msg.content
-  const r = (msg as Record<string, unknown>).reasoning
+  const r = (msg as unknown as Record<string, unknown>).reasoning
   return typeof r === 'string' ? r : ''
 }
