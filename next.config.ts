@@ -1,15 +1,15 @@
 import type { NextConfig } from 'next'
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+})
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${process.env.API_URL ?? 'http://mighty-ai-qr-server:3003'}/api/:path*`,
-      },
-    ]
-  },
+  devIndicators: false,
 }
 
-export default nextConfig
+export default withPWA(nextConfig)

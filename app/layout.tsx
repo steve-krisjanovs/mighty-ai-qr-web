@@ -5,11 +5,11 @@ export const metadata: Metadata = {
   title: 'Mighty AI QR',
   description: 'Generate NUX MightyAmp QR codes from natural language tone descriptions',
   manifest: '/manifest.json',
-  icons: { apple: '/icons/icon-192.png' },
+  icons: { apple: '/icons/icon-192.png', icon: '/icons/icon-192.png' },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#05050F',
+  themeColor: '#202124',
   width: 'device-width',
   initialScale: 1,
 }

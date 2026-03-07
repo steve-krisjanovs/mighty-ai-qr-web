@@ -6,9 +6,18 @@ services:
     ports:
       - "3005:3000"
     environment:
-      API_URL: http://mighty-ai-qr-server:3003
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      REVENUECAT_WEBHOOK_SECRET: ${REVENUECAT_WEBHOOK_SECRET:-}
+      FREE_GENERATION_LIMIT: ${FREE_GENERATION_LIMIT:-10}
+      DB_PATH: /data/mighty.db
+    volumes:
+      - mighty-qr-data:/data
     networks:
       - proxy_net
+
+volumes:
+  mighty-qr-data:
 
 networks:
   proxy_net:
