@@ -1943,43 +1943,39 @@ export default function Page() {
       <div className="flex flex-1 flex-col overflow-hidden">
 
         {/* Header */}
-        <header className="grid grid-cols-3 items-center bg-surface px-4 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(true)} className="text-fg-3 hover:text-fg transition-colors lg:hidden">
-              <MenuIcon />
-            </button>
-            <span className="text-sm font-semibold text-fg">Mighty AI QR</span>
-          </div>
-          <div className="flex justify-center">
-            <div className="w-full max-w-xs"><ModelBar settingsVersion={settingsVersion} inline /></div>
-          </div>
-          <div className="flex items-center justify-end gap-2">
-            {activeConvId && (
-              <button
-                onClick={() => {
-                  handleDeleteConversation(activeConvId)
-                  startNewChat()
-                }}
-                title="Delete conversation"
-                className="flex items-center justify-center h-9 w-9 rounded-xl text-fg-4 hover:text-red-400 transition-colors"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        <header className="bg-surface shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
+          {/* Main row: title | [desktop model] | buttons */}
+          <div className="grid grid-cols-3 items-center px-4 py-2.5">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setSidebarOpen(true)} className="text-fg-3 hover:text-fg transition-colors lg:hidden">
+                <MenuIcon />
               </button>
-            )}
-            <button
-              onClick={startNewChat}
-              title="New chat"
-              className="flex items-center justify-center h-9 w-9 rounded-xl bg-surface-2 border border-white/10 text-fg-2 hover:bg-surface-3 hover:text-fg transition-colors"
-            >
-              <NewChatIcon />
-            </button>
-            <button
-              onClick={() => setShowSettings(true)}
-              title="Settings"
-              className="flex items-center justify-center h-8 w-8 rounded-lg text-fg-3 hover:text-fg transition-colors"
-            >
-              <GearIcon />
-            </button>
+              <span className="text-sm font-semibold text-fg">Mighty AI QR</span>
+            </div>
+            <div className="hidden lg:flex justify-center">
+              <div className="w-full max-w-xs"><ModelBar settingsVersion={settingsVersion} inline /></div>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              {activeConvId && (
+                <button
+                  onClick={() => { handleDeleteConversation(activeConvId); startNewChat() }}
+                  title="Delete conversation"
+                  className="flex items-center justify-center h-9 w-9 rounded-xl text-fg-4 hover:text-red-400 transition-colors"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+              )}
+              <button onClick={startNewChat} title="New chat" className="flex items-center justify-center h-9 w-9 rounded-xl bg-surface-2 border border-white/10 text-fg-2 hover:bg-surface-3 hover:text-fg transition-colors">
+                <NewChatIcon />
+              </button>
+              <button onClick={() => setShowSettings(true)} title="Settings" className="flex items-center justify-center h-8 w-8 rounded-lg text-fg-3 hover:text-fg transition-colors">
+                <GearIcon />
+              </button>
+            </div>
+          </div>
+          {/* Mobile-only model row */}
+          <div className="lg:hidden border-t border-white/10 px-4 py-2">
+            <ModelBar settingsVersion={settingsVersion} inline />
           </div>
         </header>
 
