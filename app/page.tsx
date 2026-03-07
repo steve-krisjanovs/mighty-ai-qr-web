@@ -846,11 +846,14 @@ function AboutModal({ onClose }: { onClose: () => void }) {
       <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up p-6 space-y-5">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-fg">Mighty AI QR</p>
-              <p className="text-[11px] text-fg-4 mt-1 leading-relaxed">
-                Describe a guitar tone in plain English — get a scannable QR code for your NUX MightyAmp, instantly.
-              </p>
+            <div className="flex items-center gap-3">
+              <img src="/icons/icon-192.png" alt="Mighty AI QR" className="h-12 w-12 rounded-xl shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-fg">Mighty AI QR</p>
+                <p className="text-[11px] text-fg-4 mt-1 leading-relaxed">
+                  Describe a guitar tone in plain English — get a scannable QR code for your NUX MightyAmp, instantly.
+                </p>
+              </div>
             </div>
             <button onClick={onClose} className="shrink-0 text-fg-4 hover:text-fg transition-colors"><CloseIcon /></button>
           </div>
