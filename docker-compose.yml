@@ -10,6 +10,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       REVENUECAT_WEBHOOK_SECRET: ${REVENUECAT_WEBHOOK_SECRET:-}
       FREE_GENERATION_LIMIT: ${FREE_GENERATION_LIMIT:-10}
+      RUNNING_IN_DOCKER: "true"
       DB_PATH: /data/mighty.db
     volumes:
       - mighty-qr-data:/data

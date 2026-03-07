@@ -13,7 +13,9 @@ const DEFAULT_MODELS: Record<string, string> = {
 
 function normalizeBaseUrl(url: string, provider: string): string {
   const needsV1 = ['ollama', 'lmstudio', 'openwebui']
-  let normalized = url.replace(/\blocalhost\b/g, 'host.docker.internal')
+  let normalized = process.env.RUNNING_IN_DOCKER === 'true'
+    ? url.replace(/\blocalhost\b/g, 'host.docker.internal')
+    : url
   if (needsV1.includes(provider) && normalized && !normalized.endsWith('/v1') && !normalized.includes('/v1/')) {
     normalized = normalized.replace(/\/$/, '') + '/v1'
   }
