@@ -2034,7 +2034,6 @@ export default function Page() {
             )}
 
             <div className="border-t border-white/10 bg-surface px-4 pb-5 pt-3">
-              <ModelBar settingsVersion={settingsVersion} compact />
               <div className="rounded-3xl border border-white/10 bg-surface-2 transition-colors focus-within:border-primary/40">
                 <textarea
                   ref={textareaRef}
