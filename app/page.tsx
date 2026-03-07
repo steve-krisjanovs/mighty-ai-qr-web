@@ -957,7 +957,7 @@ function ModelDropdown({
 }
 
 function ModelBar({ settingsVersion }: { settingsVersion: number }) {
-  const [config, setConfig] = useState(() => getActiveConfig())
+  const [config, setConfig] = useState<ReturnType<typeof getActiveConfig>>(null)
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
 
