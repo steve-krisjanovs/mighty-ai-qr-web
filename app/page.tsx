@@ -862,6 +862,72 @@ function ProviderDropdown({ value, onChange }: { value: AiProvider; onChange: (p
   )
 }
 
+// Self-contained desktop header pill — reads/writes localStorage, fetches models
+function HeaderModelPill({ settingsVersion }: { settingsVersion: number }) {
+  const [config, setConfig] = useState<ReturnType<typeof getActiveConfig>>(null)
+  const [models, setModels] = useState<string[]>([])
+  const [loadingModels, setLoadingModels] = useState(false)
+
+  useEffect(() => { setConfig(getActiveConfig()) }, [settingsVersion])
+  useEffect(() => {
+    if (!config) return
+    let cancelled = false
+    setModels([])
+    setLoadingModels(true)
+    fetchModels(config.provider, config.apiKey, config.baseUrl ?? '').then(m => {
+      if (!cancelled) { setModels(m); setLoadingModels(false) }
+    }).catch(() => { if (!cancelled) setLoadingModels(false) })
+    return () => { cancelled = true }
+  }, [config?.provider, config?.apiKey, config?.baseUrl])
+
+  if (!config) return null
+
+  const handleChange = (model: string) => {
+    const settings = getApiSettings()
+    if (!settings) return
+    const providerConf: ProviderConfig = { ...(settings.configs[config.provider] ?? { apiKey: '' }), model }
+    saveApiSettings({ ...settings, configs: { ...settings.configs, [config.provider]: providerConf } })
+    setConfig(prev => prev ? { ...prev, model } : prev)
+  }
+
+  return <ModelPill value={config.model ?? ''} onChange={handleChange} models={models} loading={loadingModels} />
+}
+
+// Compact pill for desktop header — shows current model, click to pick from list
+function ModelPill({ value, onChange, models, loading }: { value: string; onChange: (m: string) => void; models: string[]; loading: boolean }) {
+  const [open, setOpen] = useState(false)
+  const label = value || 'auto'
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-2 hover:border-white/20 hover:text-fg transition-colors"
+      >
+        {loading
+          ? <span className="h-2.5 w-2.5 animate-spin rounded-full border border-fg-4 border-t-primary" />
+          : <span className="max-w-[160px] truncate">{label}</span>}
+        <ChevronIcon open={open} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-1/2 top-full z-20 mt-1.5 max-h-60 w-56 -translate-x-1/2 overflow-y-auto rounded-lg border border-white/10 bg-surface-2 shadow-xl">
+            <button onMouseDown={e => { e.preventDefault(); onChange(''); setOpen(false) }} className={`flex w-full items-center px-3 py-2 text-xs transition-colors ${!value ? 'text-primary bg-primary/10' : 'text-fg-4 hover:bg-surface-3 hover:text-fg'}`}>
+              (auto / default){!value && <span className="ml-auto text-primary">✓</span>}
+            </button>
+            {models.map(m => (
+              <button key={m} onMouseDown={e => { e.preventDefault(); onChange(m); setOpen(false) }} className={`flex w-full items-center px-3 py-2 text-xs transition-colors ${value === m ? 'text-primary bg-primary/10' : 'text-fg-2 hover:bg-surface-3 hover:text-fg'}`}>
+                <span className="truncate">{m}</span>
+                {value === m && <span className="ml-auto shrink-0 text-primary">✓</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function ModelDropdown({
   value, onChange, models, loading, compact = false,
 }: {
@@ -1949,7 +2015,7 @@ export default function Page() {
           {/* ── Desktop: single row, title left · model centre · buttons right ── */}
           <div className="hidden lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center px-4 py-2.5">
             <span className="text-sm font-semibold text-fg">Mighty AI QR</span>
-            <div className="px-6 w-52"><ModelBar settingsVersion={settingsVersion} inline compactDropdown /></div>
+            <HeaderModelPill settingsVersion={settingsVersion} />
             <div className="flex items-center justify-end gap-2">
               {activeConvId && (
                 <button onClick={() => { handleDeleteConversation(activeConvId); startNewChat() }} title="Delete conversation" className="flex items-center justify-center h-9 w-9 rounded-xl text-fg-4 hover:text-red-400 transition-colors">
