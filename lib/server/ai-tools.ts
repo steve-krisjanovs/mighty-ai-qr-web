@@ -200,8 +200,17 @@ export async function runChatOpenAI(baseUrl: string, apiKey: string, model: stri
       messages: [ ...openAIMessages, choice.message, { role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ success: true, preset_name: qrResult.presetName }) } ],
       tools: [generateQRToolOpenAI],
     })
-    return { message: followUp.choices[0].message.content ?? '', qr: qrResult }
+    const msg = followUp.choices[0].message
+    return { message: textContent(msg), qr: qrResult }
   }
 
-  return { message: choice.message.content ?? '' }
+  return { message: textContent(choice.message) }
+}
+
+// Some reasoning models (e.g. gpt-oss, DeepSeek-R1) return empty content with text in a
+// non-standard `reasoning` field. Fall back to it when content is empty.
+function textContent(msg: { content?: string | null; [k: string]: unknown }): string {
+  if (msg.content) return msg.content
+  const r = (msg as Record<string, unknown>).reasoning
+  return typeof r === 'string' ? r : ''
 }
