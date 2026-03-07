@@ -400,12 +400,33 @@ function useQrDownload(canvasRef: React.RefObject<HTMLCanvasElement | null>, pre
   }
 }
 
+function useQrShare(canvasRef: React.RefObject<HTMLCanvasElement | null>, presetName: string) {
+  return () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const title = `${presetName} — Mighty AI QR`
+    const text = `Check out this guitar tone: ${presetName}`
+    canvas.toBlob(blob => {
+      if (!blob) return
+      const file = new File([blob], `${presetName.replace(/[^a-z0-9]/gi, '_')}.png`, { type: 'image/png' })
+      if (navigator.canShare?.({ files: [file] })) {
+        navigator.share({ files: [file], title, text }).catch(() => {})
+      } else if (navigator.share) {
+        navigator.share({ title, text }).catch(() => {})
+      } else {
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://github.com/steve-krisjanovs/mighty-ai-qr-web')}&quote=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
+      }
+    }, 'image/png')
+  }
+}
+
 // ─── QR Card ──────────────────────────────────────────────────────────────────
 
 function QrCard({ qr, description, className = '' }: { qr: QrResult; description?: string; className?: string }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, qr.presetName)
+  const share = useQrShare(canvasRef, qr.presetName)
   const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(qr.presetName + ' guitar tone')}`
 
   return (
@@ -607,6 +628,7 @@ function QrModal({ item, onClose, onDeleteRequest, onRename, onRefine }: {
   const nameInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, name)
+  const share = useQrShare(canvasRef, item.qr.presetName)
 
   const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(item.qr.presetName + ' guitar tone')}`
 
@@ -676,9 +698,9 @@ function QrModal({ item, onClose, onDeleteRequest, onRename, onRefine }: {
               <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <YoutubeIcon /> Reference
               </a>
-              <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://github.com/steve-krisjanovs/mighty-ai-qr-web')}&quote=${encodeURIComponent(`🎸 ${qr.presetName} — created with Mighty AI QR`)}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
+              <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <FacebookIcon /> Share
-              </a>
+              </button>
             </div>
 
             <div className="border-t border-white/10 pt-3">
@@ -727,6 +749,7 @@ function ChatQrModal({ qr, description, onClose, onRefine }: { qr: QrResult; des
   const [settingsOpen, setSettingsOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, qr.presetName)
+  const share = useQrShare(canvasRef, qr.presetName)
   const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(qr.presetName + ' guitar tone')}`
 
   return (
@@ -773,9 +796,9 @@ function ChatQrModal({ qr, description, onClose, onRefine }: { qr: QrResult; des
               <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <YoutubeIcon /> Reference
               </a>
-              <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://github.com/steve-krisjanovs/mighty-ai-qr-web')}&quote=${encodeURIComponent(`🎸 ${qr.presetName} — created with Mighty AI QR`)}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
+              <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <FacebookIcon /> Share
-              </a>
+              </button>
             </div>
 
             <div className="border-t border-white/10 pt-3">
