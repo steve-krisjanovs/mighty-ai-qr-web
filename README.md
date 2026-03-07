@@ -11,7 +11,7 @@ Installable as a PWA on mobile and desktop.
 - **Next.js 15** (App Router, TypeScript, Tailwind CSS)
 - **SQLite** via `node:sqlite` — conversations and QR history persisted on-device
 - **JWT auth** — device-scoped, no accounts required
-- **AI providers** — Anthropic (server-side key), plus BYOK for OpenAI, Gemini, Grok, Mistral, Groq, Ollama, LM Studio, Open WebUI
+- **AI providers** — BYOK for Anthropic, OpenAI, Gemini, Grok, Mistral, Groq, Ollama, LM Studio, Open WebUI
 - **Docker** — single container, SQLite volume, `proxy_net`
 
 ## Features
@@ -76,6 +76,3 @@ Runs on `http://localhost:3000`. SQLite is created at `./data/mighty.db`.
 
 QR format reverse-engineered from the NUX MightyAmp ecosystem. Special thanks to [tuntorius](https://github.com/tuntorius) for the open-source [mightier_amp](https://github.com/tuntorius/mightier_amp) Flutter app, which was an invaluable reference for the QR encoding format.
 
-## Related
-
-- [`mighty-ai-qr-client`](https://github.com/steve-krisjanovs/mighty-ai-qr-client) — Flutter mobile client (iOS + Android)

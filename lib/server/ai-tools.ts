@@ -260,7 +260,8 @@ export async function runChatOpenAI(baseUrl: string, apiKey: string, model: stri
     ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
   ]
 
-  const response = await client.chat.completions.create({ model, max_tokens: 1024, messages: openAIMessages, tools: [generateQRToolOpenAI], tool_choice: 'auto', extra_body: { keep_alive: -1 } })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const response = await (client.chat.completions.create as any)({ model, max_tokens: 1024, messages: openAIMessages, tools: [generateQRToolOpenAI], tool_choice: 'auto', extra_body: { keep_alive: -1 } })
   const choice = response.choices[0]
 
   if (choice.finish_reason === 'tool_calls' && choice.message.tool_calls?.length) {
@@ -275,7 +276,8 @@ export async function runChatOpenAI(baseUrl: string, apiKey: string, model: stri
     const looksLikeReasoning = inlineText.length > 400 || (inlineText.match(/\?/g) ?? []).length > 2
     if (inlineText && !looksLikeReasoning) return { message: inlineText, qr: qrResult }
 
-    const followUp = await client.chat.completions.create({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const followUp = await (client.chat.completions.create as any)({
       model, max_tokens: 512,
       messages: [ ...openAIMessages, choice.message, { role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ success: true, preset_name: qrResult.presetName }) } ],
       tools: [generateQRToolOpenAI],
