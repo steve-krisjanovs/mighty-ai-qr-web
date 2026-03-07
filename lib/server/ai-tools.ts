@@ -196,7 +196,7 @@ function coerceParams(raw: Record<string, unknown>): ProPresetParams {
     device:      VALID_DEVICES.has(raw.device as string) ? raw.device as ProPresetParams['device'] : 'plugpro',
     preset_name: (raw.preset_name as string) || 'My Tone',
     amp: {
-      id:     n(amp.id, 2),
+      id:     n(amp.id ?? amp.nuxIndex, 2),
       gain:   n(amp.gain, 50),
       master: n(amp.master ?? amp.volume ?? amp.master_volume, 70),
       bass:   n(amp.bass, 50),
@@ -206,14 +206,14 @@ function coerceParams(raw: Record<string, unknown>): ProPresetParams {
       ...(amp.param7  !== undefined ? { param7: n(amp.param7, 50) }  : {}),
     },
     cabinet: {
-      id:          n(cab.id, 2),
+      id:          n(cab.id ?? cab.nuxIndex, 2),
       level_db:    n(cab.level_db ?? cab.level, 0),
       low_cut_hz:  n(cab.low_cut_hz ?? cab.low_cut, 80),
       high_cut:    n(cab.high_cut, 50),
     },
     noise_gate: {
       enabled:     b(ng.enabled ?? ng.active, false),
-      sensitivity: n(ng.sensitivity, 50),
+      sensitivity: n(ng.sensitivity ?? ng.threshold, 50),
       decay:       n(ng.decay ?? ng.release, 50),
     },
     master_db: n(raw.master_db, 0),
@@ -232,7 +232,15 @@ function coerceParams(raw: Record<string, unknown>): ProPresetParams {
     }
   }
 
-  if (raw.guitar && typeof raw.guitar === 'object') coerced.guitar = raw.guitar as ProPresetParams['guitar']
+  if (raw.guitar && typeof raw.guitar === 'object') {
+    const g = raw.guitar as Record<string, unknown>
+    let controls = g.controls
+    // Some models return controls as an object {label: value} instead of [{label, value}]
+    if (controls && !Array.isArray(controls) && typeof controls === 'object') {
+      controls = Object.entries(controls as Record<string, unknown>).map(([label, value]) => ({ label, value: n(value, 5) }))
+    }
+    coerced.guitar = { ...g, controls } as ProPresetParams['guitar']
+  }
 
   return coerced
 }
@@ -243,7 +251,7 @@ const generateQRToolOpenAI: OpenAI.ChatCompletionTool = {
 }
 
 export async function runChatOpenAI(baseUrl: string, apiKey: string, model: string, messages: ChatMessage[]): Promise<ChatResult> {
-  const clientOpts: ConstructorParameters<typeof OpenAI>[0] = { apiKey }
+  const clientOpts: ConstructorParameters<typeof OpenAI>[0] = { apiKey, timeout: 5 * 60 * 1000, maxRetries: 0 }
   if (baseUrl) clientOpts.baseURL = baseUrl
 
   const client = new OpenAI(clientOpts)
@@ -252,7 +260,7 @@ export async function runChatOpenAI(baseUrl: string, apiKey: string, model: stri
     ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
   ]
 
-  const response = await client.chat.completions.create({ model, max_tokens: 1024, messages: openAIMessages, tools: [generateQRToolOpenAI], tool_choice: 'auto' })
+  const response = await client.chat.completions.create({ model, max_tokens: 1024, messages: openAIMessages, tools: [generateQRToolOpenAI], tool_choice: 'auto', extra_body: { keep_alive: -1 } })
   const choice = response.choices[0]
 
   if (choice.finish_reason === 'tool_calls' && choice.message.tool_calls?.length) {
@@ -261,16 +269,37 @@ export async function runChatOpenAI(baseUrl: string, apiKey: string, model: stri
     const params = coerceParams(JSON.parse(toolCall.function.arguments))
     const qrResult = await generateQR(params)
 
+    // Some models include a clean description alongside the tool call — use it to skip the follow-up.
+    // Ignore it if it looks like verbose reasoning (too long or contains thinking patterns).
+    const inlineText = textContent(choice.message)
+    const looksLikeReasoning = inlineText.length > 400 || (inlineText.match(/\?/g) ?? []).length > 2
+    if (inlineText && !looksLikeReasoning) return { message: inlineText, qr: qrResult }
+
     const followUp = await client.chat.completions.create({
       model, max_tokens: 512,
       messages: [ ...openAIMessages, choice.message, { role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ success: true, preset_name: qrResult.presetName }) } ],
       tools: [generateQRToolOpenAI],
+      extra_body: { keep_alive: -1 },
     })
     const msg = followUp.choices[0].message
     return { message: textContent(msg), qr: qrResult }
   }
 
-  return { message: textContent(choice.message) }
+  const text = textContent(choice.message)
+
+  // Fallback: some local models embed the JSON tool call in content text
+  const embedded = extractEmbeddedToolCall(text)
+  if (embedded) {
+    const params = coerceParams(embedded)
+    const qrResult = await generateQR(params)
+    const followUp = await client.chat.completions.create({
+      model, max_tokens: 512,
+      messages: [ ...openAIMessages, { role: 'assistant', content: text }, { role: 'user', content: 'The QR code was generated successfully. Now describe the tone you created in 2-3 sentences.' } ],
+    })
+    return { message: textContent(followUp.choices[0].message), qr: qrResult }
+  }
+
+  return { message: text }
 }
 
 // Some reasoning models (e.g. gpt-oss, DeepSeek-R1) return empty content with text in a
@@ -279,4 +308,24 @@ function textContent(msg: { content?: string | null }): string {
   if (msg.content) return msg.content
   const r = (msg as unknown as Record<string, unknown>).reasoning
   return typeof r === 'string' ? r : ''
+}
+
+// Some local models embed the tool call JSON directly in the content text instead of using
+// the tool_calls field. Try to extract it so we can still generate the QR.
+function extractEmbeddedToolCall(text: string): Record<string, unknown> | null {
+  // Find the outermost JSON object in the text
+  const start = text.indexOf('{')
+  if (start === -1) return null
+  let depth = 0
+  for (let i = start; i < text.length; i++) {
+    if (text[i] === '{') depth++
+    else if (text[i] === '}') { depth--; if (depth === 0) {
+      try {
+        const obj = JSON.parse(text.slice(start, i + 1)) as Record<string, unknown>
+        // Must look like a generateQR call — needs at least amp and preset_name
+        if (obj.amp && (obj.preset_name || obj.device)) return obj
+      } catch { return null }
+    }}
+  }
+  return null
 }

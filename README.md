@@ -1,21 +1,34 @@
-# Mighty AI QR — Web & Desktop Client
+# Mighty AI QR — Web Client
 
-Flutter web and desktop client for Mighty AI QR. Describe a guitar tone in natural language and get a scannable NUX MightyAmp QR code back.
+Describe a guitar tone in natural language and get a scannable NUX MightyAmp QR code back. Chat with an AI, tap a suggestion, or refine an existing tone — all in the browser.
 
-Works in any modern browser. Installable as a PWA on mobile and desktop.
+Installable as a PWA on mobile and desktop.
 
 ## Stack
 
-- Flutter web (PWA, offline-first service worker)
-- Responsive layout — side-by-side on desktop, stacked on mobile
-- nginx serves the compiled web build and proxies `/api/*` to the backend
-- Docker multi-stage build: `flutter:stable` → `nginx:alpine`
+- **Next.js 15** (App Router, TypeScript, Tailwind CSS)
+- **SQLite** via `node:sqlite` — conversations and QR history persisted on-device
+- **JWT auth** — device-scoped, no accounts required
+- **AI providers** — Anthropic (server-side key), plus BYOK for OpenAI, Gemini, Grok, Mistral, Groq, Ollama, LM Studio, Open WebUI
+- **Docker** — single container, SQLite volume, `proxy_net`
+
+## Features
+
+- Chat UI with markdown rendering, voice input (Web Speech API), TTS
+- Inline QR code cards with tone settings, guitar recommendations, download
+- QR import — scan an existing QR image to decode and save its settings
+- Conversation history with rename and delete
+- QR history sidebar with rename, delete, and import
+- Suggestion chips on home screen (100+ randomised prompts)
+- Multi-theme support
+- Copy to clipboard on every chat bubble
+- Cancel in-flight requests
 
 ## Requirements
 
 - Docker
-- `proxy_net` Docker network (shared with other services)
-- `mighty-ai-qr-server` container running on `proxy_net`
+- `proxy_net` external Docker network
+- `ANTHROPIC_API_KEY` for the default server-side provider (optional if users bring their own keys)
 
 ## Run
 
@@ -25,15 +38,41 @@ docker compose up -d
 
 Runs on port `3005`. Access via `https://mighty-qr.linux.internal` (requires Caddy + internal DNS).
 
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `JWT_SECRET` | Yes | Secret for signing device tokens |
+| `ANTHROPIC_API_KEY` | No | Server-side Claude key (users can BYOK) |
+| `REVENUECAT_WEBHOOK_SECRET` | No | For subscription webhooks |
+| `RUNNING_IN_DOCKER` | Auto | Set to `"true"` by docker-compose — rewrites `localhost` → `host.docker.internal` for local LLMs |
+| `DB_PATH` | No | SQLite path (default `./data/mighty.db`) |
+
+## Local LLMs (Ollama)
+
+When running in Docker, the app rewrites `localhost` to `host.docker.internal` so local Ollama instances are reachable. Ollama must be configured to listen on all interfaces:
+
+```ini
+# /etc/systemd/system/ollama.service.d/override.conf
+[Service]
+Environment="OLLAMA_HOST=0.0.0.0:11434"
+```
+
+For AMD GPUs (RDNA 4), also add:
+
+```ini
+Environment="HSA_OVERRIDE_GFX_VERSION=12.0.0"
+```
+
 ## Development
 
-To iterate locally without Docker, point the API at the server directly by changing `_base` in `lib/services/api_service.dart` to `http://localhost:3003/api` and run:
-
 ```bash
-flutter run -d chrome
+npm install
+npm run dev
 ```
+
+Runs on `http://localhost:3000`. SQLite is created at `./data/mighty.db`.
 
 ## Related
 
-- [`mighty-ai-qr-server`](https://github.com/steve-krisjanovs/mighty-ai-qr-server) — Node.js/Fastify backend (auth, AI, QR encoding)
 - [`mighty-ai-qr-client`](https://github.com/steve-krisjanovs/mighty-ai-qr-client) — Flutter mobile client (iOS + Android)

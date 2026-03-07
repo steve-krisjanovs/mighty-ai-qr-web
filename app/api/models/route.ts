@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     const clientOpts: ConstructorParameters<typeof OpenAI>[0] = { apiKey: apiKey || 'none' }
     if (normalizedUrl) clientOpts.baseURL = normalizedUrl
 
-    const client = new OpenAI(clientOpts)
+    const client = new OpenAI({ ...clientOpts, timeout: 15_000, maxRetries: 0 })
     const list = await client.models.list()
     const models = list.data.map(m => m.id).sort()
     return NextResponse.json({ models })

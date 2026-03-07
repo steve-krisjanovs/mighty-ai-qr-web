@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, forwardRef } from 'react'
+import { flushSync } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { v4 as uuidv4 } from 'uuid'
@@ -69,12 +70,14 @@ const ALL_SUGGESTIONS = [
   'Alex Lifeson YYZ clean intro', 'Carlos Santana warm singing tone',
 ]
 
-function getRandomSuggestions(n = 6): string[] {
-  const pool = [...ALL_SUGGESTIONS]
+function getRandomSuggestions(n = 6, exclude: string[] = []): string[] {
+  const pool = ALL_SUGGESTIONS.filter(s => !exclude.includes(s))
+  const source = pool.length >= n ? pool : [...ALL_SUGGESTIONS]
   const out: string[] = []
-  while (out.length < n && pool.length > 0) {
-    const i = Math.floor(Math.random() * pool.length)
-    out.push(pool.splice(i, 1)[0])
+  const remaining = [...source]
+  while (out.length < n && remaining.length > 0) {
+    const i = Math.floor(Math.random() * remaining.length)
+    out.push(remaining.splice(i, 1)[0])
   }
   return out
 }
@@ -890,11 +893,13 @@ function HeaderModelPill({ settingsVersion }: { settingsVersion: number }) {
     setConfig(prev => prev ? { ...prev, model } : prev)
   }
 
-  return <ModelPill value={config.model ?? ''} onChange={handleChange} models={models} loading={loadingModels} />
+  const providerLabel = PROVIDERS.find(p => p.id === config.provider)?.label ?? config.provider
+
+  return <ModelPill value={config.model ?? ''} onChange={handleChange} models={models} loading={loadingModels} providerLabel={providerLabel} />
 }
 
 // Compact pill for desktop header — shows current model, click to pick from list
-function ModelPill({ value, onChange, models, loading }: { value: string; onChange: (m: string) => void; models: string[]; loading: boolean }) {
+function ModelPill({ value, onChange, models, loading, providerLabel }: { value: string; onChange: (m: string) => void; models: string[]; loading: boolean; providerLabel?: string }) {
   const [open, setOpen] = useState(false)
   const label = value || 'auto'
   return (
@@ -903,9 +908,10 @@ function ModelPill({ value, onChange, models, loading }: { value: string; onChan
         onClick={() => setOpen(o => !o)}
         className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-2 hover:border-white/20 hover:text-fg transition-colors"
       >
+        {providerLabel && <><span className="shrink-0 text-fg-4">{providerLabel}</span><span className="text-fg-4">·</span></>}
         {loading
           ? <span className="h-2.5 w-2.5 animate-spin rounded-full border border-fg-4 border-t-primary" />
-          : <span className="max-w-[160px] truncate">{label}</span>}
+          : <span className="max-w-[120px] truncate">{label}</span>}
         <ChevronIcon open={open} />
       </button>
       {open && (
@@ -1261,6 +1267,9 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
               <p className="mt-1.5 text-[11px] text-fg-4">
                 {isLocal ? `URL of your local ${current.label} instance (include /v1)` : 'OpenAI-compatible endpoint'}
               </p>
+              {isLocal && (
+                <p className="mt-1 text-[11px] text-fg-4">Running in Docker? Ollama must bind to all interfaces: set <span className="font-mono text-fg-3">OLLAMA_HOST=0.0.0.0</span> in its service environment.</p>
+              )}
             </div>
           )}
 
@@ -1562,6 +1571,28 @@ function ConvItem({ conv, active, onSelect, onDeleteRequest, onRename }: {
   )
 }
 
+// ─── Suggestion Screen ────────────────────────────────────────────────────────
+
+function SuggestionScreen({ onSend }: { onSend: (text: string) => void }) {
+  const [current, setCurrent] = useState(() => getRandomSuggestions(6))
+  const next = () => setCurrent(prev => getRandomSuggestions(6, prev))
+  return (
+    <div className="flex h-full flex-col justify-end animate-fade-in pb-2 gap-3">
+      <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-surface-2 px-4 py-3 text-sm text-fg">
+        What tone are you after? Describe an artist, song, genre, or mood and I&apos;ll dial it in.
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {current.map(s => (
+          <button key={s} onClick={() => onSend(s)} className="rounded-full border border-white/10 bg-surface-2 px-3 py-1.5 text-xs text-fg-3 hover:border-white/20 hover:text-fg transition-colors">{s}</button>
+        ))}
+      </div>
+      <button onClick={next} className="self-start text-[11px] text-fg-4 hover:text-fg-3 transition-colors">
+        More suggestions →
+      </button>
+    </div>
+  )
+}
+
 // ─── Message Row ──────────────────────────────────────────────────────────────
 
 function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete, onQrOpen, disabled }: {
@@ -1578,6 +1609,8 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
   const longPress = useLongPress(disabled ? () => {} : onActivate)
   const actionsVisible = active && !disabled
   const actionClass = `flex gap-3 transition-opacity duration-150 mb-0.5 ${actionsVisible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`
+  const [copied, setCopied] = useState(false)
+  const copy = () => { navigator.clipboard.writeText(msg.content); setCopied(true); setTimeout(() => setCopied(false), 1500) }
 
   return (
     <div className={`group flex flex-col animate-slide-in-bottom ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
@@ -1585,6 +1618,9 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
         <div className="flex items-end gap-1.5">
           {!disabled && (
             <div className={actionClass} onClick={e => e.stopPropagation()}>
+              <button onClick={copy} title="Copy" className="text-fg-4 hover:text-fg-2 transition-colors">
+                {copied ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>}
+              </button>
               <button onClick={() => { onEdit(idx); onDismiss() }} title="Edit & resend" className="text-fg-4 hover:text-fg-2 transition-colors">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               </button>
@@ -1610,9 +1646,17 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
               <div className="prose-ai">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
               </div>
+              <div className="mt-2 flex justify-end">
+                <button onClick={copy} title="Copy response" className="text-fg-4 hover:text-fg-2 transition-colors">
+                  {copied ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>}
+                </button>
+              </div>
             </div>
             {!disabled && (
               <div className={actionClass} onClick={e => e.stopPropagation()}>
+                <button onClick={copy} title="Copy" className="text-fg-4 hover:text-fg-2 transition-colors">
+                  {copied ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>}
+                </button>
                 <button onClick={() => { onDelete(idx); onDismiss() }} title="Delete" className="text-fg-4 hover:text-red-400 transition-colors">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                 </button>
@@ -1801,7 +1845,7 @@ export default function Page() {
   }, [messages])
 
   const handleDeleteMsg = useCallback((index: number) => {
-    setMessages(prev => prev.filter((_, i) => i !== index))
+    setMessages(prev => prev.slice(0, index))
   }, [])
 
   const handleRenameHistoryItem = useCallback((id: string, newName: string) => {
@@ -1886,29 +1930,39 @@ export default function Page() {
         window.speechSynthesis.speak(new SpeechSynthesisUtterance(plain))
       }
       const finalMessages = [...newMessages, aiMsg]
-      setMessages(finalMessages)
-
       let newQr = currentQr
-      if (res.qr) {
-        newQr = res.qr
-        setCurrentQr(res.qr)
-        setCurrentQrDescription(res.message)
-        const item = saveToHistory(res.qr)
-        setQrHistory(prev => [item, ...prev].slice(0, 20))
-      }
+      const historyItem = res.qr ? saveToHistory(res.qr) : null
+      if (res.qr) newQr = res.qr
+
+      flushSync(() => {
+        setMessages(finalMessages)
+        if (res.qr) {
+          setCurrentQr(res.qr)
+          setCurrentQrDescription(res.message)
+          if (historyItem) setQrHistory(prev => [historyItem, ...prev].slice(0, 20))
+        }
+      })
 
       persistConversation(convId!, finalMessages, newQr)
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') { /* cancelled by user */ }
-      else setError(e instanceof Error ? e.message : 'Something went wrong')
+      else flushSync(() => setError(e instanceof Error ? e.message : 'Something went wrong'))
     } finally {
       abortRef.current = null
-      setLoading(false)
+      flushSync(() => setLoading(false))
       scrollToBottom()
     }
   }, [loading, messages, activeConvId, currentQr, scrollToBottom, persistConversation])
 
   sendRef.current = send
+
+  // Force re-render when returning from background — browsers throttle React renders in hidden tabs
+  const [, setVisibilityTick] = useState(0)
+  useEffect(() => {
+    const handler = () => { if (document.visibilityState === 'visible') setVisibilityTick(t => t + 1) }
+    document.addEventListener('visibilitychange', handler)
+    return () => document.removeEventListener('visibilitychange', handler)
+  }, [])
 
   const toggleListening = useCallback(() => {
     if (isListening) {
@@ -2014,7 +2068,10 @@ export default function Page() {
 
           {/* ── Desktop: single row, title left · model centre · buttons right ── */}
           <div className="hidden md:grid md:grid-cols-[1fr_auto_1fr] md:items-center px-4 py-2.5">
-            <span className="text-sm font-semibold text-fg">Mighty AI QR</span>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-fg-3 hover:text-fg transition-colors"><MenuIcon /></button>
+              <button onClick={startNewChat} className="text-sm font-semibold text-fg hover:text-fg-2 transition-colors">Mighty AI QR</button>
+            </div>
             <HeaderModelPill settingsVersion={settingsVersion} />
             <div className="flex items-center justify-end gap-2">
               {activeConvId && (
@@ -2032,7 +2089,7 @@ export default function Page() {
             <div className="flex items-center justify-between px-4 py-2.5">
               <div className="flex items-center gap-3">
                 <button onClick={() => setSidebarOpen(true)} className="text-fg-3 hover:text-fg transition-colors"><MenuIcon /></button>
-                <span className="text-sm font-semibold text-fg">Mighty AI QR</span>
+                <button onClick={startNewChat} className="text-sm font-semibold text-fg hover:text-fg-2 transition-colors">Mighty AI QR</button>
               </div>
               <div className="flex items-center gap-2">
                 {activeConvId && (
@@ -2062,11 +2119,7 @@ export default function Page() {
                   <p className="text-sm text-fg-4">Edit your message below and send to continue from here.</p>
                 </div>
               ) : messages.length === 0 ? (
-                <div className="flex h-full flex-col justify-end animate-fade-in pb-2">
-                  <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-surface-2 px-4 py-3 text-sm text-fg">
-                    What tone are you after? Describe an artist, song, genre, or mood and I&apos;ll dial it in.
-                  </div>
-                </div>
+                <SuggestionScreen onSend={send} />
               ) : (
                 messages.map((msg, idx) => (
                   <MessageRow
@@ -2143,7 +2196,7 @@ export default function Page() {
                       <button
                         onClick={() => { abortRef.current?.abort(); setLoading(false) }}
                         title="Cancel"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-600/80 text-white hover:bg-red-600 transition-colors"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-on-primary hover:opacity-90 transition-colors"
                       >
                         <StopIcon />
                       </button>
@@ -2188,7 +2241,7 @@ export default function Page() {
       </div>
 
       {popupQr && (
-        <ChatQrModal qr={popupQr.qr} description={popupQr.description} onClose={() => setPopupQr(null)} onRefine={() => { setPopupQr(null); requestAnimationFrame(() => textareaRef.current?.focus()) }} />
+        <ChatQrModal qr={popupQr.qr} description={popupQr.description} onClose={() => { setPopupQr(null); requestAnimationFrame(() => { scrollToBottom(); textareaRef.current?.focus() }) }} onRefine={() => { setPopupQr(null); requestAnimationFrame(() => textareaRef.current?.focus()) }} />
       )}
 
       {showSettings && <SettingsPanel onClose={() => { setShowSettings(false); setSettingsVersion(v => v + 1) }} />}
