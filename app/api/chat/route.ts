@@ -21,6 +21,8 @@ function normalizeBaseUrl(url: string, provider: string): string {
   return normalized
 }
 
+export const maxDuration = 300 // 5 minutes — local LLMs (e.g. 20B models) can be slow
+
 export async function POST(request: NextRequest) {
   const deviceId = getDeviceIdFromRequest(request.headers.get('Authorization'))
   if (!deviceId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
