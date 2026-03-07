@@ -64,7 +64,7 @@ export async function fetchModels(
   }
 }
 
-export async function sendChat(messages: Message[]): Promise<ChatResponse> {
+export async function sendChat(messages: Message[], signal?: AbortSignal): Promise<ChatResponse> {
   let token = getToken()
   if (!token) {
     await authenticate()
@@ -82,6 +82,7 @@ export async function sendChat(messages: Message[]): Promise<ChatResponse> {
 
   const res = await fetch(`${BASE}/chat`, {
     method: 'POST',
+    signal,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,

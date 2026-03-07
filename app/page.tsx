@@ -9,7 +9,7 @@ import {
   loadHistory, saveToHistory, deleteHistoryItem, renameHistoryItem, clearAllHistory,
   loadConversations, upsertConversation,
   deleteConversation, clearAllConversations, autoTitle, relativeTime,
-  getApiSettings, saveApiSettings,
+  getApiSettings, saveApiSettings, getActiveConfig,
   getTheme, saveTheme,
   type AiProvider, type ProviderConfig, type Theme,
 } from '@/lib/storage'
@@ -110,6 +110,12 @@ const AppIcon = () => (
 const SendIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
     <path d="M12 4l-1.41 1.41L17.17 11H4v2h13.17l-6.58 6.59L12 21l9-9z" transform="rotate(-90 12 12)" />
+  </svg>
+)
+
+const StopIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="4" y="4" width="16" height="16" rx="2" />
   </svg>
 )
 
@@ -950,6 +956,46 @@ function ModelDropdown({
   )
 }
 
+function ModelBar({ settingsVersion }: { settingsVersion: number }) {
+  const [config, setConfig] = useState(() => getActiveConfig())
+  const [models, setModels] = useState<string[]>([])
+  const [loadingModels, setLoadingModels] = useState(false)
+
+  useEffect(() => { setConfig(getActiveConfig()) }, [settingsVersion])
+
+  useEffect(() => {
+    if (!config) return
+    let cancelled = false
+    setModels([])
+    setLoadingModels(true)
+    fetchModels(config.provider, config.apiKey, config.baseUrl ?? '').then(m => {
+      if (!cancelled) { setModels(m); setLoadingModels(false) }
+    })
+    return () => { cancelled = true }
+  }, [config?.provider, config?.apiKey, config?.baseUrl])
+
+  if (!config) return null
+
+  const providerLabel = PROVIDERS.find(p => p.id === config.provider)?.label ?? config.provider
+
+  const handleModelChange = (model: string) => {
+    const settings = getApiSettings()
+    if (!settings) return
+    const providerConf: ProviderConfig = { ...(settings.configs[config.provider] ?? { apiKey: '' }), model }
+    saveApiSettings({ ...settings, configs: { ...settings.configs, [config.provider]: providerConf } })
+    setConfig((prev): typeof prev => prev ? { ...prev, model } : prev)
+  }
+
+  return (
+    <div className="flex items-center gap-2 border-b border-white/10 bg-surface px-4 py-2">
+      <span className="shrink-0 text-[11px] text-fg-4">{providerLabel}</span>
+      <div className="flex-1">
+        <ModelDropdown value={config.model ?? ''} onChange={handleModelChange} models={models} loading={loadingModels} />
+      </div>
+    </div>
+  )
+}
+
 function SettingsPanel({ onClose }: { onClose: () => void }) {
   const saved = getApiSettings()
   const [provider, setProvider] = useState<AiProvider>(saved?.provider ?? 'anthropic')
@@ -1529,6 +1575,7 @@ export default function Page() {
   const [qrHistory, setQrHistory] = useState<HistoryItem[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [settingsVersion, setSettingsVersion] = useState(0)
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
   const [popupQr, setPopupQr] = useState<{ qr: QrResult; description: string } | null>(null)
@@ -1546,6 +1593,7 @@ export default function Page() {
   const recognitionRef = useRef<any>(null)
   const finalTranscriptRef = useRef('')
   const sendRef = useRef<(text: string) => void>(() => {})
+  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     const convs = loadConversations()
@@ -1731,8 +1779,11 @@ export default function Page() {
 
     scrollToBottom()
 
+    const abort = new AbortController()
+    abortRef.current = abort
+
     try {
-      const res = await sendChat(newMessages.map(({ role, content }) => ({ role, content })))
+      const res = await sendChat(newMessages.map(({ role, content }) => ({ role, content })), abort.signal)
       const aiMsg: ChatMessage = { id: uuidv4(), role: 'assistant', content: res.message, qr: res.qr }
       if (ttsEnabledRef.current && typeof window !== 'undefined' && window.speechSynthesis) {
         const plain = res.message.replace(/#{1,6} /g, '').replace(/[*_`~>]/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\n+/g, ' ').trim()
@@ -1752,8 +1803,10 @@ export default function Page() {
 
       persistConversation(convId!, finalMessages, newQr)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong')
+      if (e instanceof Error && e.name === 'AbortError') { /* cancelled by user */ }
+      else setError(e instanceof Error ? e.message : 'Something went wrong')
     } finally {
+      abortRef.current = null
       setLoading(false)
       scrollToBottom()
     }
@@ -1898,6 +1951,8 @@ export default function Page() {
           </div>
         </header>
 
+        <ModelBar settingsVersion={settingsVersion} />
+
         {/* Chat + QR */}
         <div className="flex flex-1 overflow-hidden">
 
@@ -1986,13 +2041,23 @@ export default function Page() {
                     >
                       <MicIcon />
                     </button>
-                    <button
-                      onClick={() => send(input)}
-                      disabled={loading || !input.trim()}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-on-primary hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <SendIcon />
-                    </button>
+                    {loading ? (
+                      <button
+                        onClick={() => abortRef.current?.abort()}
+                        title="Cancel"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-600/80 text-white hover:bg-red-600 transition-colors"
+                      >
+                        <StopIcon />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => send(input)}
+                        disabled={!input.trim()}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-on-primary hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <SendIcon />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2028,7 +2093,7 @@ export default function Page() {
         <ChatQrModal qr={popupQr.qr} description={popupQr.description} onClose={() => setPopupQr(null)} onRefine={() => { setPopupQr(null); requestAnimationFrame(() => textareaRef.current?.focus()) }} />
       )}
 
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsPanel onClose={() => { setShowSettings(false); setSettingsVersion(v => v + 1) }} />}
 
       {showErrorExplain && error && (
         <ErrorExplainModal error={error} onClose={() => setShowErrorExplain(false)} />
