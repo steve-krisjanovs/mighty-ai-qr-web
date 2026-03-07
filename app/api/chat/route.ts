@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getDeviceIdFromRequest } from '@/lib/server/jwt'
-import { canGenerate, incrementGeneration, getStatus } from '@/lib/server/entitlements'
 import { runChat, runChatOpenAI } from '@/lib/server/ai-tools'
 
 const serverClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -40,14 +39,6 @@ export async function POST(request: NextRequest) {
 
   const isByok = !!userApiKey || !!userBaseUrl
 
-  if (!isByok && !canGenerate(deviceId)) {
-    return NextResponse.json({
-      error: 'free_limit_reached',
-      message: 'Upgrade to Mighty AI Pro for unlimited tone generation.',
-      ...getStatus(deviceId),
-    }, { status: 402 })
-  }
-
   try {
     let result
 
@@ -62,9 +53,7 @@ export async function POST(request: NextRequest) {
       result = await runChat(serverClient, messages)
     }
 
-    if (result.qr && !isByok) incrementGeneration(deviceId)
-
-    return NextResponse.json({ ...result, ...(isByok ? {} : getStatus(deviceId)) })
+    return NextResponse.json(result)
   } catch (err) {
     console.error('[chat] error:', err)
     const message = err instanceof Error ? err.message : 'Internal server error'

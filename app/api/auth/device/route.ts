@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { signToken } from '@/lib/server/jwt'
-import { getStatus } from '@/lib/server/entitlements'
 
 export async function POST(request: NextRequest) {
   const body = await request.json()
@@ -10,8 +9,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid deviceId' }, { status: 400 })
   }
 
-  const status = getStatus(deviceId)
   const token = signToken({ deviceId })
-
-  return NextResponse.json({ token, ...status })
+  return NextResponse.json({ token })
 }
