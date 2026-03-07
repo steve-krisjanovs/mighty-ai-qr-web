@@ -1943,17 +1943,17 @@ export default function Page() {
       <div className="flex flex-1 flex-col overflow-hidden">
 
         {/* Header */}
-        <header className="flex items-center justify-between bg-surface px-4 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
+        <header className="grid grid-cols-[1fr_auto_1fr] lg:grid-cols-3 items-center bg-surface px-4 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
           <div className="flex items-center gap-3">
             <button onClick={() => setSidebarOpen(true)} className="text-fg-3 hover:text-fg transition-colors lg:hidden">
               <MenuIcon />
             </button>
             <span className="text-sm font-medium text-fg lg:hidden">Mighty AI QR</span>
           </div>
-          <div className="hidden lg:flex flex-1 justify-center px-4">
+          <div className="hidden lg:flex justify-center">
             <div className="w-72"><ModelBar settingsVersion={settingsVersion} inline /></div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2">
             {activeConvId && (
               <button
                 onClick={() => {
