@@ -81,7 +81,7 @@ export function relativeTime(ts: number): string {
 
 const SETTINGS_KEY = 'maq_settings'
 
-export type AiProvider = 'anthropic' | 'openai' | 'gemini' | 'grok' | 'mistral' | 'groq' | 'ollama' | 'openwebui' | 'lmstudio'
+export type AiProvider = 'builtin' | 'anthropic' | 'openai' | 'gemini' | 'grok' | 'mistral' | 'groq' | 'ollama' | 'openwebui' | 'lmstudio'
 
 export interface ProviderConfig {
   apiKey: string

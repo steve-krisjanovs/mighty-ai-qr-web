@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         }, { status: 429 })
       }
       const serverClient = new Anthropic({ apiKey: serverKey })
-      result = await runChat(serverClient, messages)
+      result = await runChat(serverClient, messages, 'claude-haiku-4-5-20251001')
     } else if (userProvider === 'anthropic') {
       const byokClient = new Anthropic({ apiKey: userApiKey })
       result = await runChat(byokClient, messages, userModel || undefined)

@@ -888,7 +888,8 @@ function AboutModal({ onClose }: { onClose: () => void }) {
 
 // ─── Settings Panel ───────────────────────────────────────────────────────────
 
-const PROVIDERS: { id: AiProvider; label: string; keyPlaceholder: string; defaultBase?: string; defaultModel?: string; local?: boolean; apiKeyUrl?: string; note?: string }[] = [
+const PROVIDERS: { id: AiProvider; label: string; keyPlaceholder: string; defaultBase?: string; defaultModel?: string; local?: boolean; apiKeyUrl?: string; note?: string; builtin?: boolean }[] = [
+  { id: 'builtin',   label: 'Free (Built-in)', keyPlaceholder: '', builtin: true, note: 'Powered by Claude Haiku. No key needed. Shared daily limit applies.' },
   { id: 'anthropic', label: 'Anthropic',  keyPlaceholder: 'sk-ant-...',             apiKeyUrl: 'https://console.anthropic.com/settings/keys', note: 'Free credits included on signup.' },
   { id: 'openai',    label: 'OpenAI',     keyPlaceholder: 'sk-...',                  defaultModel: 'gpt-4o', apiKeyUrl: 'https://platform.openai.com/api-keys', note: 'Requires a paid billing plan — no free tier.' },
   { id: 'gemini',    label: 'Gemini',     keyPlaceholder: 'AIza...',                 defaultModel: 'gemini-2.0-flash', defaultBase: 'https://generativelanguage.googleapis.com/v1beta/openai', apiKeyUrl: 'https://aistudio.google.com/app/apikey', note: 'API billing is separate from Gemini Pro. Enable billing in Google Cloud for full access.' },
@@ -901,6 +902,7 @@ const PROVIDERS: { id: AiProvider; label: string; keyPlaceholder: string; defaul
 ]
 
 const PROVIDER_GROUPS = [
+  { label: 'Free Tier', ids: ['builtin'] as AiProvider[] },
   { label: 'Cloud', ids: ['anthropic', 'openai', 'gemini', 'grok', 'mistral', 'groq'] as AiProvider[] },
   { label: 'Local', ids: ['ollama', 'openwebui', 'lmstudio'] as AiProvider[] },
 ]
@@ -986,6 +988,23 @@ function ProviderDropdown({ value, onChange }: { value: AiProvider; onChange: (p
   )
 }
 
+function BuiltinPill() {
+  const [remaining, setRemaining] = useState<number | null>(null)
+  useEffect(() => {
+    fetch('/api/quota').then(r => r.json()).then(d => setRemaining(d.remaining)).catch(() => {})
+  }, [])
+  return (
+    <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-4 select-none">
+      Haiku · Free
+      {remaining !== null && (
+        <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${remaining <= 10 ? 'bg-red-900/40 text-red-400' : 'bg-white/5 text-fg-4'}`}>
+          {remaining} left today
+        </span>
+      )}
+    </div>
+  )
+}
+
 // Self-contained desktop header pill — reads/writes localStorage, fetches models
 function HeaderModelPill({ settingsVersion }: { settingsVersion: number }) {
   const [config, setConfig] = useState<ReturnType<typeof getActiveConfig>>(null)
@@ -1004,11 +1023,9 @@ function HeaderModelPill({ settingsVersion }: { settingsVersion: number }) {
     return () => { cancelled = true }
   }, [config?.provider, config?.apiKey, config?.baseUrl])
 
-  if (!config) return (
-    <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-4 select-none">
-      Sonnet · Free
-    </div>
-  )
+  if (!config || config.provider === 'builtin') return <BuiltinPill />
+
+
 
   const handleChange = (model: string) => {
     const settings = getApiSettings()
@@ -1225,7 +1242,7 @@ function ModelBar({ settingsVersion, compact = false, inline = false, compactDro
 
 function SettingsPanel({ onClose }: { onClose: () => void }) {
   const saved = getApiSettings()
-  const [provider, setProvider] = useState<AiProvider>(saved?.provider ?? 'anthropic')
+  const [provider, setProvider] = useState<AiProvider>(saved?.provider ?? 'builtin')
   const [configs, setConfigs] = useState<Partial<Record<AiProvider, ProviderConfig>>>(saved?.configs ?? {})
   const [showKey, setShowKey] = useState(false)
   const [didSave, setDidSave] = useState(false)
@@ -1380,7 +1397,7 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Base URL — local providers + Gemini */}
-          {(isLocal || provider === 'gemini') && (
+          {provider !== 'builtin' && (isLocal || provider === 'gemini') && (
             <div>
               <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-3">Base URL</p>
               <input
@@ -1400,18 +1417,20 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
           )}
 
           {/* Model */}
-          <div>
-            <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-3">Model</p>
-            <ModelDropdown
-              value={model}
-              onChange={setModel}
-              models={availableModels}
-              loading={loadingModels}
-            />
-          </div>
+          {provider !== 'builtin' && (
+            <div>
+              <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-3">Model</p>
+              <ModelDropdown
+                value={model}
+                onChange={setModel}
+                models={availableModels}
+                loading={loadingModels}
+              />
+            </div>
+          )}
 
           {/* API Key */}
-          <div>
+          {provider !== 'builtin' && <div>
             <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-3">
               API Key {isLocal && <span className="normal-case text-fg-4">(optional for local)</span>}
             </p>
@@ -1433,7 +1452,7 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
             <p className="mt-1.5 text-[11px] text-fg-4">
               Stored per provider, locally in your browser. Never sent to our servers.
             </p>
-          </div>
+          </div>}
 
           <button
             onClick={handleSave}
