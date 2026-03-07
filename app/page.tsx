@@ -1400,9 +1400,9 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
           <div className="border-t border-white/10 pt-4">
             <button
               onClick={() => setShowAboutModal(true)}
-              className="flex w-full items-center justify-between text-xs text-fg-3 hover:text-fg transition-colors"
+              className="flex w-full items-center justify-between hover:text-fg transition-colors"
             >
-              <span>About</span>
+              <span className="text-xs font-medium text-fg-3 uppercase tracking-wider">About</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
             </button>
           </div>
