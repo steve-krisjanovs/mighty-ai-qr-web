@@ -1616,7 +1616,8 @@ function ConvItem({ conv, active, onSelect, onDeleteRequest, onRename }: {
 // ─── Suggestion Screen ────────────────────────────────────────────────────────
 
 function SuggestionScreen({ onSend }: { onSend: (text: string) => void }) {
-  const [current, setCurrent] = useState(() => getRandomSuggestions(6))
+  const [current, setCurrent] = useState<string[]>(ALL_SUGGESTIONS.slice(0, 6))
+  useEffect(() => { setCurrent(getRandomSuggestions(6)) }, [])
   const next = () => setCurrent(prev => getRandomSuggestions(6, prev))
   return (
     <div className="flex h-full flex-col justify-end animate-fade-in pb-2 gap-3">
