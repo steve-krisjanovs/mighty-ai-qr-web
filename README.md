@@ -46,7 +46,6 @@ Runs on port `3005`. Access via `https://mighty-qr.linux.internal` (requires Cad
 |---|---|---|
 | `JWT_SECRET` | Yes | Secret for signing device tokens |
 | `ANTHROPIC_API_KEY` | No | Server-side Claude key (users can BYOK) |
-| `REVENUECAT_WEBHOOK_SECRET` | No | For subscription webhooks |
 | `RUNNING_IN_DOCKER` | Auto | Set to `"true"` by docker-compose — rewrites `localhost` → `host.docker.internal` for local LLMs |
 | `DB_PATH` | No | SQLite path (default `./data/mighty.db`) |
 

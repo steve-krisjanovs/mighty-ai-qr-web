@@ -8,7 +8,6 @@ services:
     environment:
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      REVENUECAT_WEBHOOK_SECRET: ${REVENUECAT_WEBHOOK_SECRET:-}
       RUNNING_IN_DOCKER: "true"
       DB_PATH: /data/mighty.db
     volumes:
