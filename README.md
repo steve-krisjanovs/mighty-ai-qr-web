@@ -42,6 +42,7 @@ Installable as a PWA on mobile and desktop.
 - Copy to clipboard on every chat bubble
 - Cancel in-flight requests
 - **PWA update banner** — detects new version in the background and prompts to refresh with one tap
+- **Version stamped QR images** — every generated QR image includes the app version in the header
 
 ## Requirements
 
