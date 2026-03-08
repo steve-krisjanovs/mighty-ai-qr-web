@@ -1530,7 +1530,7 @@ function QrHistoryItem({ item, onOpen, onDeleteRequest, onRename }: {
           <p className="text-[10px] text-fg-4">{relativeTime(item.timestamp)}</p>
         </div>
       </button>
-      <button onClick={e => { e.stopPropagation(); onDeleteRequest() }} className="shrink-0 text-fg-4 hover:text-fg-2 transition-colors">
+      <button onClick={e => { e.stopPropagation(); onDeleteRequest() }} className="flex h-7 w-7 shrink-0 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
         <TrashIcon />
       </button>
     </div>
@@ -1538,7 +1538,7 @@ function QrHistoryItem({ item, onOpen, onDeleteRequest, onRename }: {
 }
 
 function Sidebar({
-  conversations, activeId, onSelect, onNew, onDelete, onRenameConv, qrHistory, onQrSelect, onQrDelete, onRenameQr, onDeleteRequest, visible, collapsed, onClose, onQrImported, onSettings, onDeleteAllChats, onDeleteAllQr,
+  conversations, activeId, onSelect, onNew, onDelete, onRenameConv, qrHistory, onQrSelect, onQrDelete, onRenameQr, onDeleteRequest, visible, collapsed, onClose, onCollapse, onQrImported, onSettings, onDeleteAllChats, onDeleteAllQr,
 }: {
   conversations: Conversation[]
   activeId: string | null
@@ -1554,6 +1554,7 @@ function Sidebar({
   visible: boolean
   collapsed: boolean
   onClose: () => void
+  onCollapse: () => void
   onQrImported: (file: File) => void
   onSettings: () => void
   onDeleteAllChats: () => void
@@ -1569,20 +1570,25 @@ function Sidebar({
         <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />
       )}
       <aside className={`
-        fixed top-0 left-0 z-50 h-full w-[260px] bg-surface shadow-[4px_0_16px_rgba(0,0,0,0.35)]
-        flex flex-col transition-transform duration-200
-        lg:relative lg:z-auto
-        ${visible ? 'translate-x-0' : '-translate-x-full'}
-        ${collapsed ? 'lg:-translate-x-full lg:hidden' : 'lg:translate-x-0'}
+        fixed top-0 left-0 z-50 h-full bg-surface shadow-[4px_0_16px_rgba(0,0,0,0.35)]
+        flex flex-col overflow-hidden transition-[transform,width] duration-200
+        lg:relative
+        ${visible ? 'translate-x-0 w-[260px]' : '-translate-x-full w-[260px]'}
+        ${collapsed ? 'lg:w-0 lg:translate-x-0' : 'lg:w-[260px] lg:translate-x-0'}
       `}>
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3 shrink-0 min-w-[260px]">
           <div className="flex items-center gap-2.5">
             <AppIcon />
-            <span className="text-sm font-medium text-fg">Mighty AI QR</span>
+            <span className="text-sm font-medium text-fg whitespace-nowrap">Mighty AI QR</span>
           </div>
-          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-fg-3 hover:bg-surface-2 hover:text-fg transition-colors lg:hidden">
-            <CloseIcon />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-fg-3 hover:bg-surface-2 hover:text-fg transition-colors lg:hidden">
+              <CloseIcon />
+            </button>
+            <button onClick={onCollapse} title="Collapse sidebar" className="hidden lg:flex h-7 w-7 items-center justify-center rounded-lg text-fg-3 hover:bg-surface-2 hover:text-fg transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center border-b border-white/10 mx-3">
@@ -1700,7 +1706,7 @@ function ConvItem({ conv, active, onSelect, onDeleteRequest, onRename }: {
       </div>
       <button
         onClick={e => { e.stopPropagation(); onDeleteRequest() }}
-        className="ml-2 shrink-0 text-fg-4 hover:text-fg-2 transition-colors"
+        className="ml-2 flex h-7 w-7 shrink-0 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
       >
         <TrashIcon />
       </button>
@@ -2167,6 +2173,7 @@ export default function Page() {
         visible={sidebarOpen}
         collapsed={sidebarCollapsed}
         onClose={() => setSidebarOpen(false)}
+        onCollapse={() => setSidebarCollapsed(true)}
         onQrImported={async (file) => {
           const bitmap = await createImageBitmap(file)
           const [scanned, importNote] = await Promise.all([
@@ -2368,7 +2375,9 @@ export default function Page() {
             <div className="hidden w-[360px] shrink-0 flex-col overflow-y-auto bg-bg p-5 lg:flex border-l border-white/5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-fg-4">QR Code</p>
-                <button onClick={() => setShowQrPanel(false)} className="text-fg-4 hover:text-fg-2 transition-colors"><CloseIcon /></button>
+                <button onClick={() => setShowQrPanel(false)} title="Close" className="flex h-7 w-7 items-center justify-center rounded-lg text-fg-3 hover:bg-surface-2 hover:text-fg transition-colors">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
               </div>
               <div className="animate-fade-in">
                 <QrCard qr={currentQr} description={currentQrDescription} />
