@@ -2103,7 +2103,12 @@ export default function Page() {
         if (res.qr) {
           setCurrentQr(res.qr)
           setCurrentQrDescription(res.message)
-          setShowQrPanel(true)
+          const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+          if (isDesktop) {
+            setShowQrPanel(true)
+          } else {
+            setPopupQr({ qr: res.qr, description: res.message })
+          }
           if (historyItem) setQrHistory(prev => [historyItem, ...prev].slice(0, 20))
         }
       })
