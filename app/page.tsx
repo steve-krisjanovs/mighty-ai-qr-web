@@ -922,7 +922,7 @@ function AboutModal({ onClose }: { onClose: () => void }) {
 // ─── Settings Panel ───────────────────────────────────────────────────────────
 
 const PROVIDERS: { id: AiProvider; label: string; keyPlaceholder: string; defaultBase?: string; defaultModel?: string; local?: boolean; apiKeyUrl?: string; note?: string; builtin?: boolean }[] = [
-  { id: 'builtin',   label: 'Free (Built-in)', keyPlaceholder: '', builtin: true, note: 'Powered by Claude Haiku. No key needed. Shared daily limit applies.' },
+  { id: 'builtin',   label: 'Free (Built-in)', keyPlaceholder: '', builtin: true, note: 'Powered by Claude Sonnet. No key needed. Shared daily limit applies.' },
   { id: 'anthropic', label: 'Anthropic',  keyPlaceholder: 'sk-ant-...',             apiKeyUrl: 'https://console.anthropic.com/settings/keys', note: 'Free credits included on signup.' },
   { id: 'openai',    label: 'OpenAI',     keyPlaceholder: 'sk-...',                  defaultModel: 'gpt-4o', apiKeyUrl: 'https://platform.openai.com/api-keys', note: 'Requires a paid billing plan — no free tier.' },
   { id: 'gemini',    label: 'Gemini',     keyPlaceholder: 'AIza...',                 defaultModel: 'gemini-2.0-flash', defaultBase: 'https://generativelanguage.googleapis.com/v1beta/openai', apiKeyUrl: 'https://aistudio.google.com/app/apikey', note: 'API billing is separate from Gemini Pro. Enable billing in Google Cloud for full access.' },
@@ -1029,15 +1029,17 @@ function ProviderDropdown({ value, onChange }: { value: AiProvider; onChange: (p
 
 function BuiltinPill() {
   const [remaining, setRemaining] = useState<number | null>(null)
+  const [model, setModel] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const fetchQuota = useCallback(() => {
     setRefreshing(true)
-    fetch('/api/quota').then(r => r.json()).then(d => { setRemaining(d.remaining); setRefreshing(false) }).catch(() => setRefreshing(false))
+    fetch('/api/quota').then(r => r.json()).then(d => { setRemaining(d.remaining); setModel(d.model ?? null); setRefreshing(false) }).catch(() => setRefreshing(false))
   }, [])
   useEffect(() => { fetchQuota() }, [fetchQuota])
+  const modelLabel = model ? (model.split('-')[1] ?? 'Free').charAt(0).toUpperCase() + (model.split('-')[1] ?? 'free').slice(1) : null
   return (
     <button onClick={fetchQuota} className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-4 select-none active:opacity-70 transition-opacity">
-      Haiku · Free
+      {modelLabel ?? 'Free'} · Free
       {remaining !== null && (
         <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${remaining <= 10 ? 'bg-red-900/40 text-red-400' : 'bg-white/5 text-fg-4'}`}>
           {refreshing ? '...' : `${remaining} left today`}

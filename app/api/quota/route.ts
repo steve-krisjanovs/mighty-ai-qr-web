@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import db from '@/lib/server/db'
 
 const FREE_DAILY_LIMIT = parseInt(process.env.FREE_DAILY_LIMIT ?? '100', 10)
+const FREE_MODEL = process.env.FREE_MODEL || 'claude-sonnet-4-6'
 
 interface QuotaRow { count: number }
 
@@ -12,5 +13,5 @@ export async function GET() {
   const row = db.prepare('SELECT count FROM daily_quota WHERE date = ?').get(today) as unknown as QuotaRow | undefined
   const used = row?.count ?? 0
   const remaining = Math.max(0, FREE_DAILY_LIMIT - used)
-  return NextResponse.json({ remaining, limit: FREE_DAILY_LIMIT })
+  return NextResponse.json({ remaining, limit: FREE_DAILY_LIMIT, model: FREE_MODEL })
 }
