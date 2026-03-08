@@ -1493,12 +1493,13 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
               className="flex w-full items-center justify-between hover:text-fg transition-colors"
             >
               <span className="text-xs font-medium text-fg-3 uppercase tracking-wider">About</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-fg-4">v{pkg.version}</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              </div>
             </button>
           </div>
           {showAboutModal && <AboutModal onClose={() => setShowAboutModal(false)} />}
-
-          <p className="text-center text-[10px] text-fg-4 pt-2">v{pkg.version}</p>
         </div>
       </aside>
     </>
