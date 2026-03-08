@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getDeviceIdFromRequest } from '@/lib/server/jwt'
-import { runChat, runChatOpenAI } from '@/lib/server/ai-tools'
+import { runChat, runChatOpenAI, SYSTEM_PROMPT_HAIKU, SYSTEM_PROMPT_FULL } from '@/lib/server/ai-tools'
 import { checkAndIncrementQuota } from '@/lib/server/quota'
 
 const DEFAULT_MODELS: Record<string, string> = {
@@ -55,14 +55,14 @@ export async function POST(request: NextRequest) {
         }, { status: 429 })
       }
       const serverClient = new Anthropic({ apiKey: serverKey })
-      result = await runChat(serverClient, messages, 'claude-haiku-4-5-20251001')
+      result = await runChat(serverClient, messages, 'claude-haiku-4-5-20251001', SYSTEM_PROMPT_HAIKU)
     } else if (userProvider === 'anthropic') {
       const byokClient = new Anthropic({ apiKey: userApiKey })
-      result = await runChat(byokClient, messages, userModel || undefined)
+      result = await runChat(byokClient, messages, userModel || undefined, SYSTEM_PROMPT_FULL)
     } else {
       const baseUrl = normalizeBaseUrl(userBaseUrl, userProvider)
       const model   = userModel || DEFAULT_MODELS[userProvider] || 'llama3.2'
-      result = await runChatOpenAI(baseUrl, userApiKey || 'none', model, messages)
+      result = await runChatOpenAI(baseUrl, userApiKey || 'none', model, messages, SYSTEM_PROMPT_FULL)
     }
 
     return NextResponse.json(result)

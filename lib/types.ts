@@ -24,6 +24,7 @@ export interface QrResult {
   settings: QrSetting[]
   guitar?: GuitarSetup
   importNote?: string
+  imported?: boolean
 }
 
 export interface ChatMessage extends Message {
