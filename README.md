@@ -12,10 +12,10 @@ Installable as a PWA on mobile and desktop.
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/home_dark.png" width="180"/><br/><sub>Dark</sub></td>
-    <td align="center"><img src="docs/screenshots/home_amber.png" width="180"/><br/><sub>Amber</sub></td>
+    <td align="center"><img src="docs/screenshots/home_oled.png" width="180"/><br/><sub>OLED</sub></td>
+    <td align="center"><img src="docs/screenshots/home_oxblood.png" width="180"/><br/><sub>Oxblood</sub></td>
     <td align="center"><img src="docs/screenshots/home_tweed.png" width="180"/><br/><sub>Tweed</sub></td>
-    <td align="center"><img src="docs/screenshots/home_light.png" width="180"/><br/><sub>Light</sub></td>
+    <td align="center"><img src="docs/screenshots/qr_popup.png" width="180"/><br/><sub>QR popup</sub></td>
     <td align="center"><img src="docs/screenshots/settings_dark.png" width="180"/><br/><sub>Settings</sub></td>
   </tr>
 </table>
