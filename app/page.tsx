@@ -1581,7 +1581,7 @@ function Sidebar({
         ${visible ? 'translate-x-0 w-[260px]' : '-translate-x-full w-[260px]'}
         ${collapsed ? 'lg:w-0 lg:translate-x-0' : 'lg:w-[260px] lg:translate-x-0'}
       `}>
-        <div className="flex items-center justify-between px-4 py-3 shrink-0 min-w-[260px]">
+        <div className="flex items-center justify-between px-3 py-3 shrink-0 min-w-[260px]">
           <div className="flex items-center gap-2.5">
             <AppIcon />
             <span className="text-sm font-medium text-fg whitespace-nowrap">Mighty AI QR</span>
