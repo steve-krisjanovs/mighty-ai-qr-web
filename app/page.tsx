@@ -2104,12 +2104,7 @@ export default function Page() {
         if (res.qr) {
           setCurrentQr(res.qr)
           setCurrentQrDescription(res.message)
-          const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
-          if (isDesktop) {
-            setShowQrPanel(true)
-          } else {
-            setPopupQr({ qr: res.qr, description: res.message })
-          }
+          // Don't auto-show — user taps "View QR code" to open
           if (historyItem) setQrHistory(prev => [historyItem, ...prev].slice(0, 20))
         }
       })
@@ -2307,7 +2302,11 @@ export default function Page() {
                     onDismiss={() => setActiveMessageId(null)}
                     onEdit={handleEditMsg}
                     onDelete={handleDeleteMsg}
-                    onQrOpen={(qr, description) => setPopupQr({ qr, description })}
+                    onQrOpen={(qr, description) => {
+                      const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+                      if (isDesktop) { setCurrentQr(qr); setCurrentQrDescription(description); setShowQrPanel(true) }
+                      else setPopupQr({ qr, description })
+                    }}
                     disabled={loading}
                   />
                 ))
