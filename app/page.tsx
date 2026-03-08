@@ -455,13 +455,16 @@ function QrCard({ qr, description, className = '' }: { qr: QrResult; description
             <p className="text-[11px] text-fg-4 leading-relaxed mt-1.5">{description}</p>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
             <DownloadIcon /> Download
           </button>
           <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
             <YoutubeIcon /> Reference
           </a>
+          <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
+            <FacebookIcon /> {shareLabel}
+          </button>
         </div>
         <div className="border-t border-white/10 pt-3">
           <button onClick={() => setSettingsOpen(o => !o)} className="flex w-full items-center justify-between text-xs text-fg-3 hover:text-fg transition-colors">
@@ -2267,8 +2270,8 @@ export default function Page() {
                 <button onClick={() => setShowSettings(true)} title="Settings" className="flex items-center justify-center h-8 w-8 rounded-lg text-fg-3 hover:text-fg transition-colors"><GearIcon /></button>
               </div>
             </div>
-            <div className="border-t border-white/10 px-4 py-2">
-              <ModelBar settingsVersion={settingsVersion} inline />
+            <div className="flex justify-center border-t border-white/10 px-4 py-2">
+              <HeaderModelPill settingsVersion={settingsVersion} />
             </div>
           </div>
 
@@ -2389,7 +2392,7 @@ export default function Page() {
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-fg-4">QR Code</p>
                 <button onClick={() => setShowQrPanel(false)} title="Close" className="flex h-7 w-7 items-center justify-center rounded-lg text-fg-3 hover:bg-surface-2 hover:text-fg transition-colors">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
               </div>
               <div className="animate-fade-in">
