@@ -2381,7 +2381,7 @@ export default function Page() {
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-fg-4">QR Code</p>
                 <button onClick={() => setShowQrPanel(false)} title="Close" className="flex h-7 w-7 items-center justify-center rounded-lg text-fg-3 hover:bg-surface-2 hover:text-fg transition-colors">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>
               </div>
               <div className="animate-fade-in">
