@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import UpdateBanner from './UpdateBanner'
 
 export const metadata: Metadata = {
   title: 'Mighty AI QR',
@@ -24,7 +25,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="h-full overflow-hidden">{children}</body>
+      <body className="h-full overflow-hidden">
+        {children}
+        <UpdateBanner />
+      </body>
     </html>
   )
 }
