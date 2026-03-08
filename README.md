@@ -41,6 +41,7 @@ Installable as a PWA on mobile and desktop.
 - 19 themes — 3 standard (Dark, OLED, Light) + 8 dark vintage + 8 light vintage (sunlit variants of each amp theme), grouped in Settings
 - Copy to clipboard on every chat bubble
 - Cancel in-flight requests
+- **PWA update banner** — detects new version in the background and prompts to refresh with one tap
 
 ## Requirements
 
