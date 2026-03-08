@@ -36,7 +36,9 @@ Installable as a PWA on mobile and desktop.
 - Conversation history with rename and delete
 - QR history sidebar with rename, delete, and import
 - Suggestion chips on home screen (100+ randomised prompts)
-- 11 themes — Dark, OLED, Light, Tweed, Amber, British, Oxblood, Silver Panel, Pedalboard, Blackface, Plexi
+- **Default NUX Device** setting — select your device once in Settings; the AI uses it as the default for all generated QR codes
+- Device name baked into the QR code image (preset name + device + optional guitar setup)
+- 19 themes — 3 standard (Dark, OLED, Light) + 8 dark vintage + 8 light vintage (sunlit variants of each amp theme), grouped in Settings
 - Copy to clipboard on every chat bubble
 - Cancel in-flight requests
 
