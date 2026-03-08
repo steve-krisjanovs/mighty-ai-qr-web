@@ -6,38 +6,65 @@ Describe a guitar tone in natural language and get a scannable NUX MightyAmp QR 
 
 Installable as a PWA on mobile and desktop.
 
+**Live:** [mighty-ai-qr-web.onrender.com](https://mighty-ai-qr-web.onrender.com)
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/home_dark.png" width="180"/><br/><sub>Dark</sub></td>
+    <td align="center"><img src="docs/screenshots/home_amber.png" width="180"/><br/><sub>Amber</sub></td>
+    <td align="center"><img src="docs/screenshots/home_tweed.png" width="180"/><br/><sub>Tweed</sub></td>
+    <td align="center"><img src="docs/screenshots/home_light.png" width="180"/><br/><sub>Light</sub></td>
+    <td align="center"><img src="docs/screenshots/settings_dark.png" width="180"/><br/><sub>Settings</sub></td>
+  </tr>
+</table>
+
 ## Stack
 
 - **Next.js 15** (App Router, TypeScript, Tailwind CSS)
 - **SQLite** via `node:sqlite` — conversations and QR history persisted server-side (Docker volume)
 - **JWT auth** — device-scoped, no accounts required
-- **AI providers** — BYOK for Anthropic, OpenAI, Gemini, Grok, Mistral, Groq, Ollama, LM Studio, Open WebUI
-- **Docker** — single container, SQLite volume, `proxy_net`
+- **Free tier** — shared daily quota powered by Claude Haiku (server-side key); no API key needed
+- **BYOK** — bring your own key for Anthropic, OpenAI, Gemini, Grok, Mistral, Groq, Ollama, LM Studio, Open WebUI
+- **Docker** — single container, SQLite volume
 
 ## Features
 
 - Chat UI with markdown rendering, voice input (Web Speech API), TTS
-- Inline QR code cards with tone settings, guitar recommendations, download
+- Inline QR code cards with tone settings, guitar recommendations, download, share
 - QR import — scan an existing QR image to decode and save its settings
 - Conversation history with rename and delete
 - QR history sidebar with rename, delete, and import
 - Suggestion chips on home screen (100+ randomised prompts)
-- Multi-theme support
+- 11 themes — Dark, OLED, Light, Tweed, Amber, British, Oxblood, Silver Panel, Pedalboard, Blackface, Plexi
 - Copy to clipboard on every chat bubble
 - Cancel in-flight requests
 
 ## Requirements
 
 - Docker
-- `proxy_net` external Docker network
 
-## Run
+For self-hosted use with Caddy and an internal network, use `docker-compose.yml` (requires a `proxy_net` external Docker network).
+
+For public hosting (Render, VPS), use `docker-compose.prod.yml` — no external network needed, includes Caddy with automatic HTTPS.
+
+## Run (local)
 
 ```bash
 docker compose up -d
 ```
 
 Runs on port `3005`. Access via `https://mighty-qr.linux.internal` (requires Caddy + internal DNS).
+
+## Deploy (public)
+
+```bash
+# Set your domain in Caddyfile, then:
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Or deploy to [Render](https://render.com): connect the repo, select Docker, add a persistent disk at `/data`, and set the environment variables below.
 
 ## Environment Variables
 
@@ -77,4 +104,3 @@ Runs on `http://localhost:3000`. SQLite is created at `./data/mighty.db`.
 ## Credits
 
 QR format reverse-engineered from the NUX MightyAmp ecosystem. Special thanks to [tuntorius](https://github.com/tuntorius) for the open-source [mightier_amp](https://github.com/tuntorius/mightier_amp) Flutter app, which was an invaluable reference for the QR encoding format.
-
