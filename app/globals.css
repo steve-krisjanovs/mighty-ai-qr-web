@@ -178,6 +178,134 @@
   --scrollbar-h:rgba(212,147,10,0.4);
 }
 
+/* Tweed Light — cream linen, warm tobacco text, gold primary */
+[data-theme="tweed-lt"] {
+  --bg:         #efe9d6;
+  --surface:    #fdf7ea;
+  --surface-2:  #efe9d6;
+  --surface-3:  #e2d7bc;
+  --primary:    #9a7418;
+  --on-primary: #fdf7ea;
+  --fg:         #2e1a04;
+  --fg-2:       #4e3010;
+  --fg-3:       #7a5828;
+  --fg-4:       #a88040;
+  --scrollbar:  rgba(154,116,24,0.25);
+  --scrollbar-h:rgba(154,116,24,0.45);
+}
+
+/* Amber Light — warm parchment, deep amber */
+[data-theme="amber-lt"] {
+  --bg:         #f5edcc;
+  --surface:    #fdf8e8;
+  --surface-2:  #f5edcc;
+  --surface-3:  #e8dab0;
+  --primary:    #c07800;
+  --on-primary: #fdf8e8;
+  --fg:         #2a1c00;
+  --fg-2:       #4a3208;
+  --fg-3:       #7a5818;
+  --fg-4:       #aa8030;
+  --scrollbar:  rgba(192,120,0,0.25);
+  --scrollbar-h:rgba(192,120,0,0.45);
+}
+
+/* British Light — sage parchment, forest green text, gold primary */
+[data-theme="british-lt"] {
+  --bg:         #e8eddc;
+  --surface:    #f6faf0;
+  --surface-2:  #e8eddc;
+  --surface-3:  #d8e4c8;
+  --primary:    #7a6010;
+  --on-primary: #f6faf0;
+  --fg:         #101a06;
+  --fg-2:       #203810;
+  --fg-3:       #3a5a20;
+  --fg-4:       #608048;
+  --scrollbar:  rgba(122,96,16,0.25);
+  --scrollbar-h:rgba(122,96,16,0.45);
+}
+
+/* Oxblood Light — blush cream, deep burgundy */
+[data-theme="oxblood-lt"] {
+  --bg:         #f0e4e4;
+  --surface:    #fdf5f5;
+  --surface-2:  #f0e4e4;
+  --surface-3:  #e4d0d0;
+  --primary:    #8a2020;
+  --on-primary: #fdf5f5;
+  --fg:         #200808;
+  --fg-2:       #3a1010;
+  --fg-3:       #682828;
+  --fg-4:       #a05050;
+  --scrollbar:  rgba(138,32,32,0.25);
+  --scrollbar-h:rgba(138,32,32,0.45);
+}
+
+/* Silver Light — platinum panel, warm charcoal text */
+[data-theme="silver-lt"] {
+  --bg:         #e8eaec;
+  --surface:    #f8f9fa;
+  --surface-2:  #e8eaec;
+  --surface-3:  #d8dce0;
+  --primary:    #7a6840;
+  --on-primary: #f8f9fa;
+  --fg:         #16181a;
+  --fg-2:       #363c40;
+  --fg-3:       #546068;
+  --fg-4:       #8a9298;
+  --scrollbar:  rgba(122,104,64,0.25);
+  --scrollbar-h:rgba(122,104,64,0.45);
+}
+
+/* Pedalboard Light — military sage, dark olive text */
+[data-theme="pedalboard-lt"] {
+  --bg:         #dce8d8;
+  --surface:    #f0f8ec;
+  --surface-2:  #dce8d8;
+  --surface-3:  #cad8c4;
+  --primary:    #386820;
+  --on-primary: #f0f8ec;
+  --fg:         #0c1c08;
+  --fg-2:       #1c3810;
+  --fg-3:       #365828;
+  --fg-4:       #5a8048;
+  --scrollbar:  rgba(56,104,32,0.25);
+  --scrollbar-h:rgba(56,104,32,0.45);
+}
+
+/* Blackface Light — silver-blue Fender panel, navy text */
+[data-theme="blackface-lt"] {
+  --bg:         #d8e4f0;
+  --surface:    #f0f6fd;
+  --surface-2:  #d8e4f0;
+  --surface-3:  #c4d4e8;
+  --primary:    #1a5a9a;
+  --on-primary: #f0f6fd;
+  --fg:         #060e1c;
+  --fg-2:       #102040;
+  --fg-3:       #283c68;
+  --fg-4:       #506090;
+  --scrollbar:  rgba(26,90,154,0.25);
+  --scrollbar-h:rgba(26,90,154,0.45);
+}
+
+/* Plexi Light — warm parchment, deep mahogany text */
+[data-theme="plexi-lt"] {
+  --bg:         #f0e8c8;
+  --surface:    #fdf6e4;
+  --surface-2:  #f0e8c8;
+  --surface-3:  #e4d4a4;
+  --primary:    #8a6000;
+  --on-primary: #fdf6e4;
+  --fg:         #1c1000;
+  --fg-2:       #3a2800;
+  --fg-3:       #6a4810;
+  --fg-4:       #9a7030;
+  --scrollbar:  rgba(138,96,0,0.25);
+  --scrollbar-h:rgba(138,96,0,0.45);
+}
+
 /* ─── Base ───────────────────────────────────────────────────────────────────*/
 
 html, body {
@@ -199,9 +327,12 @@ html, body {
 ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-h); }
 
 /* Light-mode border override — white/10 is invisible on light bg */
-[data-theme="light"] .border-white\/10  { border-color: rgba(0,0,0,0.08) !important; }
-[data-theme="light"] .border-white\/20  { border-color: rgba(0,0,0,0.14) !important; }
-[data-theme="light"] .divide-white\/10 > * + * { border-color: rgba(0,0,0,0.08) !important; }
+[data-theme="light"] .border-white\/10,
+[data-theme$="-lt"]  .border-white\/10  { border-color: rgba(0,0,0,0.10) !important; }
+[data-theme="light"] .border-white\/20,
+[data-theme$="-lt"]  .border-white\/20  { border-color: rgba(0,0,0,0.16) !important; }
+[data-theme="light"] .divide-white\/10 > * + *,
+[data-theme$="-lt"]  .divide-white\/10 > * + * { border-color: rgba(0,0,0,0.10) !important; }
 
 /* ─── Prose (AI markdown) ────────────────────────────────────────────────────*/
 

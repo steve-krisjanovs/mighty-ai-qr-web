@@ -86,17 +86,25 @@ function getRandomSuggestions(n = 6, exclude: string[] = []): string[] {
 }
 
 const THEMES: { id: Theme; label: string; bg: string; surface: string; fg: string; primary: string; desc: string }[] = [
-  { id: 'dark',       label: 'Dark',        bg: '#202124', surface: '#292a2d', fg: '#e8eaed', primary: '#8ab4f8', desc: 'Google dark' },
-  { id: 'oled',       label: 'OLED',        bg: '#000000', surface: '#0d0d0d', fg: '#e0e0e0', primary: '#00bcd4', desc: 'Pure black' },
-  { id: 'light',      label: 'Light',       bg: '#f0f2f5', surface: '#ffffff', fg: '#202124', primary: '#1a73e8', desc: 'Clean light' },
-  { id: 'tweed',      label: 'Tweed',       bg: '#221608', surface: '#2e1e0c', fg: '#f5e6c8', primary: '#d4a843', desc: 'Fender warmth' },
-  { id: 'amber',      label: 'Amber',       bg: '#160f00', surface: '#201600', fg: '#ffe4a0', primary: '#ffab40', desc: 'Tube glow' },
-  { id: 'british',    label: 'British',     bg: '#0c1a0c', surface: '#142014', fg: '#e2edd6', primary: '#c9a227', desc: 'Marshall green' },
-  { id: 'oxblood',    label: 'Oxblood',     bg: '#180808', surface: '#220e0e', fg: '#f5dede', primary: '#e07070', desc: 'Vintage tolex' },
-  { id: 'silver',     label: 'Silver Panel',bg: '#1a1c1e', surface: '#26292c', fg: '#dce3e8', primary: '#b8a882', desc: 'Boutique silver' },
-  { id: 'pedalboard', label: 'Pedalboard',  bg: '#0f1410', surface: '#171d18', fg: '#c8d4c0', primary: '#5a9e4a', desc: 'Signal chain' },
-  { id: 'blackface',  label: 'Blackface',   bg: '#0a0e1a', surface: '#111827', fg: '#d8dff0', primary: '#7eb8d4', desc: 'Fender silver' },
-  { id: 'plexi',      label: 'Plexi',       bg: '#1a1200', surface: '#251a00', fg: '#f0e6c8', primary: '#d4930a', desc: 'Marshall gold' },
+  { id: 'dark',           label: 'Dark',             bg: '#202124', surface: '#292a2d', fg: '#e8eaed', primary: '#8ab4f8', desc: 'Google dark' },
+  { id: 'oled',           label: 'OLED',             bg: '#000000', surface: '#0d0d0d', fg: '#e0e0e0', primary: '#00bcd4', desc: 'Pure black' },
+  { id: 'light',          label: 'Light',            bg: '#f0f2f5', surface: '#ffffff', fg: '#202124', primary: '#1a73e8', desc: 'Clean light' },
+  { id: 'tweed',          label: 'Tweed',            bg: '#221608', surface: '#2e1e0c', fg: '#f5e6c8', primary: '#d4a843', desc: 'Fender warmth' },
+  { id: 'tweed-lt',       label: 'Tweed Light',      bg: '#efe9d6', surface: '#fdf7ea', fg: '#2e1a04', primary: '#9a7418', desc: 'Cream linen' },
+  { id: 'amber',          label: 'Amber',            bg: '#160f00', surface: '#201600', fg: '#ffe4a0', primary: '#ffab40', desc: 'Tube glow' },
+  { id: 'amber-lt',       label: 'Amber Light',      bg: '#f5edcc', surface: '#fdf8e8', fg: '#2a1c00', primary: '#c07800', desc: 'Warm parchment' },
+  { id: 'british',        label: 'British',          bg: '#0c1a0c', surface: '#142014', fg: '#e2edd6', primary: '#c9a227', desc: 'Marshall green' },
+  { id: 'british-lt',     label: 'British Light',    bg: '#e8eddc', surface: '#f6faf0', fg: '#101a06', primary: '#7a6010', desc: 'Sage panel' },
+  { id: 'oxblood',        label: 'Oxblood',          bg: '#180808', surface: '#220e0e', fg: '#f5dede', primary: '#e07070', desc: 'Vintage tolex' },
+  { id: 'oxblood-lt',     label: 'Oxblood Light',    bg: '#f0e4e4', surface: '#fdf5f5', fg: '#200808', primary: '#8a2020', desc: 'Blush cream' },
+  { id: 'silver',         label: 'Silver Panel',     bg: '#1a1c1e', surface: '#26292c', fg: '#dce3e8', primary: '#b8a882', desc: 'Boutique silver' },
+  { id: 'silver-lt',      label: 'Silver Light',     bg: '#e8eaec', surface: '#f8f9fa', fg: '#16181a', primary: '#7a6840', desc: 'Platinum day' },
+  { id: 'pedalboard',     label: 'Pedalboard',       bg: '#0f1410', surface: '#171d18', fg: '#c8d4c0', primary: '#5a9e4a', desc: 'Signal chain' },
+  { id: 'pedalboard-lt',  label: 'Pedalboard Light', bg: '#dce8d8', surface: '#f0f8ec', fg: '#0c1c08', primary: '#386820', desc: 'Military sage' },
+  { id: 'blackface',      label: 'Blackface',        bg: '#0a0e1a', surface: '#111827', fg: '#d8dff0', primary: '#7eb8d4', desc: 'Fender silver' },
+  { id: 'blackface-lt',   label: 'Blackface Light',  bg: '#d8e4f0', surface: '#f0f6fd', fg: '#060e1c', primary: '#1a5a9a', desc: 'Silver-blue day' },
+  { id: 'plexi',          label: 'Plexi',            bg: '#1a1200', surface: '#251a00', fg: '#f0e6c8', primary: '#d4930a', desc: 'Marshall gold' },
+  { id: 'plexi-lt',       label: 'Plexi Light',      bg: '#f0e8c8', surface: '#fdf6e4', fg: '#1c1000', primary: '#8a6000', desc: 'Gold parchment' },
 ]
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
