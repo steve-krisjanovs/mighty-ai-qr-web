@@ -98,6 +98,86 @@
   --scrollbar-h:rgba(224,112,112,0.4);
 }
 
+/* OLED — pure black, cyan accent */
+[data-theme="oled"] {
+  --bg:         #000000;
+  --surface:    #0d0d0d;
+  --surface-2:  #1a1a1a;
+  --surface-3:  #242424;
+  --primary:    #00bcd4;
+  --on-primary: #000e10;
+  --fg:         #e0e0e0;
+  --fg-2:       #b0b0b0;
+  --fg-3:       #808080;
+  --fg-4:       #505050;
+  --scrollbar:  rgba(0,188,212,0.2);
+  --scrollbar-h:rgba(0,188,212,0.4);
+}
+
+/* Silver Panel — boutique amp, brushed aluminium */
+[data-theme="silver"] {
+  --bg:         #1a1c1e;
+  --surface:    #26292c;
+  --surface-2:  #32363a;
+  --surface-3:  #3e4348;
+  --primary:    #b8a882;
+  --on-primary: #0e0c08;
+  --fg:         #dce3e8;
+  --fg-2:       #a8b4bc;
+  --fg-3:       #748088;
+  --fg-4:       #4a5258;
+  --scrollbar:  rgba(184,168,130,0.2);
+  --scrollbar-h:rgba(184,168,130,0.4);
+}
+
+/* Pedalboard — signal chain, industrial olive */
+[data-theme="pedalboard"] {
+  --bg:         #0f1410;
+  --surface:    #171d18;
+  --surface-2:  #1f2820;
+  --surface-3:  #283328;
+  --primary:    #5a9e4a;
+  --on-primary: #020800;
+  --fg:         #c8d4c0;
+  --fg-2:       #96a88e;
+  --fg-3:       #647c5c;
+  --fg-4:       #405038;
+  --scrollbar:  rgba(90,158,74,0.2);
+  --scrollbar-h:rgba(90,158,74,0.4);
+}
+
+/* Blackface — Fender blackface era, navy with silver */
+[data-theme="blackface"] {
+  --bg:         #0a0e1a;
+  --surface:    #111827;
+  --surface-2:  #1a2436;
+  --surface-3:  #223044;
+  --primary:    #7eb8d4;
+  --on-primary: #020810;
+  --fg:         #d8dff0;
+  --fg-2:       #a0aac4;
+  --fg-3:       #6878a0;
+  --fg-4:       #3c4a70;
+  --scrollbar:  rgba(126,184,212,0.2);
+  --scrollbar-h:rgba(126,184,212,0.4);
+}
+
+/* Plexi — Marshall Plexi gold, dark brown */
+[data-theme="plexi"] {
+  --bg:         #1a1200;
+  --surface:    #251a00;
+  --surface-2:  #332400;
+  --surface-3:  #422e00;
+  --primary:    #d4930a;
+  --on-primary: #0e0600;
+  --fg:         #f0e6c8;
+  --fg-2:       #c8b078;
+  --fg-3:       #967840;
+  --fg-4:       #6a5020;
+  --scrollbar:  rgba(212,147,10,0.2);
+  --scrollbar-h:rgba(212,147,10,0.4);
+}
+
 /* ─── Base ───────────────────────────────────────────────────────────────────*/
 
 html, body {

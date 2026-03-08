@@ -406,23 +406,31 @@ function useQrDownload(canvasRef: React.RefObject<HTMLCanvasElement | null>, pre
 }
 
 function useQrShare(canvasRef: React.RefObject<HTMLCanvasElement | null>, presetName: string) {
-  return () => {
+  const [shareLabel, setShareLabel] = useState('Share')
+  const share = () => {
     const canvas = canvasRef.current
     if (!canvas) return
     const title = `${presetName} — Mighty AI QR`
     const text = `Check out this guitar tone: ${presetName}`
-    canvas.toBlob(blob => {
+    canvas.toBlob(async blob => {
       if (!blob) return
       const file = new File([blob], `${presetName.replace(/[^a-z0-9]/gi, '_')}.png`, { type: 'image/png' })
       if (navigator.canShare?.({ files: [file] })) {
-        navigator.share({ files: [file], title, text }).catch(() => {})
-      } else if (navigator.share) {
-        navigator.share({ title, text }).catch(() => {})
-      } else {
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://github.com/steve-krisjanovs/mighty-ai-qr-web')}&quote=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
+        try { await navigator.share({ files: [file], title, text }); return } catch {}
       }
+      if (navigator.share) {
+        try { await navigator.share({ title, text }); return } catch {}
+      }
+      // Desktop fallback: copy image to clipboard + open Facebook
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+        setShareLabel('Copied!')
+        setTimeout(() => setShareLabel('Share'), 2000)
+      } catch {}
+      window.open('https://www.facebook.com/', '_blank', 'noopener,noreferrer')
     }, 'image/png')
   }
+  return { share, shareLabel }
 }
 
 // ─── QR Card ──────────────────────────────────────────────────────────────────
@@ -431,7 +439,7 @@ function QrCard({ qr, description, className = '' }: { qr: QrResult; description
   const [settingsOpen, setSettingsOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, qr.presetName)
-  const share = useQrShare(canvasRef, qr.presetName)
+  const { share, shareLabel } = useQrShare(canvasRef, qr.presetName)
   const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(qr.presetName + ' guitar tone')}`
 
   return (
@@ -639,7 +647,7 @@ function QrModal({ item, onClose, onDeleteRequest, onRename, onRefine }: {
   const nameInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, name)
-  const share = useQrShare(canvasRef, item.qr.presetName)
+  const { share, shareLabel } = useQrShare(canvasRef, item.qr.presetName)
 
   const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(item.qr.presetName + ' guitar tone')}`
 
@@ -710,7 +718,7 @@ function QrModal({ item, onClose, onDeleteRequest, onRename, onRefine }: {
                 <YoutubeIcon /> Reference
               </a>
               <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
-                <FacebookIcon /> Share
+                <FacebookIcon /> {shareLabel}
               </button>
             </div>
 
@@ -760,7 +768,7 @@ function ChatQrModal({ qr, description, onClose, onRefine }: { qr: QrResult; des
   const [settingsOpen, setSettingsOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, qr.presetName)
-  const share = useQrShare(canvasRef, qr.presetName)
+  const { share, shareLabel } = useQrShare(canvasRef, qr.presetName)
   const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(qr.presetName + ' guitar tone')}`
 
   return (
@@ -808,7 +816,7 @@ function ChatQrModal({ qr, description, onClose, onRefine }: { qr: QrResult; des
                 <YoutubeIcon /> Reference
               </a>
               <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
-                <FacebookIcon /> Share
+                <FacebookIcon /> {shareLabel}
               </button>
             </div>
 
