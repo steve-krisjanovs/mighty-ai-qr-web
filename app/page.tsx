@@ -1006,18 +1006,21 @@ function ProviderDropdown({ value, onChange }: { value: AiProvider; onChange: (p
 
 function BuiltinPill() {
   const [remaining, setRemaining] = useState<number | null>(null)
-  useEffect(() => {
-    fetch('/api/quota').then(r => r.json()).then(d => setRemaining(d.remaining)).catch(() => {})
+  const [refreshing, setRefreshing] = useState(false)
+  const fetchQuota = useCallback(() => {
+    setRefreshing(true)
+    fetch('/api/quota').then(r => r.json()).then(d => { setRemaining(d.remaining); setRefreshing(false) }).catch(() => setRefreshing(false))
   }, [])
+  useEffect(() => { fetchQuota() }, [fetchQuota])
   return (
-    <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-4 select-none">
+    <button onClick={fetchQuota} className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-4 select-none active:opacity-70 transition-opacity">
       Haiku · Free
       {remaining !== null && (
         <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${remaining <= 10 ? 'bg-red-900/40 text-red-400' : 'bg-white/5 text-fg-4'}`}>
-          {remaining} left today
+          {refreshing ? '...' : `${remaining} left today`}
         </span>
       )}
-    </div>
+    </button>
   )
 }
 
@@ -1888,6 +1891,23 @@ export default function Page() {
 
   const chatRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const pullStartY = useRef(0)
+  const [pullDistance, setPullDistance] = useState(0)
+  const PULL_THRESHOLD = 80
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if ((chatRef.current?.scrollTop ?? 1) === 0) pullStartY.current = e.touches[0].clientY
+  }, [])
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!pullStartY.current) return
+    const dist = e.touches[0].clientY - pullStartY.current
+    if (dist > 0 && (chatRef.current?.scrollTop ?? 1) === 0) setPullDistance(Math.min(dist, 100))
+    else { pullStartY.current = 0; setPullDistance(0) }
+  }, [])
+  const handleTouchEnd = useCallback(() => {
+    if (pullDistance >= PULL_THRESHOLD) window.location.reload()
+    pullStartY.current = 0
+    setPullDistance(0)
+  }, [pullDistance])
   const [isListening, setIsListening] = useState(false)
   const [ttsEnabled, setTtsEnabled] = useState(false)
   const ttsEnabledRef = useRef(false)
@@ -2283,7 +2303,12 @@ export default function Page() {
 
           {/* Chat */}
           <div className="flex flex-1 flex-col overflow-hidden">
-            <div ref={chatRef} className="flex-1 overflow-y-auto px-4 py-6" onClick={() => setActiveMessageId(null)}>
+            <div ref={chatRef} className="flex-1 overflow-y-auto px-4 py-6" onClick={() => setActiveMessageId(null)} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+              {pullDistance > 10 && (
+                <div className="flex justify-center pb-2 text-xs text-fg-4 transition-opacity select-none">
+                  {pullDistance >= PULL_THRESHOLD ? 'Release to refresh' : 'Pull to refresh'}
+                </div>
+              )}
               <div className="mx-auto w-full max-w-2xl space-y-4">
               {messages.length === 0 && input.trim() ? (
                 <div className="flex h-full flex-col items-center justify-center animate-fade-in">
