@@ -934,6 +934,12 @@ const PROVIDERS: { id: AiProvider; label: string; keyPlaceholder: string; defaul
   { id: 'lmstudio',  label: 'LM Studio',  keyPlaceholder: 'lm-studio (any value)',   defaultBase: 'http://localhost:1234/v1',   defaultModel: 'local-model', local: true },
 ]
 
+const THEME_GROUPS: { label: string; ids: Theme[] }[] = [
+  { label: 'Standard', ids: ['dark', 'oled', 'light'] },
+  { label: 'Dark Vintage', ids: ['tweed', 'amber', 'british', 'oxblood', 'silver', 'pedalboard', 'blackface', 'plexi'] },
+  { label: 'Light Vintage', ids: ['tweed-lt', 'amber-lt', 'british-lt', 'oxblood-lt', 'silver-lt', 'pedalboard-lt', 'blackface-lt', 'plexi-lt'] },
+]
+
 const PROVIDER_GROUPS = [
   { label: 'Free Tier', ids: ['builtin'] as AiProvider[] },
   { label: 'Cloud', ids: ['anthropic', 'openai', 'gemini', 'grok', 'mistral', 'groq'] as AiProvider[] },
@@ -1396,23 +1402,31 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setThemeOpen(false)} />
                   <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-white/10 bg-surface-2 shadow-xl overflow-hidden">
-                    {THEMES.map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => { applyTheme(t.id); setThemeOpen(false) }}
-                        className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${
-                          currentTheme === t.id ? 'text-primary bg-primary/10' : 'text-fg-2 hover:bg-surface-3 hover:text-fg'
-                        }`}
-                      >
-                        <div className="flex gap-1 shrink-0">
-                          <div style={{ background: t.bg }} className="h-3 w-3 rounded-sm border border-white/10" />
-                          <div style={{ background: t.primary }} className="h-3 w-3 rounded-sm" />
-                          <div style={{ background: t.fg, opacity: 0.7 }} className="h-3 w-3 rounded-sm" />
-                        </div>
-                        <span className="flex-1 text-left">{t.label}</span>
-                        <span className="text-xs opacity-50">{t.desc}</span>
-                        {currentTheme === t.id && <span className="ml-auto text-primary shrink-0">✓</span>}
-                      </button>
+                    {THEME_GROUPS.map(group => (
+                      <div key={group.label}>
+                        <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-fg-4">{group.label}</p>
+                        {group.ids.map(id => {
+                          const t = THEMES.find(x => x.id === id)!
+                          return (
+                            <button
+                              key={t.id}
+                              onClick={() => { applyTheme(t.id); setThemeOpen(false) }}
+                              className={`flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
+                                currentTheme === t.id ? 'text-primary bg-primary/10' : 'text-fg-2 hover:bg-surface-3 hover:text-fg'
+                              }`}
+                            >
+                              <div className="flex gap-1 shrink-0">
+                                <div style={{ background: t.bg }} className="h-3 w-3 rounded-sm border border-white/10" />
+                                <div style={{ background: t.primary }} className="h-3 w-3 rounded-sm" />
+                                <div style={{ background: t.fg, opacity: 0.7 }} className="h-3 w-3 rounded-sm" />
+                              </div>
+                              <span className="flex-1 text-left">{t.label}</span>
+                              <span className="text-xs opacity-50">{t.desc}</span>
+                              {currentTheme === t.id && <span className="ml-auto text-primary shrink-0">✓</span>}
+                            </button>
+                          )
+                        })}
+                      </div>
                     ))}
                   </div>
                 </>
