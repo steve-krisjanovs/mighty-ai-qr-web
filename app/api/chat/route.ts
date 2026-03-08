@@ -33,10 +33,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid messages' }, { status: 400 })
   }
 
-  const userApiKey   = (request.headers.get('x-user-api-key') ?? '').trim()
-  const userProvider = (request.headers.get('x-provider') ?? '').trim()
-  const userBaseUrl  = (request.headers.get('x-base-url') ?? '').trim()
-  const userModel    = (request.headers.get('x-model') ?? '').trim()
+  const userApiKey      = (request.headers.get('x-user-api-key') ?? '').trim()
+  const userProvider    = (request.headers.get('x-provider') ?? '').trim()
+  const userBaseUrl     = (request.headers.get('x-base-url') ?? '').trim()
+  const userModel       = (request.headers.get('x-model') ?? '').trim()
+  const defaultDevice   = (request.headers.get('x-default-device') ?? 'plugpro').trim()
+
+  const deviceInstruction = `The user's default NUX device is "${defaultDevice}". Always use this device when generating QR codes unless the user explicitly asks for a different one.\n\n`
+  const systemHaiku = deviceInstruction + SYSTEM_PROMPT_HAIKU
+  const systemFull  = deviceInstruction + SYSTEM_PROMPT_FULL
 
   const isByok = !!userApiKey || !!userBaseUrl
 
@@ -55,14 +60,14 @@ export async function POST(request: NextRequest) {
         }, { status: 429 })
       }
       const serverClient = new Anthropic({ apiKey: serverKey })
-      result = await runChat(serverClient, messages, 'claude-haiku-4-5-20251001', SYSTEM_PROMPT_HAIKU)
+      result = await runChat(serverClient, messages, 'claude-haiku-4-5-20251001', systemHaiku)
     } else if (userProvider === 'anthropic') {
       const byokClient = new Anthropic({ apiKey: userApiKey })
-      result = await runChat(byokClient, messages, userModel || undefined, SYSTEM_PROMPT_FULL)
+      result = await runChat(byokClient, messages, userModel || undefined, systemFull)
     } else {
       const baseUrl = normalizeBaseUrl(userBaseUrl, userProvider)
       const model   = userModel || DEFAULT_MODELS[userProvider] || 'llama3.2'
-      result = await runChatOpenAI(baseUrl, userApiKey || 'none', model, messages, SYSTEM_PROMPT_FULL)
+      result = await runChatOpenAI(baseUrl, userApiKey || 'none', model, messages, systemFull)
     }
 
     return NextResponse.json(result)

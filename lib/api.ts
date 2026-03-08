@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid'
 import type { Message, QrResult } from './types'
-import { getActiveConfig } from './storage'
+import { getActiveConfig, getDefaultDevice } from './storage'
 
 export interface ChatResponse {
   message: string
@@ -73,6 +73,7 @@ export async function sendChat(messages: Message[], signal?: AbortSignal): Promi
 
   const active = getActiveConfig()
   const extraHeaders: Record<string, string> = {}
+  extraHeaders['x-default-device'] = getDefaultDevice()
   if (active) {
     if (active.apiKey) extraHeaders['x-user-api-key'] = active.apiKey
     extraHeaders['x-provider'] = active.provider

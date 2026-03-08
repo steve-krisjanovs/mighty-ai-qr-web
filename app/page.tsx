@@ -12,7 +12,9 @@ import {
   deleteConversation, clearAllConversations, autoTitle, relativeTime,
   getApiSettings, saveApiSettings, getActiveConfig,
   getTheme, saveTheme,
-  type AiProvider, type ProviderConfig, type Theme,
+  getDefaultDevice, saveDefaultDevice,
+  type AiProvider, type ProviderConfig, type Theme, type NuxDevice,
+  NUX_DEVICES,
 } from '@/lib/storage'
 import type { ChatMessage, QrResult, HistoryItem, Conversation } from '@/lib/types'
 import pkg from '../package.json'
@@ -303,8 +305,8 @@ async function ocrImageText(bitmap: ImageBitmap): Promise<string> {
 
 // ─── QR Image (canvas — bakes header/footer into the PNG) ─────────────────────
 
-const QrImage = forwardRef<HTMLCanvasElement, { imageBase64: string; presetName: string; guitar?: import('@/lib/types').GuitarSetup; size?: number }>(
-  function QrImage({ imageBase64, presetName, guitar, size = 176 }, ref) {
+const QrImage = forwardRef<HTMLCanvasElement, { imageBase64: string; presetName: string; deviceName?: string; guitar?: import('@/lib/types').GuitarSetup; size?: number }>(
+  function QrImage({ imageBase64, presetName, deviceName, guitar, size = 176 }, ref) {
     const internalRef = useRef<HTMLCanvasElement>(null)
     const canvasRef = (ref as React.RefObject<HTMLCanvasElement>) ?? internalRef
 
@@ -325,7 +327,7 @@ const QrImage = forwardRef<HTMLCanvasElement, { imageBase64: string; presetName:
         const dpr = window.devicePixelRatio || 1
         const pad = 16
         const headerH = 30
-        const footerH = guitarLine ? 46 : 30
+        const footerH = guitarLine ? 58 : 44
         const w = size + pad * 2
         const h = size + headerH + footerH
 
@@ -348,19 +350,25 @@ const QrImage = forwardRef<HTMLCanvasElement, { imageBase64: string; presetName:
 
         ctx.fillStyle = 'rgba(0,0,0,0.42)'
         ctx.font      = '600 11px system-ui,sans-serif'
-        ctx.fillText(presetName, w / 2, headerH + size + 18, w - pad * 2)
+        ctx.fillText(presetName, w / 2, headerH + size + 15, w - pad * 2)
+
+        if (deviceName) {
+          ctx.fillStyle = 'rgba(0,0,0,0.28)'
+          ctx.font      = '500 9px system-ui,sans-serif'
+          ctx.fillText(deviceName, w / 2, headerH + size + 27, w - pad * 2)
+        }
 
         if (guitarLine) {
           ctx.fillStyle = 'rgba(0,0,0,0.32)'
           ctx.font      = '500 9px system-ui,sans-serif'
-          ctx.fillText(guitarLine, w / 2, headerH + size + 34, w - pad * 2)
+          ctx.fillText(guitarLine, w / 2, headerH + size + 41, w - pad * 2)
         }
       }
       img.src = imageBase64
-    }, [imageBase64, presetName, guitar, size, canvasRef])
+    }, [imageBase64, presetName, deviceName, guitar, size, canvasRef])
 
     const hasGuitar = guitar && (guitar.pickup || guitar.pickupType || (guitar.controls?.length ?? 0) > 0)
-    const totalH = size + (hasGuitar ? 76 : 60)
+    const totalH = size + (hasGuitar ? 88 : 74)
     return <canvas ref={canvasRef} style={{ width: size, height: totalH }} />
   }
 )
@@ -446,7 +454,7 @@ function QrCard({ qr, description, className = '' }: { qr: QrResult; description
   return (
     <div className={`rounded-2xl border border-white/10 bg-surface-2 overflow-hidden ${className}`}>
       <div className="flex justify-center bg-white p-4">
-        <QrImage ref={canvasRef} imageBase64={qr.imageBase64} presetName={qr.presetName} guitar={qr.guitar} />
+        <QrImage ref={canvasRef} imageBase64={qr.imageBase64} presetName={qr.presetName} deviceName={qr.deviceName} guitar={qr.guitar} />
       </div>
       <div className="p-4 space-y-3">
         <div>
@@ -679,7 +687,7 @@ function QrModal({ item, onClose, onDeleteRequest, onRename, onRefine }: {
             >
               <CloseIcon />
             </button>
-            <QrImage ref={canvasRef} imageBase64={item.qr.imageBase64} presetName={name} guitar={item.qr.guitar} />
+            <QrImage ref={canvasRef} imageBase64={item.qr.imageBase64} presetName={name} deviceName={item.qr.deviceName} guitar={item.qr.guitar} />
           </div>
 
           {/* Scrollable content */}
@@ -789,7 +797,7 @@ function ChatQrModal({ qr, description, onClose, onRefine }: { qr: QrResult; des
             >
               <CloseIcon />
             </button>
-            <QrImage ref={canvasRef} imageBase64={qr.imageBase64} presetName={qr.presetName} guitar={qr.guitar} />
+            <QrImage ref={canvasRef} imageBase64={qr.imageBase64} presetName={qr.presetName} deviceName={qr.deviceName} guitar={qr.guitar} />
           </div>
 
           {/* Content */}
@@ -1274,11 +1282,18 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [loadingModels, setLoadingModels] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<Theme>(() => getTheme())
   const [themeOpen, setThemeOpen] = useState(false)
+  const [currentDevice, setCurrentDevice] = useState<NuxDevice>(() => getDefaultDevice())
+  const [deviceOpen, setDeviceOpen] = useState(false)
 
   const applyTheme = (t: Theme) => {
     setCurrentTheme(t)
     document.documentElement.dataset.theme = t
     saveTheme(t)
+  }
+
+  const applyDevice = (d: NuxDevice) => {
+    setCurrentDevice(d)
+    saveDefaultDevice(d)
   }
 
   const current = PROVIDERS.find(p => p.id === provider)!
@@ -1389,6 +1404,41 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
                         <span className="flex-1 text-left">{t.label}</span>
                         <span className="text-xs opacity-50">{t.desc}</span>
                         {currentTheme === t.id && <span className="ml-auto text-primary shrink-0">✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Default NUX Device */}
+          <div>
+            <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-2">Default NUX Device</p>
+            <div className="relative">
+              {(() => { const active = NUX_DEVICES.find(d => d.id === currentDevice)!; return (
+                <button
+                  onClick={() => setDeviceOpen(o => !o)}
+                  className="flex w-full items-center gap-2.5 rounded-lg border border-white/10 bg-surface-2 px-3 py-2.5 text-sm text-fg hover:bg-surface-3 transition-colors"
+                >
+                  <span className="flex-1 text-left">{active.label}</span>
+                  <ChevronIcon open={deviceOpen} />
+                </button>
+              )})()}
+              {deviceOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setDeviceOpen(false)} />
+                  <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-white/10 bg-surface-2 shadow-xl overflow-hidden">
+                    {NUX_DEVICES.map(d => (
+                      <button
+                        key={d.id}
+                        onClick={() => { applyDevice(d.id); setDeviceOpen(false) }}
+                        className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${
+                          currentDevice === d.id ? 'text-primary bg-primary/10' : 'text-fg-2 hover:bg-surface-3 hover:text-fg'
+                        }`}
+                      >
+                        <span className="flex-1 text-left">{d.label}</span>
+                        {currentDevice === d.id && <span className="ml-auto text-primary shrink-0">✓</span>}
                       </button>
                     ))}
                   </div>

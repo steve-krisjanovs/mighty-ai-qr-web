@@ -8,12 +8,12 @@ export const generateQRTool: Anthropic.Tool = {
   description: `Generate a NUX MightyAmp-compatible QR code from structured tone parameters.
 Call this whenever the user asks for a tone, preset, or patch.
 All parameter values (gain, master, bass, mid, treble, etc.) are integers 0-100.
-Always default to device "plugpro" unless the user specifies otherwise.`,
+Use the device specified in the system prompt unless the user requests a different one.`,
   input_schema: {
     type: 'object' as const,
     required: ['device', 'preset_name', 'amp', 'cabinet', 'noise_gate', 'master_db'],
     properties: {
-      device: { type: 'string', enum: ['plugpro', 'space', 'litemk2', '8btmk2', 'plugair_v1', 'plugair_v2', 'lite', '8bt', '2040bt'], description: 'Target NUX device. Default: plugpro' },
+      device: { type: 'string', enum: ['plugpro', 'space', 'litemk2', '8btmk2', 'plugair_v1', 'plugair_v2', 'lite', '8bt', '2040bt'], description: 'Target NUX device. Use the default from the system prompt unless the user specifies otherwise.' },
       preset_name: { type: 'string', description: 'Short descriptive name for the preset' },
       amp: {
         type: 'object', required: ['id', 'gain', 'master', 'bass', 'mid', 'treble'],
