@@ -1967,7 +1967,8 @@ export default function Page() {
     setActiveConvId(id)
     setMessages(conv.messages)
     setCurrentQr(conv.lastQr)
-    setShowQrPanel(!!conv.lastQr)
+    const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+    setShowQrPanel(!!conv.lastQr && isDesktop)
     const lastQrMsg = [...conv.messages].reverse().find(m => m.qr)
     setCurrentQrDescription(lastQrMsg?.content ?? '')
     setError(null)
