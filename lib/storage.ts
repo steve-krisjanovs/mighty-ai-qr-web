@@ -124,7 +124,7 @@ export function clearApiSettings() {
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
-export type Theme = 'dark' | 'light' | 'tweed' | 'amber' | 'british' | 'oxblood'
+export type Theme = 'dark' | 'oled' | 'light' | 'tweed' | 'amber' | 'british' | 'oxblood' | 'silver' | 'pedalboard' | 'blackface' | 'plexi'
 
 const THEME_KEY = 'maq_theme'
 
