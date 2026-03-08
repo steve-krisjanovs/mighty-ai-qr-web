@@ -15,6 +15,7 @@ import {
   type AiProvider, type ProviderConfig, type Theme,
 } from '@/lib/storage'
 import type { ChatMessage, QrResult, HistoryItem, Conversation } from '@/lib/types'
+import pkg from '../package.json'
 
 const ALL_SUGGESTIONS = [
   'Kashmir tone from Knebworth 1979', 'Eruption Eddie Van Halen brown sound',
@@ -871,7 +872,7 @@ function AboutModal({ onClose }: { onClose: () => void }) {
             <div className="flex items-center gap-3">
               <img src="/icons/icon-192.png" alt="Mighty AI QR" className="h-12 w-12 rounded-xl shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-fg">Mighty AI QR</p>
+                <p className="text-sm font-semibold text-fg">Mighty AI QR <span className="text-[11px] font-normal text-fg-4">v{pkg.version}</span></p>
                 <p className="text-[11px] text-fg-4 mt-1 leading-relaxed">
                   Describe a guitar tone in plain English — get a scannable QR code for your NUX MightyAmp, instantly.
                 </p>
@@ -1496,6 +1497,8 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
             </button>
           </div>
           {showAboutModal && <AboutModal onClose={() => setShowAboutModal(false)} />}
+
+          <p className="text-center text-[10px] text-fg-4 pt-2">v{pkg.version}</p>
         </div>
       </aside>
     </>
