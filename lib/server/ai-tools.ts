@@ -140,10 +140,6 @@ Always include a guitar setup recommendation in the guitar field:
   - Vol 10 is standard; roll back to 7–8 for mild breakup cleanup with a hot amp
   - Tone 10 = full bright, 5–7 = warm/rounded, 0–3 = very dark/muffled`
 
-// Lean prompt for Haiku (free tier) — covers the essentials without overloading a small model
-export const SYSTEM_PROMPT_HAIKU = SHARED_HEADER
-
-// Expanded prompt for Sonnet and all other providers — adds pedal selection, stacking, compressor, EQ, and modulation guidance
 export const SYSTEM_PROMPT_FULL = SHARED_HEADER + `
 
 EFX pedal selection guide:

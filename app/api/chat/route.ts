@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getDeviceIdFromRequest } from '@/lib/server/jwt'
-import { runChat, runChatOpenAI, SYSTEM_PROMPT_HAIKU, SYSTEM_PROMPT_FULL } from '@/lib/server/ai-tools'
+import { runChat, runChatOpenAI, SYSTEM_PROMPT_FULL } from '@/lib/server/ai-tools'
 import { checkAndIncrementQuota } from '@/lib/server/quota'
 
 const DEFAULT_MODELS: Record<string, string> = {
@@ -40,8 +40,7 @@ export async function POST(request: NextRequest) {
   const defaultDevice   = (request.headers.get('x-default-device') ?? 'plugpro').trim()
 
   const deviceInstruction = `The user's default NUX device is "${defaultDevice}". Always use this device when generating QR codes unless the user explicitly asks for a different one.\n\n`
-  const systemHaiku = deviceInstruction + SYSTEM_PROMPT_HAIKU
-  const systemFull  = deviceInstruction + SYSTEM_PROMPT_FULL
+  const systemFull = deviceInstruction + SYSTEM_PROMPT_FULL
 
   const isByok = !!userApiKey || !!userBaseUrl
 
@@ -59,8 +58,9 @@ export async function POST(request: NextRequest) {
           error: "Today's free request limit has been reached. Add your own API key in Settings to keep going — Anthropic gives free credits on signup.",
         }, { status: 429 })
       }
+      const freeModel = process.env.FREE_MODEL || 'claude-sonnet-4-6'
       const serverClient = new Anthropic({ apiKey: serverKey })
-      result = await runChat(serverClient, messages, 'claude-haiku-4-5-20251001', systemHaiku)
+      result = await runChat(serverClient, messages, freeModel, systemFull)
     } else if (userProvider === 'anthropic') {
       const byokClient = new Anthropic({ apiKey: userApiKey })
       result = await runChat(byokClient, messages, userModel || undefined, systemFull)
