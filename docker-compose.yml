@@ -7,6 +7,8 @@ services:
       - "3005:3000"
     environment:
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod}
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       RUNNING_IN_DOCKER: "true"
       DB_PATH: /data/mighty.db
     volumes:

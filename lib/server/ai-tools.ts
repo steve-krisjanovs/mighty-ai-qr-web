@@ -2,6 +2,22 @@ import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import { generateQR } from './qr-encoder'
 import type { ProPresetParams } from './nux'
+import { webSearch } from './tavily'
+
+export const webSearchTool: Anthropic.Tool = {
+  name: 'web_search',
+  description: `Search the web for guitar tone information about a specific song or artist.
+Use this BEFORE calling generateQR whenever the user references a specific song, recording, or artist tone.
+Search for the distinctive effects, amp settings, or sound characteristics that define that tone.
+Examples: "Beast of Burden Rolling Stones guitar tone", "David Gilmour Comfortably Numb solo effects"`,
+  input_schema: {
+    type: 'object' as const,
+    required: ['query'],
+    properties: {
+      query: { type: 'string', description: 'Search query, e.g. "Beast of Burden Rolling Stones guitar tone effects"' },
+    },
+  },
+}
 
 export const generateQRTool: Anthropic.Tool = {
   name: 'generateQR',
@@ -73,7 +89,14 @@ When a user asks for a tone, ALWAYS call the generateQR tool to produce a scanna
 After calling the tool, respond conversationally — describe what you chose and why in 2-3 sentences.
 Keep it concise and tone-focused. Don't explain the technical bytes.
 
-IMPORTANT: Only ever generate ONE tone per message. You can only call the tool once per response.
+SONG/ARTIST REFERENCES — USE WEB SEARCH FIRST:
+When the user references a specific song, album recording, or well-known artist tone, call web_search BEFORE generateQR.
+Search for the distinctive effects, amp characteristics, and sound details of that specific recording.
+Example searches: "Beast of Burden Rolling Stones guitar tone phaser", "Comfortably Numb solo David Gilmour effects chain".
+Use the search results to capture defining elements (e.g. slow phaser, specific fuzz, clean amp) that you might otherwise miss.
+For generic style requests ("blues tone", "heavy metal", "clean jazz") you can skip the search and go straight to generateQR.
+
+IMPORTANT: Only ever generate ONE tone per message. You can only call generateQR once per response.
 If the user asks for multiple tones (e.g. "give me three options"), generate the best single option now and tell them to ask for the next one. For example: "Here's my top pick — ask me for another variation if you'd like a different take."
 Never promise to generate multiple tones in one go.
 
@@ -191,37 +214,57 @@ export interface ChatMessage {
 export interface ChatResult {
   message: string
   qr?: Awaited<ReturnType<typeof generateQR>>
+  sources?: { title: string; url: string }[]
 }
 
 export async function runChat(client: Anthropic, messages: ChatMessage[], model = 'claude-sonnet-4-6', systemPrompt = SYSTEM_PROMPT_FULL): Promise<ChatResult> {
-  const anthropicMessages: Anthropic.MessageParam[] = messages.map(m => ({ role: m.role, content: m.content }))
+  const tools: Anthropic.Tool[] = [webSearchTool, generateQRTool]
+  let currentMessages: Anthropic.MessageParam[] = messages.map(m => ({ role: m.role, content: m.content }))
+  let searchCount = 0
+  const sources: { title: string; url: string }[] = []
 
-  const response = await client.messages.create({
-    model, max_tokens: 1024, system: systemPrompt, tools: [generateQRTool], messages: anthropicMessages,
-  })
+  while (true) {
+    const response = await client.messages.create({ model, max_tokens: 1024, system: systemPrompt, tools, messages: currentMessages })
 
-  if (response.stop_reason === 'tool_use') {
+    if (response.stop_reason !== 'tool_use') {
+      const textBlock = response.content.find(b => b.type === 'text')
+      return { message: textBlock?.type === 'text' ? textBlock.text : '' }
+    }
+
     const toolUse = response.content.find(b => b.type === 'tool_use')
     if (!toolUse || toolUse.type !== 'tool_use') throw new Error('Expected tool_use block')
 
+    if (toolUse.name === 'web_search' && searchCount < 2) {
+      searchCount++
+      const { query } = toolUse.input as { query: string }
+      console.log(`[web_search] query: "${query}"`)
+      const searchResult = await webSearch(query)
+      console.log(`[web_search] result length: ${searchResult.text.length} chars`)
+      sources.push(...searchResult.sources)
+      currentMessages = [
+        ...currentMessages,
+        { role: 'assistant', content: response.content },
+        { role: 'user', content: [{ type: 'tool_result', tool_use_id: toolUse.id, content: searchResult.text }] },
+      ]
+      continue
+    }
+
+    // generateQR (or web_search limit hit — treat next tool use as generateQR)
     const params = toolUse.input as ProPresetParams
     const qrResult = await generateQR(params)
 
     const followUp = await client.messages.create({
-      model, max_tokens: 512, system: systemPrompt, tools: [generateQRTool],
+      model, max_tokens: 512, system: systemPrompt, tools,
       messages: [
-        ...anthropicMessages,
+        ...currentMessages,
         { role: 'assistant', content: response.content },
         { role: 'user', content: [{ type: 'tool_result', tool_use_id: toolUse.id, content: JSON.stringify({ success: true, preset_name: qrResult.presetName }) }] },
       ],
     })
 
     const textBlock = followUp.content.find(b => b.type === 'text')
-    return { message: textBlock?.type === 'text' ? textBlock.text : '', qr: qrResult }
+    return { message: textBlock?.type === 'text' ? textBlock.text : '', qr: qrResult, sources: sources.length > 0 ? sources : undefined }
   }
-
-  const textBlock = response.content.find(b => b.type === 'text')
-  return { message: textBlock?.type === 'text' ? textBlock.text : '' }
 }
 
 const VALID_DEVICES = new Set(['plugpro','space','litemk2','8btmk2','plugair_v1','plugair_v2','lite','8bt','2040bt'])
@@ -303,58 +346,84 @@ const generateQRToolOpenAI: OpenAI.ChatCompletionTool = {
   function: { name: generateQRTool.name, description: generateQRTool.description, parameters: generateQRTool.input_schema as Record<string, unknown> },
 }
 
+const webSearchToolOpenAI: OpenAI.ChatCompletionTool = {
+  type: 'function',
+  function: { name: webSearchTool.name, description: webSearchTool.description, parameters: webSearchTool.input_schema as Record<string, unknown> },
+}
+
+const openAITools = [webSearchToolOpenAI, generateQRToolOpenAI]
+
 export async function runChatOpenAI(baseUrl: string, apiKey: string, model: string, messages: ChatMessage[], systemPrompt = SYSTEM_PROMPT_FULL): Promise<ChatResult> {
   const clientOpts: ConstructorParameters<typeof OpenAI>[0] = { apiKey, timeout: 5 * 60 * 1000, maxRetries: 0 }
   if (baseUrl) clientOpts.baseURL = baseUrl
 
   const client = new OpenAI(clientOpts)
-  const openAIMessages: OpenAI.ChatCompletionMessageParam[] = [
+  let currentMessages: OpenAI.ChatCompletionMessageParam[] = [
     { role: 'system', content: systemPrompt },
     ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
   ]
+  let searchCount = 0
+  const sources: { title: string; url: string }[] = []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const response = await (client.chat.completions.create as any)({ model, max_tokens: 1024, messages: openAIMessages, tools: [generateQRToolOpenAI], tool_choice: 'auto', extra_body: { keep_alive: -1 } })
-  const choice = response.choices[0]
-
-  if (choice.finish_reason === 'tool_calls' && choice.message.tool_calls?.length) {
-    const toolCall = choice.message.tool_calls[0]
-    if (toolCall.type !== 'function') throw new Error('Expected function tool call')
-    const params = coerceParams(JSON.parse(toolCall.function.arguments))
-    const qrResult = await generateQR(params)
-
-    // Some models include a clean description alongside the tool call — use it to skip the follow-up.
-    // Ignore it if it looks like verbose reasoning (too long or contains thinking patterns).
-    const inlineText = textContent(choice.message)
-    const looksLikeReasoning = inlineText.length > 400 || (inlineText.match(/\?/g) ?? []).length > 2
-    if (inlineText && !looksLikeReasoning) return { message: inlineText, qr: qrResult }
-
+  while (true) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const followUp = await (client.chat.completions.create as any)({
-      model, max_tokens: 512,
-      messages: [ ...openAIMessages, choice.message, { role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ success: true, preset_name: qrResult.presetName }) } ],
-      tools: [generateQRToolOpenAI],
-      extra_body: { keep_alive: -1 },
-    })
-    const msg = followUp.choices[0].message
-    return { message: textContent(msg), qr: qrResult }
+    const response = await (client.chat.completions.create as any)({ model, max_tokens: 1024, messages: currentMessages, tools: openAITools, tool_choice: 'auto', extra_body: { keep_alive: -1 } })
+    const choice = response.choices[0]
+
+    if (choice.finish_reason === 'tool_calls' && choice.message.tool_calls?.length) {
+      const toolCall = choice.message.tool_calls[0]
+      if (toolCall.type !== 'function') throw new Error('Expected function tool call')
+
+      if (toolCall.function.name === 'web_search' && searchCount < 2) {
+        searchCount++
+        const { query } = JSON.parse(toolCall.function.arguments) as { query: string }
+        console.log(`[web_search] query: "${query}"`)
+        const searchResult = await webSearch(query)
+        console.log(`[web_search] result length: ${searchResult.text.length} chars`)
+        sources.push(...searchResult.sources)
+        currentMessages = [
+          ...currentMessages,
+          choice.message,
+          { role: 'tool', tool_call_id: toolCall.id, content: searchResult.text },
+        ]
+        continue
+      }
+
+      // generateQR
+      const params = coerceParams(JSON.parse(toolCall.function.arguments))
+      const qrResult = await generateQR(params)
+      const resultSources = sources.length > 0 ? sources : undefined
+
+      const inlineText = textContent(choice.message)
+      const looksLikeReasoning = inlineText.length > 400 || (inlineText.match(/\?/g) ?? []).length > 2
+      if (inlineText && !looksLikeReasoning) return { message: inlineText, qr: qrResult, sources: resultSources }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const followUp = await (client.chat.completions.create as any)({
+        model, max_tokens: 512,
+        messages: [ ...currentMessages, choice.message, { role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify({ success: true, preset_name: qrResult.presetName }) } ],
+        tools: openAITools,
+        extra_body: { keep_alive: -1 },
+      })
+      return { message: textContent(followUp.choices[0].message), qr: qrResult, sources: resultSources }
+    }
+
+    const text = textContent(choice.message)
+
+    // Fallback: some local models embed the JSON tool call in content text
+    const embedded = extractEmbeddedToolCall(text)
+    if (embedded) {
+      const params = coerceParams(embedded)
+      const qrResult = await generateQR(params)
+      const followUp = await client.chat.completions.create({
+        model, max_tokens: 512,
+        messages: [ ...currentMessages, { role: 'assistant', content: text }, { role: 'user', content: 'The QR code was generated successfully. Now describe the tone you created in 2-3 sentences.' } ],
+      })
+      return { message: textContent(followUp.choices[0].message), qr: qrResult }
+    }
+
+    return { message: text }
   }
-
-  const text = textContent(choice.message)
-
-  // Fallback: some local models embed the JSON tool call in content text
-  const embedded = extractEmbeddedToolCall(text)
-  if (embedded) {
-    const params = coerceParams(embedded)
-    const qrResult = await generateQR(params)
-    const followUp = await client.chat.completions.create({
-      model, max_tokens: 512,
-      messages: [ ...openAIMessages, { role: 'assistant', content: text }, { role: 'user', content: 'The QR code was generated successfully. Now describe the tone you created in 2-3 sentences.' } ],
-    })
-    return { message: textContent(followUp.choices[0].message), qr: qrResult }
-  }
-
-  return { message: text }
 }
 
 // Some reasoning models (e.g. gpt-oss, DeepSeek-R1) return empty content with text in a

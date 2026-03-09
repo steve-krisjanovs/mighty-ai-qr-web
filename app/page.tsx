@@ -1027,7 +1027,7 @@ function ProviderDropdown({ value, onChange }: { value: AiProvider; onChange: (p
   )
 }
 
-function BuiltinPill() {
+function BuiltinPill({ quotaVersion }: { quotaVersion: number }) {
   const [remaining, setRemaining] = useState<number | null>(null)
   const [model, setModel] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -1035,10 +1035,16 @@ function BuiltinPill() {
     setRefreshing(true)
     fetch('/api/quota').then(r => r.json()).then(d => { setRemaining(d.remaining); setModel(d.model ?? null); setRefreshing(false) }).catch(() => setRefreshing(false))
   }, [])
-  useEffect(() => { fetchQuota() }, [fetchQuota])
+  useEffect(() => { fetchQuota() }, [fetchQuota, quotaVersion])
+  useEffect(() => {
+    const id = setInterval(fetchQuota, 30_000)
+    return () => clearInterval(id)
+  }, [fetchQuota])
   const modelLabel = model ? (model.split('-')[1] ?? 'Free').charAt(0).toUpperCase() + (model.split('-')[1] ?? 'free').slice(1) : null
   return (
     <button onClick={fetchQuota} className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-4 select-none active:opacity-70 transition-opacity">
+      <span className="font-medium text-orange-400">Anthropic</span>
+      <span className="text-fg-4">·</span>
       {modelLabel ?? 'Free'} · Free
       {remaining !== null && (
         <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${remaining <= 10 ? 'bg-red-900/40 text-red-400' : 'bg-white/5 text-fg-4'}`}>
@@ -1050,7 +1056,7 @@ function BuiltinPill() {
 }
 
 // Self-contained desktop header pill — reads/writes localStorage, fetches models
-function HeaderModelPill({ settingsVersion }: { settingsVersion: number }) {
+function HeaderModelPill({ settingsVersion, quotaVersion }: { settingsVersion: number; quotaVersion: number }) {
   const [config, setConfig] = useState<ReturnType<typeof getActiveConfig>>(null)
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
@@ -1068,7 +1074,7 @@ function HeaderModelPill({ settingsVersion }: { settingsVersion: number }) {
   }, [config?.provider, config?.apiKey, config?.baseUrl])
 
   const isByok = !!config?.apiKey || !!config?.baseUrl
-  if (!config || config.provider === 'builtin' || !isByok) return <BuiltinPill />
+  if (!config || config.provider === 'builtin' || !isByok) return <BuiltinPill quotaVersion={quotaVersion} />
 
 
 
@@ -1082,20 +1088,33 @@ function HeaderModelPill({ settingsVersion }: { settingsVersion: number }) {
 
   const providerLabel = PROVIDERS.find(p => p.id === config.provider)?.label ?? config.provider
 
-  return <ModelPill value={config.model ?? ''} onChange={handleChange} models={models} loading={loadingModels} providerLabel={providerLabel} />
+  return <ModelPill value={config.model ?? ''} onChange={handleChange} models={models} loading={loadingModels} providerLabel={providerLabel} provider={config.provider} />
+}
+
+const PROVIDER_COLORS: Record<string, string> = {
+  anthropic: 'text-orange-400',
+  openai:    'text-green-400',
+  gemini:    'text-blue-400',
+  grok:      'text-purple-400',
+  mistral:   'text-rose-400',
+  groq:      'text-emerald-400',
+  ollama:    'text-teal-400',
+  lmstudio:  'text-cyan-400',
+  openwebui: 'text-sky-400',
 }
 
 // Compact pill for desktop header — shows current model, click to pick from list
-function ModelPill({ value, onChange, models, loading, providerLabel }: { value: string; onChange: (m: string) => void; models: string[]; loading: boolean; providerLabel?: string }) {
+function ModelPill({ value, onChange, models, loading, providerLabel, provider }: { value: string; onChange: (m: string) => void; models: string[]; loading: boolean; providerLabel?: string; provider?: string }) {
   const [open, setOpen] = useState(false)
   const label = value || 'auto'
+  const providerColor = provider ? (PROVIDER_COLORS[provider] ?? 'text-fg-4') : 'text-fg-4'
   return (
     <div className="relative">
       <button
         onClick={() => setOpen(o => !o)}
         className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-2 hover:border-white/20 hover:text-fg transition-colors"
       >
-        {providerLabel && <><span className="shrink-0 text-fg-4">{providerLabel}</span><span className="text-fg-4">·</span></>}
+        {providerLabel && <><span className={`shrink-0 font-medium ${providerColor}`}>{providerLabel}</span><span className="text-fg-4">·</span></>}
         {loading
           ? <span className="h-2.5 w-2.5 animate-spin rounded-full border border-fg-4 border-t-primary" />
           : <span className="max-w-[120px] truncate">{label}</span>}
@@ -1292,6 +1311,8 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [showKey, setShowKey] = useState(false)
   const [didSave, setDidSave] = useState(false)
   const [closing, setClosing] = useState(false)
+  const [isPwa] = useState(() => typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true))
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'done'>('idle')
   const [showAbout, setShowAbout] = useState(false)
   const [showAboutModal, setShowAboutModal] = useState(false)
   const [availableModels, setAvailableModels] = useState<string[]>([])
@@ -1559,6 +1580,24 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
           >
             {didSave ? 'Saved' : 'Save'}
           </button>
+
+          {/* Check for updates — PWA only */}
+          {isPwa && (
+            <button
+              onClick={() => {
+                if (!('serviceWorker' in navigator)) return
+                setUpdateStatus('checking')
+                navigator.serviceWorker.ready.then(reg => reg.update()).then(() => {
+                  setUpdateStatus('done')
+                  setTimeout(() => setUpdateStatus('idle'), 2500)
+                }).catch(() => setUpdateStatus('idle'))
+              }}
+              disabled={updateStatus === 'checking'}
+              className="w-full rounded-lg border border-white/10 py-2.5 text-sm text-fg-3 hover:text-fg hover:border-white/20 transition-colors disabled:opacity-50"
+            >
+              {updateStatus === 'checking' ? 'Checking…' : updateStatus === 'done' ? 'Up to date' : 'Check for updates'}
+            </button>
+          )}
 
           {/* About */}
           <div className="border-t border-white/10 pt-4">
@@ -1834,6 +1873,57 @@ function SuggestionScreen({ onSend }: { onSend: (text: string) => void }) {
   )
 }
 
+// ─── Sources Bar ──────────────────────────────────────────────────────────────
+
+function SourcesBar({ sources }: { sources: { title: string; url: string }[] }) {
+  const [open, setOpen] = useState(false)
+  const getDomain = (url: string) => { try { return new URL(url).hostname } catch { return '' } }
+  return (
+    <div className="mt-2 animate-fade-in">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 text-xs text-fg-4 hover:text-fg-2 transition-colors"
+      >
+        <div className="flex -space-x-1.5">
+          {sources.slice(0, 5).map((s, i) => (
+            <img
+              key={i}
+              src={`https://www.google.com/s2/favicons?domain=${getDomain(s.url)}&sz=16`}
+              width={16} height={16}
+              className="rounded-sm ring-1 ring-surface-2 bg-surface-3"
+              alt=""
+            />
+          ))}
+        </div>
+        <span>{sources.length} source{sources.length !== 1 ? 's' : ''}</span>
+        <ChevronIcon open={open} />
+      </button>
+      {open && (
+        <div className="mt-1.5 space-y-0.5">
+          {sources.map((s, i) => (
+            <a
+              key={i}
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-fg-3 hover:bg-surface-3 hover:text-fg transition-colors"
+            >
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${getDomain(s.url)}&sz=16`}
+                width={16} height={16}
+                className="rounded-sm shrink-0"
+                alt=""
+              />
+              <span className="truncate">{s.title || getDomain(s.url)}</span>
+              <span className="ml-auto shrink-0 text-fg-4">{getDomain(s.url)}</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Message Row ──────────────────────────────────────────────────────────────
 
 function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete, onQrOpen, disabled }: {
@@ -1887,11 +1977,6 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
               <div className="prose-ai">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
               </div>
-              <div className="mt-2 flex justify-end">
-                <button onClick={copy} title="Copy response" className="text-fg-4 hover:text-fg-2 transition-colors">
-                  {copied ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>}
-                </button>
-              </div>
             </div>
             {!disabled && (
               <div className={actionClass} onClick={e => e.stopPropagation()}>
@@ -1904,6 +1989,7 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
               </div>
             )}
           </div>
+          {msg.sources && msg.sources.length > 0 && <SourcesBar sources={msg.sources} />}
           {msg.qr && (
             <div className="mt-2 animate-fade-in space-y-2">
               <button
@@ -1958,6 +2044,7 @@ export default function Page() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [settingsVersion, setSettingsVersion] = useState(0)
+  const [quotaVersion, setQuotaVersion] = useState(0)
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
   const [popupQr, setPopupQr] = useState<{ qr: QrResult; description: string } | null>(null)
@@ -2193,7 +2280,8 @@ export default function Page() {
 
     try {
       const res = await sendChat(newMessages.map(({ role, content }) => ({ role, content })), abort.signal)
-      const aiMsg: ChatMessage = { id: uuidv4(), role: 'assistant', content: res.message, qr: res.qr }
+      setQuotaVersion(v => v + 1)
+      const aiMsg: ChatMessage = { id: uuidv4(), role: 'assistant', content: res.message, qr: res.qr, sources: res.sources }
       if (ttsEnabledRef.current && typeof window !== 'undefined' && window.speechSynthesis) {
         const plain = res.message.replace(/#{1,6} /g, '').replace(/[*_`~>]/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\n+/g, ' ').trim()
         window.speechSynthesis.speak(new SpeechSynthesisUtterance(plain))
@@ -2346,7 +2434,7 @@ export default function Page() {
               <button onClick={startNewChat} className="text-sm font-semibold text-fg hover:text-fg-2 transition-colors">Mighty AI QR</button>
             </div>
             <div className="absolute left-1/2 -translate-x-1/2">
-              <HeaderModelPill settingsVersion={settingsVersion} />
+              <HeaderModelPill settingsVersion={settingsVersion} quotaVersion={quotaVersion} />
             </div>
             <div className="ml-auto flex items-center gap-2">
               {activeConvId && (
@@ -2377,7 +2465,7 @@ export default function Page() {
               </div>
             </div>
             <div className="flex justify-center border-t border-white/10 px-4 py-2">
-              <HeaderModelPill settingsVersion={settingsVersion} />
+              <HeaderModelPill settingsVersion={settingsVersion} quotaVersion={quotaVersion} />
             </div>
           </div>
 

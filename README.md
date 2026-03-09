@@ -1,6 +1,7 @@
 # Mighty AI QR — Web Client
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.4.0-informational)](package.json)
 [![Live](https://img.shields.io/badge/Live-mighty--ai--qr--web.onrender.com-blue)](https://mighty-ai-qr-web.onrender.com)
 
 Describe a guitar tone in natural language and get a scannable NUX MightyAmp QR code back. Chat with an AI, tap a suggestion, or refine an existing tone — all in the browser.
@@ -26,6 +27,7 @@ Installable as a PWA on mobile and desktop.
 - **JWT auth** — device-scoped, no accounts required
 - **Free tier** — shared daily quota powered by Claude Sonnet (server-side key); no API key needed
 - **BYOK** — bring your own key for Anthropic, OpenAI, Gemini, Grok, Mistral, Groq, Ollama, LM Studio, Open WebUI
+- **Web search** — optional Tavily integration; the AI searches the web for song/artist tone references before generating a QR code, grounding answers in real gear data beyond its training cutoff — especially important for obscure recordings, recent releases, and deep-cut tone research
 - **Docker** — single container, SQLite volume
 
 ## Features
@@ -39,9 +41,13 @@ Installable as a PWA on mobile and desktop.
 - **Default NUX Device** setting — select your device once in Settings; the AI uses it as the default for all generated QR codes
 - Device name baked into the QR code image (preset name + device + optional guitar setup)
 - 19 themes — 3 standard (Dark, OLED, Light) + 8 dark vintage + 8 light vintage (sunlit variants of each amp theme), grouped in Settings
+- **Web search sources panel** — when Tavily is configured and the AI searches the web, a collapsible sources bar with favicons appears below the response
+- **Provider-coloured model pill** — header pill shows the active provider name in its brand colour (Anthropic orange, OpenAI green, Gemini blue, etc.)
+- **Live quota pill** — free-tier remaining count updates immediately after each request and polls every 30s for multi-user accuracy
 - Copy to clipboard on every chat bubble
 - Cancel in-flight requests
 - **PWA update banner** — detects new version in the background and prompts to refresh with one tap
+- **Check for updates** — Settings button (PWA only) that manually triggers a service worker update check; if a new version is found the update banner appears and the app reloads automatically
 - **Version stamped QR images** — every generated QR image includes the app version in the header
 
 ## Requirements
@@ -78,6 +84,7 @@ Or deploy to [Render](https://render.com): connect the repo, select Docker, add 
 | `FREE_DAILY_LIMIT` | No | Max free requests per day across all users (default `100`). Resets at midnight UTC. |
 | `FREE_MODEL` | No | Anthropic model used for free-tier requests (default `claude-sonnet-4-6`). |
 | `RUNNING_IN_DOCKER` | Auto | Set to `"true"` by docker-compose — rewrites `localhost` → `host.docker.internal` for local LLMs |
+| `TAVILY_API_KEY` | No | Enables web search for song/artist tone lookups. Get a key at [tavily.com](https://tavily.com). If unset, web search is silently skipped. |
 | `DB_PATH` | No | SQLite path (default `./data/mighty.db`) |
 
 ## Local LLMs (Ollama)

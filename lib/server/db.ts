@@ -24,6 +24,12 @@ if (process.env.NEXT_PHASE !== 'phase-production-build') {
       date  TEXT PRIMARY KEY,
       count INTEGER NOT NULL DEFAULT 0
     );
+
+    CREATE TABLE IF NOT EXISTS web_search_cache (
+      query      TEXT PRIMARY KEY,
+      result     TEXT NOT NULL,
+      cached_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `)
 }
 

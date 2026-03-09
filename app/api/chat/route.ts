@@ -23,8 +23,9 @@ function normalizeBaseUrl(url: string, provider: string): string {
 export const maxDuration = 300 // 5 minutes — local LLMs (e.g. 20B models) can be slow
 
 export async function POST(request: NextRequest) {
+  console.log('[chat] request received')
   const deviceId = getDeviceIdFromRequest(request.headers.get('Authorization'))
-  if (!deviceId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!deviceId) { console.log('[chat] unauthorized'); return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
 
   const body = await request.json()
   const { messages } = body
@@ -44,6 +45,8 @@ export async function POST(request: NextRequest) {
 
   const isByok = !!userApiKey || !!userBaseUrl
 
+  console.log(`[chat] provider=${userProvider || 'builtin'} byok=${isByok} model=${userModel || 'auto'} msgs=${messages.length}`)
+
   try {
     let result
 
@@ -59,17 +62,21 @@ export async function POST(request: NextRequest) {
         }, { status: 429 })
       }
       const freeModel = process.env.FREE_MODEL || 'claude-sonnet-4-6'
+      console.log(`[chat] using server key, model=${freeModel}`)
       const serverClient = new Anthropic({ apiKey: serverKey })
       result = await runChat(serverClient, messages, freeModel, systemFull)
     } else if (userProvider === 'anthropic') {
+      console.log(`[chat] byok anthropic model=${userModel || 'auto'}`)
       const byokClient = new Anthropic({ apiKey: userApiKey })
       result = await runChat(byokClient, messages, userModel || undefined, systemFull)
     } else {
       const baseUrl = normalizeBaseUrl(userBaseUrl, userProvider)
       const model   = userModel || DEFAULT_MODELS[userProvider] || 'llama3.2'
+      console.log(`[chat] byok openai-compat provider=${userProvider} model=${model} baseUrl=${baseUrl}`)
       result = await runChatOpenAI(baseUrl, userApiKey || 'none', model, messages, systemFull)
     }
 
+    console.log(`[chat] done`)
     return NextResponse.json(result)
   } catch (err) {
     console.error('[chat] error:', err)

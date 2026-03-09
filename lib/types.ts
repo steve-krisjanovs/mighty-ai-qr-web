@@ -30,6 +30,7 @@ export interface QrResult {
 export interface ChatMessage extends Message {
   id: string
   qr?: QrResult
+  sources?: { title: string; url: string }[]
 }
 
 export interface HistoryItem {

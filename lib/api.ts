@@ -5,6 +5,7 @@ import { getActiveConfig, getDefaultDevice } from './storage'
 export interface ChatResponse {
   message: string
   qr?: QrResult
+  sources?: { title: string; url: string }[]
 }
 
 const BASE = '/api'
@@ -111,6 +112,7 @@ export async function sendChat(messages: Message[], signal?: AbortSignal): Promi
   return {
     message: data.message ?? '',
     qr: data.qr,
+    sources: data.sources,
   }
 }
 
