@@ -1,7 +1,7 @@
 # Mighty AI QR — Web Client
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.4.1-informational)](package.json)
+[![Version](https://img.shields.io/badge/version-1.4.2-informational)](package.json)
 [![Live](https://img.shields.io/badge/Live-mighty--ai--qr--web.onrender.com-blue)](https://mighty-ai-qr-web.onrender.com)
 
 Describe a guitar tone in natural language and get a scannable NUX MightyAmp QR code back. Chat with an AI, tap a suggestion, or refine an existing tone — all in the browser.

@@ -1311,7 +1311,7 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [showKey, setShowKey] = useState(false)
   const [didSave, setDidSave] = useState(false)
   const [closing, setClosing] = useState(false)
-  const [isPwa] = useState(() => typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true))
+  const [isPwa] = useState(() => typeof window !== 'undefined' && 'serviceWorker' in navigator && (window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true))
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'done'>('idle')
   const [showAbout, setShowAbout] = useState(false)
   const [showAboutModal, setShowAboutModal] = useState(false)
@@ -1585,11 +1585,11 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
           {isPwa && (
             <button
               onClick={async () => {
-                if (!('serviceWorker' in navigator)) return
                 setUpdateStatus('checking')
                 try {
-                  const reg = await navigator.serviceWorker.ready
-                  await reg.update()
+                  const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+                  const reg = await Promise.race([navigator.serviceWorker.ready, timeout])
+                  await Promise.race([reg.update(), timeout])
                   setUpdateStatus('done')
                   setTimeout(() => setUpdateStatus('idle'), 2500)
                 } catch {
