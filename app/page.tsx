@@ -1584,13 +1584,17 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
           {/* Check for updates — PWA only */}
           {isPwa && (
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (!('serviceWorker' in navigator)) return
                 setUpdateStatus('checking')
-                navigator.serviceWorker.ready.then(reg => reg.update()).then(() => {
+                try {
+                  const reg = await navigator.serviceWorker.ready
+                  await reg.update()
                   setUpdateStatus('done')
                   setTimeout(() => setUpdateStatus('idle'), 2500)
-                }).catch(() => setUpdateStatus('idle'))
+                } catch {
+                  setUpdateStatus('idle')
+                }
               }}
               disabled={updateStatus === 'checking'}
               className="w-full rounded-lg border border-white/10 py-2.5 text-sm text-fg-3 hover:text-fg hover:border-white/20 transition-colors disabled:opacity-50"
