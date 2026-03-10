@@ -2694,9 +2694,9 @@ export default function Page() {
             decodeQrFromFile(file),
             ocrImageText(bitmap),
           ])
-          if (!scanned) return
+          if (!scanned) { setError("Couldn't find a QR code in this image."); return }
           const decoded = await decodeQr(scanned.qrString)
-          if (!decoded) return
+          if (!decoded) { setError("QR code found but couldn't be decoded — it may not be a NUX preset."); return }
 
           // Use OCR text, or fall back to cleaned filename if OCR is unavailable
           const filenameHint = file.name.replace(/\.[^.]+$/, '').replace(/[_\-\.]+/g, ' ').trim()
