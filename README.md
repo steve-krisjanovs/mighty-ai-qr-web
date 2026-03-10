@@ -50,6 +50,27 @@ Installable as a PWA on mobile and desktop.
 - **Check for updates** — Settings button (PWA only) that manually triggers a service worker update check; if a new version is found the update banner appears and the app reloads automatically
 - **Version stamped QR images** — every generated QR image includes the app version in the header
 
+## Supported NUX Devices
+
+### Pro format (113-byte payload) — full feature set
+| Device | ID |
+|---|---|
+| Mighty Plug Pro | `plugpro` |
+| Mighty Space | `space` |
+| Mighty Lite MkII | `litemk2` |
+| Mighty 8BT MkII | `8btmk2` |
+
+29 amp models, 25 cabinets, compressor, EFX, modulation, delay, reverb, 5-band EQ.
+
+### Standard format (40-byte payload)
+| Device | ID | Notes |
+|---|---|---|
+| Mighty Plug (v1) | `plugair_v1` | 13 amps, 19 cabs, EFX slot |
+| Mighty Plug (v2) | `plugair_v2` | Updated amp/mod/reverb set, 19 cabs |
+| Mighty Lite BT | `lite` | 1 amp, single ambience slot (delay OR reverb) |
+| Mighty 8BT | `8bt` | 1 amp, separate delay + reverb |
+| Mighty 20/40BT | `2040bt` | 1 amp with full EQ, wah pedal |
+
 ## Requirements
 
 - Docker
