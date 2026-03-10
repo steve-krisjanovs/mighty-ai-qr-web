@@ -27,9 +27,9 @@ All parameter values (gain, master, bass, mid, treble, etc.) are integers 0-100.
 Use the device specified in the system prompt unless the user requests a different one.`,
   input_schema: {
     type: 'object' as const,
-    required: ['device', 'preset_name', 'amp', 'cabinet', 'noise_gate', 'master_db'],
+    required: ['device', 'preset_name', 'amp', 'noise_gate', 'master_db'],
     properties: {
-      device: { type: 'string', enum: ['plugpro', 'space', 'litemk2', '8btmk2', 'plugair_v1', 'plugair_v2', 'lite', '8bt', '2040bt'], description: 'Target NUX device. Use the default from the system prompt unless the user specifies otherwise.' },
+      device: { type: 'string', enum: ['plugpro', 'space', 'litemk2', '8btmk2', 'plugair_v1', 'plugair_v2', 'lite', '8bt', '2040bt'], description: 'Target NUX device. Use the default from the system prompt unless the user specifies otherwise. Standard devices (plugair_v1/v2, lite, 8bt, 2040bt) have different amp/effect IDs — see device-specific sections in the system prompt.' },
       preset_name: { type: 'string', description: 'Short descriptive name for the preset' },
       amp: {
         type: 'object', required: ['id', 'gain', 'master', 'bass', 'mid', 'treble'],
@@ -41,11 +41,19 @@ Use the device specified in the system prompt unless the user requests a differe
         },
       },
       cabinet: {
-        type: 'object', required: ['id', 'level_db', 'low_cut_hz', 'high_cut'],
+        type: 'object',
+        description: 'Required for pro devices (plugpro, space, litemk2, 8btmk2) and PlugAir (plugair_v1/v2). Omit for lite, 8bt, 2040bt (no cabinet support).',
+        required: ['id', 'level_db', 'low_cut_hz', 'high_cut'],
         properties: {
           id: { type: 'number' }, level_db: { type: 'number', minimum: -12, maximum: 12 },
           low_cut_hz: { type: 'number', minimum: 20, maximum: 300 }, high_cut: { type: 'number', minimum: 0, maximum: 100 },
         },
+      },
+      wah: {
+        type: 'object',
+        description: 'Wah pedal — only available on 2040bt.',
+        required: ['enabled', 'pedal'],
+        properties: { enabled: { type: 'boolean' }, pedal: { type: 'number', minimum: 0, maximum: 100 } },
       },
       noise_gate: {
         type: 'object', required: ['enabled', 'sensitivity', 'decay'],
@@ -81,6 +89,86 @@ Use the device specified in the system prompt unless the user requests a differe
     },
   },
 }
+
+// ── Standard device reference (used in system prompt) ────────────────────────
+const STANDARD_DEVICE_REFERENCE = `
+IMPORTANT — STANDARD DEVICES: plugair_v1, plugair_v2, lite, 8bt, 2040bt
+These devices use DIFFERENT amp/effect IDs from the Pro devices above. Always use the correct IDs for the active device.
+
+── Mighty Plug Air v1 (plugair_v1) ──────────────────────────────────────────
+Amps (amp.id, 0-indexed): 0=TwinVerb(Clean), 1=JZ120(Clean), 2=TweedDlx(Tweed crunch),
+  3=Plexi(Marshall clean-crunch), 4=TopBoost30(Vox AC30), 5=Lead100(Marshall gain),
+  6=Fireman(Engl), 7=DIEVH4(EVH 5150), 8=Recto(Mesa), 9=Optima(Acoustic),
+  10=Stageman(Acoustic stage), 11=MLD(Ampeg bass), 12=AGL(Aguilar bass)
+Amp params: gain(0-100), master(0-100), bass(0-100), mid(0-100), treble(0-100), param6=tone/presence(0-100)
+  Note: TwinVerb(0), Plexi(3), Fireman(6) have NO bass/mid/treble — only gain, master, param6(tone). Set bass/mid/treble to 0.
+Cabinets (cabinet.id, 0-indexed): 0=V1960, 1=A212, 2=BS410(bass), 3=DR112, 4=GB412,
+  5=JZ120IR, 6=TR212, 7=V412, 8=AGLDB810(bass), 12=GHBird(acoustic), 13=GJ15(acoustic)
+  Match amp to cab: Plexi/Lead100 → V1960(0) or GB412(4). TwinVerb/JZ120 → TR212(6) or DR112(3). Recto → V1960(0). Acoustic → GHBird(12).
+EFX (efx.id, 0-indexed): 0=TouchWah, 1=UniVibe, 2=Tremolo(efx), 3=Phaser(efx),
+  4=Boost, 5=TScreamer(TS-808), 6=BassTS, 7=3BandEQ, 8=MuffFuzz, 9=Crunch, 10=RedDist, 11=MorningDrive, 12=DistOne(RAT)
+Modulation (modulation.id): 0=Phaser, 1=Chorus, 2=STChorus, 3=Flanger, 4=UVibe, 5=Tremolo
+  Params: p1=rate(0-100), p2=depth(0-100), p3=mix(0-100)
+Delay (delay.id): 0=Analog, 1=TapeEcho, 2=Digital, 3=PingPong
+  Params: p1=time(0-100), p2=feedback(0-100), p3=mix(0-100)
+Reverb (reverb.id): 0=Room, 1=Hall, 2=Plate, 3=Spring, 4=Shimmer
+  Params: p1=decay(0-100), p2=damp(0-100), p3=mix(0-100)
+No compressor, no EQ. master_db is ignored (use amp.master for volume).
+
+── Mighty Plug Air v2 (plugair_v2) ──────────────────────────────────────────
+Amps (amp.id, 0-indexed): 0=JazzClean, 1=DeluxeRvb, 2=TwinRvbV2, 3=ClassA30(Vox),
+  4=Brit800(JCM800), 5=Pl1987x50(Marshall), 6=FiremanHBE(Engl), 7=DualRect(Mesa),
+  8=DIEVH4v2(EVH), 9=AGLv2(Aguilar bass), 10=Starlift, 11=MLDv2(Ampeg bass), 12=Stagemanv2(Acoustic)
+Cabinets: same 0-18 as v1
+EFX: same 0-12 as v1
+Modulation (modulation.id): 0=PH100(Phase), 1=CE-1(Chorus), 2=STChorus, 3=SCF
+  Params: p1=intensity/rate, p2=depth/width, p3=rate/mix
+Delay (delay.id): 0=Analog, 1=Digital, 2=ModDelay, 3=PingPong
+  Params: p1=time, p2=feedback, p3=mix
+Reverb (reverb.id): 0=Room, 1=Hall, 2=Plate
+  Params: p1=decay, p2=damp, p3=mix
+No compressor, no EQ.
+
+── Mighty Lite BT (lite) ─────────────────────────────────────────────────────
+ONE amp only — always amp.id=0 (AmpClean). Params: gain(0-100), master=level(0-100), param6=tone(0-100). No bass/mid/treble.
+NO cabinet. Omit cabinet field entirely.
+NO EFX, no compressor, no EQ, no wah.
+Modulation (modulation.id): 0=Phaser, 1=Chorus, 2=Tremolo, 3=Vibe
+  Params: p1=rate(0-100), p2=depth(0-100)
+SINGLE AMBIENCE SLOT — use reverb OR delay, NOT both. Reverb takes priority.
+Reverb (reverb.id): 0=Room, 1=Hall, 2=Plate, 3=Spring — p1=decay, p2=mix
+Delay (delay.id): 0=Delay1, 1=Delay2, 2=Delay3, 3=Delay4 — p1=time, p2=feedback, p3=mix
+master_db is ignored.
+
+── Mighty 8BT (8bt) ─────────────────────────────────────────────────────────
+Same amp as Lite (amp.id=0, AmpClean, gain/master/param6=tone only). No cabinet.
+Modulation (modulation.id): 0=Phaser, 1=Chorus, 2=Tremolo, 3=Vibe
+Delay (delay.id): 0=Delay1, 1=Delay2, 2=Delay3, 3=Delay4 — p1=time, p2=feedback, p3=mix
+Reverb (reverb.id): 0=Room, 1=Hall, 2=Plate, 3=Spring — p1=decay, p2=mix
+BOTH delay AND reverb can be active simultaneously (unlike Lite).
+No EFX, no compressor, no EQ, no wah.
+
+── Mighty 20/40BT (2040bt) ──────────────────────────────────────────────────
+ONE amp only — always amp.id=0. Params: gain, master=level, bass, mid, treble(=high). No cabinet.
+UNIQUE: has wah pedal — wah.enabled=true/false, wah.pedal=0-100 (position).
+Modulation (modulation.id): 0=Phaser, 1=Chorus, 2=Tremolo
+  Params: p1=rate, p2=depth, p3=mix
+Delay (delay.id): 0=Analog, 1=ModulationDelay, 2=Digital
+  Params: p1=time, p2=feedback, p3=mix
+Reverb (reverb.id): 0=Hall, 1=Plate, 2=Spring
+  Params: p1=decay, p2=damp, p3=mix
+No EFX, no compressor, no EQ.
+
+Standard device tone guide:
+- Lite/8BT clean: amp.id=0, gain 20-35, param6(tone) 50-65
+- Lite/8BT crunch: amp.id=0, gain 55-70, param6 50-65
+- Lite/8BT high gain: amp.id=0, gain 75-90, param6 45-55
+- PlugAir v1 blues: amp.id=2(TweedDlx) or 1(JZ120), gain 35-55, cab DR112(3) or TR212(6)
+- PlugAir v1 classic rock: amp.id=3(Plexi), gain 50-65, cab V1960(0)
+- PlugAir v1 high gain: amp.id=7(DIEVH4) or 8(Recto), gain 70-85, cab V1960(0)
+- PlugAir v2 blues: amp.id=1(DeluxeRvb), gain 35-55, cab DR112(3)
+- PlugAir v2 high gain: amp.id=7(DualRect) or 8(DIEVH4v2), gain 70-85
+- 20/40BT: amp.id always 0, use bass/mid/treble to shape tone; add wah for funk/wah styles`
 
 const SHARED_HEADER = `You are Mighty AI, a guitar and bass tone expert and NUX MightyAmp specialist.
 You help musicians dial in perfect tones from natural language descriptions — artist names, songs, genres, moods.
@@ -163,7 +251,7 @@ Always include a guitar setup recommendation in the guitar field:
   - Vol 10 is standard; roll back to 7–8 for mild breakup cleanup with a hot amp
   - Tone 10 = full bright, 5–7 = warm/rounded, 0–3 = very dark/muffled`
 
-export const SYSTEM_PROMPT_FULL = SHARED_HEADER + `
+export const SYSTEM_PROMPT_FULL = SHARED_HEADER + STANDARD_DEVICE_REFERENCE + `
 
 EFX pedal selection guide:
 - RC Boost / AC Boost / Katana (id=2,3,12): clean boost — push an amp into natural breakup without coloring tone; use p1=60-80 for subtle drive
@@ -281,6 +369,9 @@ function b(v: unknown, fallback: boolean): boolean {
   return fallback
 }
 
+const STANDARD_DEVICES_NO_CAB = new Set(['lite', '8bt', '2040bt'])
+const PLUG_AIR_DEVICES = new Set(['plugair_v1', 'plugair_v2'])
+
 // Normalises raw LLM tool-call arguments into a valid ProPresetParams.
 // Local models often ignore the JSON schema and use different field names.
 function coerceParams(raw: Record<string, unknown>): ProPresetParams {
@@ -288,11 +379,17 @@ function coerceParams(raw: Record<string, unknown>): ProPresetParams {
   const cab = (raw.cabinet as Record<string, unknown>) ?? {}
   const ng  = (raw.noise_gate as Record<string, unknown>) ?? {}
 
+  const device: ProPresetParams['device'] = VALID_DEVICES.has(raw.device as string)
+    ? raw.device as ProPresetParams['device'] : 'plugpro'
+
+  const hasCabinet = !STANDARD_DEVICES_NO_CAB.has(device)
+  const defaultAmpId = PLUG_AIR_DEVICES.has(device) ? 0 : 2
+
   const coerced: ProPresetParams = {
-    device:      VALID_DEVICES.has(raw.device as string) ? raw.device as ProPresetParams['device'] : 'plugpro',
+    device,
     preset_name: (raw.preset_name as string) || 'My Tone',
     amp: {
-      id:     n(amp.id ?? amp.nuxIndex, 2),
+      id:     n(amp.id ?? amp.nuxIndex, defaultAmpId),
       gain:   n(amp.gain, 50),
       master: n(amp.master ?? amp.volume ?? amp.master_volume, 70),
       bass:   n(amp.bass, 50),
@@ -301,18 +398,26 @@ function coerceParams(raw: Record<string, unknown>): ProPresetParams {
       ...(amp.param6  !== undefined ? { param6: n(amp.param6, 50) }  : {}),
       ...(amp.param7  !== undefined ? { param7: n(amp.param7, 50) }  : {}),
     },
-    cabinet: {
-      id:          n(cab.id ?? cab.nuxIndex, 2),
-      level_db:    n(cab.level_db ?? cab.level, 0),
-      low_cut_hz:  n(cab.low_cut_hz ?? cab.low_cut, 80),
-      high_cut:    n(cab.high_cut, 50),
-    },
+    ...(hasCabinet ? {
+      cabinet: {
+        id:          n(cab.id ?? cab.nuxIndex, 2),
+        level_db:    n(cab.level_db ?? cab.level, 0),
+        low_cut_hz:  n(cab.low_cut_hz ?? cab.low_cut, 80),
+        high_cut:    n(cab.high_cut, 50),
+      },
+    } : {}),
     noise_gate: {
       enabled:     b(ng.enabled ?? ng.active, false),
       sensitivity: n(ng.sensitivity ?? ng.threshold, 50),
       decay:       n(ng.decay ?? ng.release, 50),
     },
     master_db: n(raw.master_db, 0),
+  }
+
+  // Wah (2040bt only)
+  if (device === '2040bt' && raw.wah && typeof raw.wah === 'object') {
+    const w = raw.wah as Record<string, unknown>
+    coerced.wah = { enabled: b(w.enabled, false), pedal: n(w.pedal, 50) }
   }
 
   // Optional effects — only include if present and has an id

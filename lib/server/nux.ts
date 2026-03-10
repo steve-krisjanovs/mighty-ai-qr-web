@@ -75,12 +75,18 @@ export interface GuitarSetup {
   controls?: { label: string; value: number }[]
 }
 
+export interface WahParams {
+  enabled: boolean
+  pedal: number
+}
+
 export interface ProPresetParams {
   device: DeviceType
   preset_name: string
   amp: AmpParams
-  cabinet: CabinetParams
+  cabinet?: CabinetParams
   noise_gate: NoiseGateParams
+  wah?: WahParams
   efx?: EffectParams
   compressor?: EffectParams
   modulation?: EffectParams
