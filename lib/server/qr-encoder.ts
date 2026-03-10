@@ -288,6 +288,7 @@ function buildStandardPayload(p: ProPresetParams, device: DeviceType): Buffer {
   switch (device) {
     case 'plugair_v1':
     case 'plugair_v2':
+    case 'mightyair':
       return buildPlugAirPayload(p)
     case 'lite':
       return buildLitePayload(p)
@@ -376,7 +377,7 @@ function buildStandardSettings(p: ProPresetParams): SettingRow[] {
   const d = p.device
 
   // Amp name maps
-  const ampNames = d === 'plugair_v1' ? PLUG_AIR_V1_AMP_NAMES
+  const ampNames = (d === 'plugair_v1' || d === 'mightyair') ? PLUG_AIR_V1_AMP_NAMES
     : d === 'plugair_v2' ? PLUG_AIR_V2_AMP_NAMES
     : d === '2040bt' ? BT2040_AMP_NAMES
     : LITE_AMP_NAMES
@@ -393,7 +394,7 @@ function buildStandardSettings(p: ProPresetParams): SettingRow[] {
   })
 
   // Cabinet (PlugAir only)
-  if ((d === 'plugair_v1' || d === 'plugair_v2') && p.cabinet) {
+  if ((d === 'plugair_v1' || d === 'plugair_v2' || d === 'mightyair') && p.cabinet) {
     rows.push({
       slot: 'Cabinet', selection: PLUG_AIR_CAB_NAMES[p.cabinet.id] ?? `Cab #${p.cabinet.id}`, enabled: true,
       params: { 'Level (dB)': p.cabinet.level_db },
@@ -411,7 +412,7 @@ function buildStandardSettings(p: ProPresetParams): SettingRow[] {
   }
 
   // EFX (PlugAir only)
-  if ((d === 'plugair_v1' || d === 'plugair_v2') && p.efx) {
+  if ((d === 'plugair_v1' || d === 'plugair_v2' || d === 'mightyair') && p.efx) {
     rows.push({
       slot: 'EFX', selection: PLUG_AIR_EFX_NAMES[p.efx.id] ?? `EFX #${p.efx.id}`, enabled: p.efx.enabled,
       params: { P1: p.efx.p1, P2: p.efx.p2, ...(p.efx.p3 !== undefined ? { P3: p.efx.p3 } : {}) },
@@ -420,7 +421,7 @@ function buildStandardSettings(p: ProPresetParams): SettingRow[] {
 
   // Modulation
   if (p.modulation) {
-    const modNames = d === 'plugair_v1' ? PLUG_AIR_V1_MOD_NAMES
+    const modNames = (d === 'plugair_v1' || d === 'mightyair') ? PLUG_AIR_V1_MOD_NAMES
       : d === 'plugair_v2' ? PLUG_AIR_V2_MOD_NAMES
       : d === '2040bt' ? BT2040_MOD_NAMES
       : LITE_MOD_NAMES
@@ -432,7 +433,7 @@ function buildStandardSettings(p: ProPresetParams): SettingRow[] {
 
   // Delay
   if (p.delay) {
-    const delayNames = d === 'plugair_v1' || d === 'plugair_v2' ? PLUG_AIR_DELAY_NAMES
+    const delayNames = (d === 'plugair_v1' || d === 'plugair_v2' || d === 'mightyair') ? PLUG_AIR_DELAY_NAMES
       : d === '2040bt' ? BT2040_DELAY_NAMES
       : LITE_8BT_DELAY_NAMES
     rows.push({
@@ -444,7 +445,7 @@ function buildStandardSettings(p: ProPresetParams): SettingRow[] {
 
   // Reverb
   if (p.reverb) {
-    const reverbNames = d === 'plugair_v1' ? PLUG_AIR_V1_REVERB_NAMES
+    const reverbNames = (d === 'plugair_v1' || d === 'mightyair') ? PLUG_AIR_V1_REVERB_NAMES
       : d === 'plugair_v2' ? PLUG_AIR_V2_REVERB_NAMES
       : d === '2040bt' ? BT2040_REVERB_NAMES
       : LITE_8BT_REVERB_NAMES

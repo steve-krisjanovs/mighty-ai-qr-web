@@ -29,7 +29,7 @@ Use the device specified in the system prompt unless the user requests a differe
     type: 'object' as const,
     required: ['device', 'preset_name', 'amp', 'noise_gate', 'master_db'],
     properties: {
-      device: { type: 'string', enum: ['plugpro', 'space', 'litemk2', '8btmk2', 'plugair_v1', 'plugair_v2', 'lite', '8bt', '2040bt'], description: 'Target NUX device. Use the default from the system prompt unless the user specifies otherwise. Standard devices (plugair_v1/v2, lite, 8bt, 2040bt) have different amp/effect IDs — see device-specific sections in the system prompt.' },
+      device: { type: 'string', enum: ['plugpro', 'space', 'litemk2', '8btmk2', 'plugair_v1', 'plugair_v2', 'mightyair', 'lite', '8bt', '2040bt'], description: 'Target NUX device. Use the default from the system prompt unless the user specifies otherwise. Standard devices (plugair_v1/v2, lite, 8bt, 2040bt) have different amp/effect IDs — see device-specific sections in the system prompt.' },
       preset_name: { type: 'string', description: 'Short descriptive name for the preset' },
       amp: {
         type: 'object', required: ['id', 'gain', 'master', 'bass', 'mid', 'treble'],
@@ -94,6 +94,10 @@ Use the device specified in the system prompt unless the user requests a differe
 const STANDARD_DEVICE_REFERENCE = `
 IMPORTANT — STANDARD DEVICES: plugair_v1, plugair_v2, lite, 8bt, 2040bt
 These devices use DIFFERENT amp/effect IDs from the Pro devices above. Always use the correct IDs for the active device.
+
+── Mighty Air (mightyair) ────────────────────────────────────────────────────
+Identical to plugair_v1 in every way — same amps, cabs, EFX, effects, and byte layout.
+Only difference is the QR device ID (6 vs 11). Use mightyair for Mighty Air devices.
 
 ── Mighty Plug Air v1 (plugair_v1) ──────────────────────────────────────────
 Amps (amp.id, 0-indexed): 0=TwinVerb(Clean), 1=JZ120(Clean), 2=TweedDlx(Tweed crunch),
@@ -355,7 +359,7 @@ export async function runChat(client: Anthropic, messages: ChatMessage[], model 
   }
 }
 
-const VALID_DEVICES = new Set(['plugpro','space','litemk2','8btmk2','plugair_v1','plugair_v2','lite','8bt','2040bt'])
+const VALID_DEVICES = new Set(['plugpro','space','litemk2','8btmk2','plugair_v1','plugair_v2','mightyair','lite','8bt','2040bt'])
 
 function n(v: unknown, fallback: number): number {
   const x = Number(v)
@@ -370,7 +374,7 @@ function b(v: unknown, fallback: boolean): boolean {
 }
 
 const STANDARD_DEVICES_NO_CAB = new Set(['lite', '8bt', '2040bt'])
-const PLUG_AIR_DEVICES = new Set(['plugair_v1', 'plugair_v2'])
+const PLUG_AIR_DEVICES = new Set(['plugair_v1', 'plugair_v2', 'mightyair'])
 
 // Normalises raw LLM tool-call arguments into a valid ProPresetParams.
 // Local models often ignore the JSON schema and use different field names.

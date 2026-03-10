@@ -65,6 +65,7 @@ Installable as a PWA on mobile and desktop.
 ### Standard format (40-byte payload)
 | Device | ID | Notes |
 |---|---|---|
+| Mighty Air | `mightyair` | 13 amps, 19 cabs, EFX slot (same format as Plug v1) |
 | Mighty Plug (v1) | `plugair_v1` | 13 amps, 19 cabs, EFX slot |
 | Mighty Plug (v2) | `plugair_v2` | Updated amp/mod/reverb set, 19 cabs |
 | Mighty Lite BT | `lite` | 1 amp, single ambience slot (delay OR reverb) |
