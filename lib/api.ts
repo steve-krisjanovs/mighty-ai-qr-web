@@ -119,6 +119,7 @@ export async function sendChat(messages: Message[], signal?: AbortSignal): Promi
 export interface DecodeResult {
   presetName: string
   deviceName: string
+  deviceId?: string
   settings: import('./types').QrResult['settings']
 }
 
@@ -132,4 +133,32 @@ export async function decodeQr(qrString: string): Promise<DecodeResult | null> {
   })
   if (!res.ok) return null
   return res.json()
+}
+
+export async function convertPreset(qrString: string, targetDevice: string): Promise<import('./types').QrResult | null> {
+  let token = getToken()
+  if (!token) { await authenticate(); token = getToken()! }
+
+  const active = getActiveConfig()
+  const extraHeaders: Record<string, string> = {}
+  extraHeaders['x-default-device'] = targetDevice
+  if (active) {
+    if (active.apiKey) extraHeaders['x-user-api-key'] = active.apiKey
+    extraHeaders['x-provider'] = active.provider
+    if (active.baseUrl) extraHeaders['x-base-url'] = active.baseUrl
+    if (active.model)   extraHeaders['x-model'] = active.model
+  }
+
+  const res = await fetch(`${BASE}/convert`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...extraHeaders },
+    body: JSON.stringify({ qrString, targetDevice }),
+  })
+  if (!res.ok) {
+    let message = `Conversion failed (${res.status})`
+    try { const b = await res.json(); if (b?.error) message = b.error } catch { /* ignore */ }
+    throw new Error(message)
+  }
+  const data = await res.json()
+  return data.qr ?? null
 }

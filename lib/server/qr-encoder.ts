@@ -321,6 +321,7 @@ export interface QRResult {
   imageBase64: string
   presetName: string
   deviceName: string
+  deviceId?: string
   settings: SettingRow[]
   guitar?: import('./nux').GuitarSetup
 }
@@ -470,7 +471,7 @@ export async function generateQR(p: ProPresetParams): Promise<QRResult> {
     color: { dark: '#000000', light: '#ffffff' },
   })
 
-  return { qrString, imageBase64, presetName: p.preset_name, deviceName: device.displayName, settings: buildSettings(p), guitar: p.guitar }
+  return { qrString, imageBase64, presetName: p.preset_name, deviceName: device.displayName, deviceId: p.device, settings: buildSettings(p), guitar: p.guitar }
 }
 
 function decodeDbPro(b: number): number { return Math.round((b / 100) * 24 - 12) }
@@ -483,14 +484,27 @@ const QR_ID_DISPLAY: Record<number, string> = {
   11: 'Mighty Plug', 9: 'Mighty Lite BT', 12: 'Mighty 8BT', 7: 'Mighty 20/40BT', 6: 'Mighty Air',
 }
 
-export function decodeQRString(qrString: string): { presetName: string; deviceName: string; settings: SettingRow[] } | null {
+const QR_ID_VERSION_TO_DEVICE: Record<string, DeviceType> = {
+  '15_1': 'plugpro',
+  '19_1': 'litemk2',
+  '20_1': '8btmk2',
+  '11_0': 'plugair_v1',
+  '11_2': 'plugair_v2',
+  '6_0':  'mightyair',
+  '9_1':  'lite',
+  '12_1': '8bt',
+  '7_1':  '2040bt',
+}
+
+export function decodeQRString(qrString: string): { presetName: string; deviceName: string; deviceId?: string; settings: SettingRow[] } | null {
   if (!qrString.startsWith('nux://MightyAmp:')) return null
   try {
     const buf = Buffer.from(qrString.slice(16), 'base64')
     const deviceName = QR_ID_DISPLAY[buf[0]] ?? 'NUX MightyAmp'
+    const deviceId = QR_ID_VERSION_TO_DEVICE[`${buf[0]}_${buf[1]}`]
 
     if (buf.length < 115) {
-      return { presetName: 'Imported Preset', deviceName, settings: [] }
+      return { presetName: 'Imported Preset', deviceName, deviceId, settings: [] }
     }
 
     const d = buf.slice(2)
@@ -525,6 +539,6 @@ export function decodeQRString(qrString: string): { presetName: string; deviceNa
 
     settings.push({ slot: 'Master Vol', enabled: true, selection: `${masterDb >= 0 ? '+' : ''}${masterDb} dB`, params: {} })
 
-    return { presetName, deviceName, settings }
+    return { presetName, deviceName, deviceId, settings }
   } catch { return null }
 }

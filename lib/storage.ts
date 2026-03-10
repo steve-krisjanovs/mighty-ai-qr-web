@@ -7,7 +7,18 @@ const HISTORY_KEY = 'qr_history'
 
 export function loadHistory(): HistoryItem[] {
   if (typeof window === 'undefined') return []
-  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]') } catch { return [] }
+  try {
+    const items: HistoryItem[] = JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]')
+    let dirty = false
+    for (const item of items) {
+      if (!item.deviceName && item.qr?.deviceName) {
+        item.deviceName = item.qr.deviceName
+        dirty = true
+      }
+    }
+    if (dirty) localStorage.setItem(HISTORY_KEY, JSON.stringify(items))
+    return items
+  } catch { return [] }
 }
 
 export function saveToHistory(qr: QrResult): HistoryItem {
@@ -124,13 +135,14 @@ export function clearApiSettings() {
 
 // ─── Default NUX Device ───────────────────────────────────────────────────────
 
-export type NuxDevice = 'plugpro' | 'space' | 'litemk2' | '8btmk2' | 'plugair_v1' | 'plugair_v2' | 'lite' | '8bt' | '2040bt'
+export type NuxDevice = 'plugpro' | 'space' | 'litemk2' | '8btmk2' | 'mightyair' | 'plugair_v1' | 'plugair_v2' | 'lite' | '8bt' | '2040bt'
 
 export const NUX_DEVICES: { id: NuxDevice; label: string }[] = [
   { id: 'plugpro',    label: 'Mighty Plug Pro' },
   { id: 'space',      label: 'Mighty Space' },
   { id: 'litemk2',   label: 'Mighty Lite MkII' },
   { id: '8btmk2',    label: 'Mighty 8BT MkII' },
+  { id: 'mightyair',  label: 'Mighty Air' },
   { id: 'plugair_v1', label: 'Mighty Plug (v1)' },
   { id: 'plugair_v2', label: 'Mighty Plug (v2)' },
   { id: 'lite',       label: 'Mighty Lite BT' },

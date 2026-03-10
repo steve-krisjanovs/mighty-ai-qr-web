@@ -21,6 +21,7 @@ export interface QrResult {
   imageBase64: string
   presetName: string
   deviceName: string
+  deviceId?: string
   settings: QrSetting[]
   guitar?: GuitarSetup
   importNote?: string

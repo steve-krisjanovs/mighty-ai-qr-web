@@ -34,6 +34,35 @@ Reverse-engineered from [mightier_amp](https://github.com/tuntorius/mightier_amp
 
 ---
 
+## UI Conventions
+
+- **Never use native `<select>` elements.** Always use a custom dropdown component (button + absolute list) styled with `rounded-lg border border-white/10 bg-surface-2 hover:bg-surface-3 transition-colors`. See `DeviceDropdown` or `ProviderDropdown` for reference.
+
+---
+
+## Docker
+
+Always build and run with the `.env.local` file explicitly:
+
+```bash
+docker compose --env-file .env.local up -d --build
+```
+
+Docker Compose does **not** pick up `.env.local` automatically — only `.env`. Without `--env-file`, env vars like `ANTHROPIC_API_KEY` will be missing at runtime.
+
+---
+
+## Resume — Last Session (v1.5.0)
+
+Features added this session — still needs testing:
+- **Convert button in chat QR popup** (`ChatQrModal`) — test it generates a code for the selected target device and saves to history
+- **Downgrade warning** — open a Pro device code, switch target to Standard or Basic, confirm amber warning appears
+- **Device dropdown override** — change device in chat input or QR modal, reload page, confirm it resets to saved default (not persisted)
+- **Collapsible QR groups** in sidebar — collapse/expand
+- **Friendly error messages** — put a bad API key in Settings, try chat or convert, confirm readable message (not raw API error)
+
+---
+
 ## TODO / Bugs
 
 - **BUG**: `Cannot read properties of undefined (reading 'id')` appears randomly in chat responses — intermittent, root cause unknown, likely a null/undefined message or chunk object not being guarded before accessing `.id`

@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { v4 as uuidv4 } from 'uuid'
-import { sendChat, initAuth, fetchModels, decodeQr } from '@/lib/api'
+import { sendChat, initAuth, fetchModels, decodeQr, convertPreset } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteHistoryItem, renameHistoryItem, clearAllHistory,
   loadConversations, upsertConversation,
@@ -18,6 +18,47 @@ import {
 } from '@/lib/storage'
 import type { ChatMessage, QrResult, HistoryItem, Conversation } from '@/lib/types'
 import pkg from '../package.json'
+import JSZip from 'jszip'
+
+async function downloadQrZip(items: HistoryItem[], filename: string) {
+  const zip = new JSZip()
+  const nameCounts = new Map<string, number>()
+  for (const item of items) {
+    const base64 = item.imageBase64.replace(/^data:image\/\w+;base64,/, '')
+    const device = (item.deviceName || item.qr.deviceName || 'Unknown Device').replace(/[^a-z0-9_\-. ]/gi, '_')
+    const safeName = item.presetName.replace(/[^a-z0-9_\-. ]/gi, '_')
+    const key = `${device}/${safeName}`
+    const count = nameCounts.get(key) ?? 0
+    nameCounts.set(key, count + 1)
+    const fileName = count === 0 ? `${safeName}.png` : `${safeName}_${count}.png`
+    zip.file(`${device}/${fileName}`, base64, { base64: true })
+  }
+  const blob = await zip.generateAsync({ type: 'blob' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = filename; a.click()
+  URL.revokeObjectURL(url)
+}
+
+function friendlyError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err)
+  const lower = msg.toLowerCase()
+  if (lower.includes('401') || lower.includes('authentication') || lower.includes('auth_subevent') || lower.includes('invalid_api_key') || lower.includes('incorrect api key'))
+    return 'API key is invalid or missing. Check your key in Settings.'
+  if (lower.includes('403') || lower.includes('permission') || lower.includes('forbidden'))
+    return 'Your API key does not have permission to use this model.'
+  if (lower.includes('429') || lower.includes('rate limit') || lower.includes('too many requests'))
+    return 'Rate limit reached. Wait a moment and try again.'
+  if (lower.includes('quota') || lower.includes('billing') || lower.includes('credit'))
+    return 'API quota or billing limit reached. Check your account.'
+  if (lower.includes('network') || lower.includes('failed to fetch') || lower.includes('econnrefused') || lower.includes('load failed'))
+    return 'Could not reach the server. Check your connection or base URL.'
+  if (lower.includes('timeout') || lower.includes('timed out'))
+    return 'Request timed out. Try again.'
+  if (lower.includes('no qr') || lower.includes('no qr code generated'))
+    return 'No QR code was generated. Try rephrasing your request.'
+  return msg
+}
 
 const ALL_SUGGESTIONS = [
   'Kashmir tone from Knebworth 1979', 'Eruption Eddie Van Halen brown sound',
@@ -654,20 +695,58 @@ function DeleteConfirmModal({ label, onConfirm, onCancel }: {
 
 // ─── QR Modal ─────────────────────────────────────────────────────────────────
 
-function QrModal({ item, onClose, onDeleteRequest, onRename, onRefine }: {
+function getCapabilityLevel(device: string): number {
+  if (['plugpro', 'space', 'litemk2', '8btmk2'].includes(device)) return 3
+  if (['plugair_v1', 'plugair_v2', 'mightyair'].includes(device)) return 2
+  return 1
+}
+
+function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest, onRename, onRefine, onConverted }: {
   item: HistoryItem
+  currentDevice: NuxDevice
+  onDeviceChange: (d: NuxDevice) => void
   onClose: () => void
   onDeleteRequest: () => void
   onRename: (name: string) => void
   onRefine: () => void
+  onConverted: (newItem: HistoryItem) => void
 }) {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(item.qr.presetName)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [converting, setConverting] = useState(false)
+  const [convertError, setConvertError] = useState<string | null>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, name)
   const { share, shareLabel } = useQrShare(canvasRef, item.qr.presetName)
+
+  const sourceDev = item.qr.deviceId
+  const isDeviceMismatch = !!sourceDev && sourceDev !== currentDevice
+  const targetDeviceLabel = NUX_DEVICES.find(d => d.id === currentDevice)?.label ?? currentDevice
+  const isDowngrade = !!sourceDev && getCapabilityLevel(sourceDev) > getCapabilityLevel(currentDevice)
+  const downgradeNote = isDowngrade
+    ? getCapabilityLevel(sourceDev!) === 3 && getCapabilityLevel(currentDevice) === 2
+      ? 'Compressor and 5-band EQ will be dropped; amps and effects adapted to nearest match.'
+      : getCapabilityLevel(sourceDev!) === 3 && getCapabilityLevel(currentDevice) === 1
+        ? 'Compressor, 5-band EQ, and cabinet will be dropped; amps and effects adapted to nearest match.'
+        : 'Cabinet and effects will be adapted to nearest match on your device.'
+    : null
+
+  const handleConvert = async () => {
+    setConverting(true)
+    setConvertError(null)
+    try {
+      const qr = await convertPreset(item.qr.qrString, currentDevice)
+      if (!qr) throw new Error('Conversion failed — no QR returned')
+      const newItem = saveToHistory(qr)
+      onConverted(newItem)
+    } catch (err) {
+      setConvertError(friendlyError(err))
+    } finally {
+      setConverting(false)
+    }
+  }
 
   const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(item.qr.presetName + ' guitar tone')}`
 
@@ -685,7 +764,7 @@ function QrModal({ item, onClose, onDeleteRequest, onRename, onRefine }: {
     <>
       <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up overflow-hidden flex flex-col max-h-[90svh]" onClick={e => e.stopPropagation()}>
 
           {/* QR Image */}
           <div className="relative flex justify-center bg-white p-4 shrink-0">
@@ -771,6 +850,24 @@ function QrModal({ item, onClose, onDeleteRequest, onRename, onRefine }: {
               </div>
             </div>
 
+            <div className="border-t border-white/10 pt-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-fg-3">Target device</span>
+                <DeviceDropdown value={currentDevice} onChange={onDeviceChange} />
+              </div>
+              {isDowngrade && downgradeNote && (
+                <p className="text-[11px] text-amber-400/80">{downgradeNote}</p>
+              )}
+              {convertError && <p className="text-[11px] text-red-400">{convertError}</p>}
+              <button
+                onClick={handleConvert}
+                disabled={converting}
+                className="w-full rounded-xl border border-primary/40 py-2.5 text-sm font-medium text-primary hover:bg-primary/10 active:bg-primary/20 transition-colors disabled:opacity-50"
+              >
+                {converting ? 'Converting…' : `Convert to ${targetDeviceLabel}`}
+              </button>
+            </div>
+
             <button onClick={onDeleteRequest} className="flex w-full items-center justify-center gap-1.5 py-1.5 text-xs text-fg-4 hover:text-fg-2 transition-colors">
               <TrashIcon /> Delete preset
             </button>
@@ -784,18 +881,49 @@ function QrModal({ item, onClose, onDeleteRequest, onRename, onRefine }: {
 
 // ─── Chat QR Modal ────────────────────────────────────────────────────────────
 
-function ChatQrModal({ qr, description, onClose, onRefine }: { qr: QrResult; description: string; onClose: () => void; onRefine: () => void }) {
+function ChatQrModal({ qr, description, onClose, onRefine, currentDevice, onDeviceChange, onConverted }: {
+  qr: QrResult; description: string; onClose: () => void; onRefine: () => void
+  currentDevice: NuxDevice; onDeviceChange: (d: NuxDevice) => void; onConverted: (item: HistoryItem) => void
+}) {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [converting, setConverting] = useState(false)
+  const [convertError, setConvertError] = useState<string | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, qr.presetName)
   const { share, shareLabel } = useQrShare(canvasRef, qr.presetName)
   const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(qr.presetName + ' guitar tone')}`
+  const targetDeviceLabel = NUX_DEVICES.find(d => d.id === currentDevice)?.label ?? currentDevice
+  const sourceDev = qr.deviceId
+  const isDowngrade = !!sourceDev && getCapabilityLevel(sourceDev) > getCapabilityLevel(currentDevice)
+  const downgradeNote = isDowngrade
+    ? getCapabilityLevel(sourceDev!) === 3 && getCapabilityLevel(currentDevice) === 2
+      ? 'Compressor and 5-band EQ will be dropped; amps and effects adapted to nearest match.'
+      : getCapabilityLevel(sourceDev!) === 3 && getCapabilityLevel(currentDevice) === 1
+        ? 'Compressor, 5-band EQ, and cabinet will be dropped; amps and effects adapted to nearest match.'
+        : 'Cabinet and effects will be adapted to nearest match on your device.'
+    : null
+
+  const handleConvert = async () => {
+    setConverting(true)
+    setConvertError(null)
+    try {
+      const converted = await convertPreset(qr.qrString, currentDevice)
+      if (!converted) throw new Error('No QR code generated. Try again.')
+      const newItem = saveToHistory(converted)
+      onConverted(newItem)
+      onClose()
+    } catch (err) {
+      setConvertError(friendlyError(err))
+    } finally {
+      setConverting(false)
+    }
+  }
 
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up overflow-hidden flex flex-col max-h-[90svh]" onClick={e => e.stopPropagation()}>
 
           {/* QR Image */}
           <div className="relative flex justify-center bg-white p-4 shrink-0">
@@ -867,6 +995,24 @@ function ChatQrModal({ qr, description, onClose, onRefine }: { qr: QrResult; des
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="border-t border-white/10 pt-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-fg-3">Target device</span>
+                <DeviceDropdown value={currentDevice} onChange={onDeviceChange} />
+              </div>
+              {isDowngrade && downgradeNote && (
+                <p className="text-[11px] text-amber-400/80">{downgradeNote}</p>
+              )}
+              {convertError && <p className="text-[11px] text-red-400">{convertError}</p>}
+              <button
+                onClick={handleConvert}
+                disabled={converting}
+                className="w-full rounded-xl border border-primary/40 py-2.5 text-sm font-medium text-primary hover:bg-primary/10 active:bg-primary/20 transition-colors disabled:opacity-50"
+              >
+                {converting ? 'Converting…' : `Convert to ${targetDeviceLabel}`}
+              </button>
             </div>
           </div>
 
@@ -965,6 +1111,39 @@ function LocalLlmInfoModal({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </>
+  )
+}
+
+function DeviceDropdown({ value, onChange }: { value: NuxDevice; onChange: (d: NuxDevice) => void }) {
+  const [open, setOpen] = useState(false)
+  const current = NUX_DEVICES.find(d => d.id === value)!
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 rounded-lg border border-white/10 bg-surface-2 px-3 py-1.5 text-xs text-fg hover:bg-surface-3 transition-colors"
+      >
+        <span>{current.label}</span>
+        <ChevronIcon open={open} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 z-20 mb-1 w-48 rounded-lg border border-white/10 bg-surface-2 shadow-xl overflow-hidden">
+            {NUX_DEVICES.map(d => (
+              <button
+                key={d.id}
+                onClick={() => { onChange(d.id); setOpen(false) }}
+                className={`flex w-full items-center justify-between px-3 py-2 text-xs transition-colors ${value === d.id ? 'text-primary bg-primary/10' : 'text-fg-2 hover:bg-surface-3 hover:text-fg'}`}
+              >
+                <span>{d.label}</span>
+                {value === d.id && <span className="text-primary">✓</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -1625,6 +1804,43 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
+function QrDeviceGroup({ deviceName, items, onQrSelect, onClose, onDeleteRequest, onRenameQr, onQrDelete }: {
+  deviceName: string
+  items: HistoryItem[]
+  onQrSelect: (item: HistoryItem) => void
+  onClose: () => void
+  onDeleteRequest: (label: string, onConfirm: () => void) => void
+  onRenameQr: (id: string, name: string) => void
+  onQrDelete: (id: string) => void
+}) {
+  const [collapsed, setCollapsed] = useState(false)
+
+  const downloadZip = () => downloadQrZip(items, `${deviceName.replace(/[^a-z0-9_\-. ]/gi, '_')}-qr-codes.zip`)
+
+  return (
+    <div>
+      <div className="flex items-center px-3 pt-3 pb-1 sticky top-0 z-10 bg-surface gap-1">
+        <button onClick={() => setCollapsed(c => !c)} className="flex flex-1 items-center gap-1 min-w-0 text-left">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 text-fg-4 transition-transform ${collapsed ? '-rotate-90' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-fg-4 truncate">{deviceName}</span>
+        </button>
+        <button onClick={downloadZip} title="Download all as ZIP" className="flex h-6 w-6 shrink-0 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+      </div>
+      {!collapsed && items.map(item => (
+        <QrHistoryItem
+          key={item.id}
+          item={item}
+          onOpen={() => { onQrSelect(item); onClose() }}
+          onDeleteRequest={() => onDeleteRequest(item.presetName, () => onQrDelete(item.id))}
+          onRename={name => onRenameQr(item.id, name)}
+        />
+      ))}
+    </div>
+  )
+}
+
 function QrHistoryItem({ item, onOpen, onDeleteRequest, onRename }: {
   item: HistoryItem; onOpen: () => void; onDeleteRequest: () => void; onRename: (name: string) => void
 }) {
@@ -1749,9 +1965,18 @@ function Sidebar({
             </button>
           )}
           {tab === 'qr' && qrHistory.length > 0 && (
-            <button onClick={onDeleteAllQr} title="Delete all QR codes" className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
-              <TrashIcon />
-            </button>
+            <>
+              <button
+                onClick={() => downloadQrZip(qrHistory, 'all-qr-codes.zip')}
+                title="Download all QR codes as ZIP"
+                className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </button>
+              <button onClick={onDeleteAllQr} title="Delete all QR codes" className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
+                <TrashIcon />
+              </button>
+            </>
           )}
         </div>
 
@@ -1785,15 +2010,28 @@ function Sidebar({
               </div>
               {qrHistory.length === 0
                 ? <p className="px-4 py-4 text-center text-xs text-fg-4">No QR codes yet</p>
-                : qrHistory.map(item => (
-                  <QrHistoryItem
-                    key={item.id}
-                    item={item}
-                    onOpen={() => { onQrSelect(item); onClose() }}
-                    onDeleteRequest={() => onDeleteRequest(item.presetName, () => onQrDelete(item.id))}
-                    onRename={name => onRenameQr(item.id, name)}
-                  />
-                ))
+                : (() => {
+                    const groups = new Map<string, HistoryItem[]>()
+                    for (const item of qrHistory) {
+                      const key = item.deviceName || item.qr.deviceName || 'Unknown Device'
+                      if (!groups.has(key)) groups.set(key, [])
+                      groups.get(key)!.push(item)
+                    }
+                    for (const g of groups.values()) g.sort((a, b) => b.timestamp - a.timestamp)
+                    const sorted = [...groups.entries()].sort((a, b) => b[1][0].timestamp - a[1][0].timestamp)
+                    return sorted.map(([deviceName, items]) => (
+                      <QrDeviceGroup
+                        key={deviceName}
+                        deviceName={deviceName}
+                        items={items}
+                        onQrSelect={onQrSelect}
+                        onClose={onClose}
+                        onDeleteRequest={onDeleteRequest}
+                        onRenameQr={onRenameQr}
+                        onQrDelete={onQrDelete}
+                      />
+                    ))
+                  })()
               }
             </>
           )}
@@ -2049,6 +2287,7 @@ export default function Page() {
   const [showSettings, setShowSettings] = useState(false)
   const [settingsVersion, setSettingsVersion] = useState(0)
   const [quotaVersion, setQuotaVersion] = useState(0)
+  const [currentDevice, setCurrentDevice] = useState<NuxDevice>(() => getDefaultDevice())
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
   const [popupQr, setPopupQr] = useState<{ qr: QrResult; description: string } | null>(null)
@@ -2102,6 +2341,8 @@ export default function Page() {
       setCurrentQrDescription(lastQrMsg?.content ?? '')
     }
   }, [])
+
+  useEffect(() => { setCurrentDevice(getDefaultDevice()) }, [settingsVersion])
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -2308,7 +2549,7 @@ export default function Page() {
       persistConversation(convId!, finalMessages, newQr)
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') { /* cancelled by user */ }
-      else flushSync(() => setError(e instanceof Error ? e.message : 'Something went wrong'))
+      else flushSync(() => setError(friendlyError(e)))
     } finally {
       abortRef.current = null
       flushSync(() => setLoading(false))
@@ -2555,13 +2796,16 @@ export default function Page() {
                   style={{ maxHeight: '120px', overflowY: 'auto' }}
                 />
                 <div className="flex items-center justify-between px-3 pb-3">
-                  <button
-                    onClick={() => setTtsEnabled(v => { if (v) window.speechSynthesis?.cancel(); return !v })}
-                    title={ttsEnabled ? 'TTS on — click to disable' : 'TTS off — click to enable'}
-                    className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors ${ttsEnabled ? 'text-primary hover:opacity-80' : 'text-fg-4 hover:text-fg-3'}`}
-                  >
-                    {ttsEnabled ? <VolumeIcon /> : <VolumeOffIcon />}
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setTtsEnabled(v => { if (v) window.speechSynthesis?.cancel(); return !v })}
+                      title={ttsEnabled ? 'TTS on — click to disable' : 'TTS off — click to enable'}
+                      className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors ${ttsEnabled ? 'text-primary hover:opacity-80' : 'text-fg-4 hover:text-fg-3'}`}
+                    >
+                      {ttsEnabled ? <VolumeIcon /> : <VolumeOffIcon />}
+                    </button>
+                    <DeviceDropdown value={currentDevice} onChange={d => setCurrentDevice(d)} />
+                  </div>
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={toggleListening}
@@ -2612,7 +2856,15 @@ export default function Page() {
       </div>
 
       {popupQr && (
-        <ChatQrModal qr={popupQr.qr} description={popupQr.description} onClose={() => { setPopupQr(null); requestAnimationFrame(() => { scrollToBottom(); textareaRef.current?.focus() }) }} onRefine={() => { setPopupQr(null); requestAnimationFrame(() => textareaRef.current?.focus()) }} />
+        <ChatQrModal
+          qr={popupQr.qr}
+          description={popupQr.description}
+          onClose={() => { setPopupQr(null); requestAnimationFrame(() => { scrollToBottom(); textareaRef.current?.focus() }) }}
+          onRefine={() => { setPopupQr(null); requestAnimationFrame(() => textareaRef.current?.focus()) }}
+          currentDevice={currentDevice}
+          onDeviceChange={d => setCurrentDevice(d)}
+          onConverted={newItem => { setQrHistory(prev => [newItem, ...prev].slice(0, 20)) }}
+        />
       )}
 
       {showSettings && <SettingsPanel onClose={() => { setShowSettings(false); setSettingsVersion(v => v + 1) }} />}
@@ -2632,10 +2884,16 @@ export default function Page() {
       {selectedHistoryItem && (
         <QrModal
           item={selectedHistoryItem}
+          currentDevice={currentDevice}
+          onDeviceChange={d => setCurrentDevice(d)}
           onClose={() => setSelectedHistoryItem(null)}
           onDeleteRequest={() => requestDelete(selectedHistoryItem.presetName, () => handleDeleteHistoryItem(selectedHistoryItem.id))}
           onRename={name => handleRenameHistoryItem(selectedHistoryItem.id, name)}
           onRefine={() => refineFromHistoryItem(selectedHistoryItem)}
+          onConverted={newItem => {
+            setQrHistory(prev => [newItem, ...prev].slice(0, 20))
+            setSelectedHistoryItem(newItem)
+          }}
         />
       )}
     </div>
