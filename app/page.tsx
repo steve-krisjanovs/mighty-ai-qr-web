@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { v4 as uuidv4 } from 'uuid'
-import { sendChat, initAuth, fetchModels, decodeQr, convertPreset } from '@/lib/api'
+import { sendChat, initAuth, fetchModels, decodeQr } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteHistoryItem, renameHistoryItem, clearAllHistory,
   loadConversations, upsertConversation,
@@ -701,7 +701,7 @@ function getCapabilityLevel(device: string): number {
   return 1
 }
 
-function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest, onRename, onRefine, onConverted }: {
+function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest, onRename, onRefine }: {
   item: HistoryItem
   currentDevice: NuxDevice
   onDeviceChange: (d: NuxDevice) => void
@@ -709,13 +709,10 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
   onDeleteRequest: () => void
   onRename: (name: string) => void
   onRefine: () => void
-  onConverted: (newItem: HistoryItem) => void
 }) {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(item.qr.presetName)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [converting, setConverting] = useState(false)
-  const [convertError, setConvertError] = useState<string | null>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, name)
@@ -732,21 +729,6 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
         ? 'Compressor, 5-band EQ, and cabinet will be dropped; amps and effects adapted to nearest match.'
         : 'Cabinet and effects will be adapted to nearest match on your device.'
     : null
-
-  const handleConvert = async () => {
-    setConverting(true)
-    setConvertError(null)
-    try {
-      const qr = await convertPreset(item.qr.qrString, currentDevice)
-      if (!qr) throw new Error('Conversion failed — no QR returned')
-      const newItem = saveToHistory(qr)
-      onConverted(newItem)
-    } catch (err) {
-      setConvertError(friendlyError(err))
-    } finally {
-      setConverting(false)
-    }
-  }
 
   const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(item.qr.presetName + ' guitar tone')}`
 
@@ -858,14 +840,6 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
               {isDowngrade && downgradeNote && (
                 <p className="text-[11px] text-amber-400/80">{downgradeNote}</p>
               )}
-              {convertError && <p className="text-[11px] text-red-400">{convertError}</p>}
-              <button
-                onClick={handleConvert}
-                disabled={converting}
-                className="w-full rounded-xl border border-primary/40 py-2.5 text-sm font-medium text-primary hover:bg-primary/10 active:bg-primary/20 transition-colors disabled:opacity-50"
-              >
-                {converting ? 'Converting…' : `Convert to ${targetDeviceLabel}`}
-              </button>
             </div>
 
             <button onClick={onDeleteRequest} className="flex w-full items-center justify-center gap-1.5 py-1.5 text-xs text-fg-4 hover:text-fg-2 transition-colors">
@@ -881,13 +855,11 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
 
 // ─── Chat QR Modal ────────────────────────────────────────────────────────────
 
-function ChatQrModal({ qr, description, onClose, onRefine, currentDevice, onDeviceChange, onConverted }: {
+function ChatQrModal({ qr, description, onClose, onRefine, currentDevice, onDeviceChange }: {
   qr: QrResult; description: string; onClose: () => void; onRefine: () => void
-  currentDevice: NuxDevice; onDeviceChange: (d: NuxDevice) => void; onConverted: (item: HistoryItem) => void
+  currentDevice: NuxDevice; onDeviceChange: (d: NuxDevice) => void
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [converting, setConverting] = useState(false)
-  const [convertError, setConvertError] = useState<string | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, qr.presetName)
   const { share, shareLabel } = useQrShare(canvasRef, qr.presetName)
@@ -902,22 +874,6 @@ function ChatQrModal({ qr, description, onClose, onRefine, currentDevice, onDevi
         ? 'Compressor, 5-band EQ, and cabinet will be dropped; amps and effects adapted to nearest match.'
         : 'Cabinet and effects will be adapted to nearest match on your device.'
     : null
-
-  const handleConvert = async () => {
-    setConverting(true)
-    setConvertError(null)
-    try {
-      const converted = await convertPreset(qr.qrString, currentDevice)
-      if (!converted) throw new Error('No QR code generated. Try again.')
-      const newItem = saveToHistory(converted)
-      onConverted(newItem)
-      onClose()
-    } catch (err) {
-      setConvertError(friendlyError(err))
-    } finally {
-      setConverting(false)
-    }
-  }
 
   return (
     <>
@@ -1005,14 +961,6 @@ function ChatQrModal({ qr, description, onClose, onRefine, currentDevice, onDevi
               {isDowngrade && downgradeNote && (
                 <p className="text-[11px] text-amber-400/80">{downgradeNote}</p>
               )}
-              {convertError && <p className="text-[11px] text-red-400">{convertError}</p>}
-              <button
-                onClick={handleConvert}
-                disabled={converting}
-                className="w-full rounded-xl border border-primary/40 py-2.5 text-sm font-medium text-primary hover:bg-primary/10 active:bg-primary/20 transition-colors disabled:opacity-50"
-              >
-                {converting ? 'Converting…' : `Convert to ${targetDeviceLabel}`}
-              </button>
             </div>
           </div>
 
@@ -2863,7 +2811,6 @@ export default function Page() {
           onRefine={() => { setPopupQr(null); requestAnimationFrame(() => textareaRef.current?.focus()) }}
           currentDevice={currentDevice}
           onDeviceChange={d => setCurrentDevice(d)}
-          onConverted={newItem => { setQrHistory(prev => [newItem, ...prev].slice(0, 20)) }}
         />
       )}
 
@@ -2890,10 +2837,6 @@ export default function Page() {
           onDeleteRequest={() => requestDelete(selectedHistoryItem.presetName, () => handleDeleteHistoryItem(selectedHistoryItem.id))}
           onRename={name => handleRenameHistoryItem(selectedHistoryItem.id, name)}
           onRefine={() => refineFromHistoryItem(selectedHistoryItem)}
-          onConverted={newItem => {
-            setQrHistory(prev => [newItem, ...prev].slice(0, 20))
-            setSelectedHistoryItem(newItem)
-          }}
         />
       )}
     </div>
