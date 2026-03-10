@@ -44,8 +44,14 @@ export async function POST(request: NextRequest) {
   const systemFull = deviceInstruction + SYSTEM_PROMPT_FULL
 
   const isByok = !!userApiKey || !!userBaseUrl
+  const needsKey = !isByok && !!userProvider && userProvider !== 'anthropic' && userProvider !== 'builtin'
 
-  console.log(`[chat] provider=${userProvider || 'builtin'} byok=${isByok} model=${userModel || 'auto'} msgs=${messages.length}`)
+  console.log(`[chat] provider=${userProvider || 'builtin'} byok=${isByok} msgs=${messages.length}`)
+
+  if (needsKey) {
+    const providerLabel = userProvider.charAt(0).toUpperCase() + userProvider.slice(1)
+    return NextResponse.json({ error: `No API key configured for ${providerLabel}. Add one in Settings or switch back to the free tier.` }, { status: 400 })
+  }
 
   try {
     let result

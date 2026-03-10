@@ -65,7 +65,7 @@ export async function fetchModels(
   }
 }
 
-export async function sendChat(messages: Message[], signal?: AbortSignal): Promise<ChatResponse> {
+export async function sendChat(messages: Message[], signal?: AbortSignal, device?: string): Promise<ChatResponse> {
   let token = getToken()
   if (!token) {
     await authenticate()
@@ -74,7 +74,7 @@ export async function sendChat(messages: Message[], signal?: AbortSignal): Promi
 
   const active = getActiveConfig()
   const extraHeaders: Record<string, string> = {}
-  extraHeaders['x-default-device'] = getDefaultDevice()
+  extraHeaders['x-default-device'] = device ?? getDefaultDevice()
   if (active) {
     if (active.apiKey) extraHeaders['x-user-api-key'] = active.apiKey
     extraHeaders['x-provider'] = active.provider
@@ -96,7 +96,7 @@ export async function sendChat(messages: Message[], signal?: AbortSignal): Promi
   if (res.status === 401) {
     localStorage.removeItem('auth_token')
     await authenticate()
-    return sendChat(messages)
+    return sendChat(messages, undefined, device)
   }
 
   if (!res.ok) {
@@ -135,7 +135,23 @@ export async function decodeQr(qrString: string): Promise<DecodeResult | null> {
   return res.json()
 }
 
-export async function convertPreset(qrString: string, targetDevice: string): Promise<import('./types').QrResult | null> {
+export async function identifyQr(importNote: string): Promise<{ artist: string | null; song: string | null }> {
+  let token = getToken()
+  if (!token) { await authenticate(); token = getToken()! }
+  try {
+    const res = await fetch(`${BASE}/identify-qr`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ importNote }),
+    })
+    if (!res.ok) return { artist: null, song: null }
+    return res.json()
+  } catch {
+    return { artist: null, song: null }
+  }
+}
+
+export async function convertPreset(qrString: string, targetDevice: string, presetName?: string): Promise<import('./types').QrResult | null> {
   let token = getToken()
   if (!token) { await authenticate(); token = getToken()! }
 
@@ -152,7 +168,7 @@ export async function convertPreset(qrString: string, targetDevice: string): Pro
   const res = await fetch(`${BASE}/convert`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...extraHeaders },
-    body: JSON.stringify({ qrString, targetDevice }),
+    body: JSON.stringify({ qrString, targetDevice, presetName }),
   })
   if (!res.ok) {
     let message = `Conversion failed (${res.status})`

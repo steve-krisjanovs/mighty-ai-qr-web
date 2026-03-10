@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { v4 as uuidv4 } from 'uuid'
-import { sendChat, initAuth, fetchModels, decodeQr } from '@/lib/api'
+import { sendChat, initAuth, fetchModels, decodeQr, convertPreset, identifyQr } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteHistoryItem, renameHistoryItem, clearAllHistory,
   loadConversations, upsertConversation,
@@ -324,7 +324,20 @@ async function decodeQrFromFile(file: File): Promise<{ qrString: string; imageBa
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
   const code = jsQR(imageData.data, imageData.width, imageData.height)
   if (!code?.data) return null
-  const imageBase64 = canvas.toDataURL('image/png')
+
+  // Crop just the QR matrix using jsQR location corners (+ padding) so imageBase64
+  // contains only the QR code, not any pre-baked labels from the original image.
+  const loc = code.location
+  const pad = 12
+  const minX = Math.max(0, Math.min(loc.topLeftCorner.x, loc.bottomLeftCorner.x) - pad)
+  const minY = Math.max(0, Math.min(loc.topLeftCorner.y, loc.topRightCorner.y) - pad)
+  const maxX = Math.min(canvas.width, Math.max(loc.topRightCorner.x, loc.bottomRightCorner.x) + pad)
+  const maxY = Math.min(canvas.height, Math.max(loc.bottomLeftCorner.y, loc.bottomRightCorner.y) + pad)
+  const cropCanvas = document.createElement('canvas')
+  cropCanvas.width = maxX - minX
+  cropCanvas.height = maxY - minY
+  cropCanvas.getContext('2d')!.drawImage(canvas, minX, minY, maxX - minX, maxY - minY, 0, 0, maxX - minX, maxY - minY)
+  const imageBase64 = cropCanvas.toDataURL('image/png')
   return { qrString: code.data, imageBase64 }
 }
 
@@ -693,6 +706,36 @@ function DeleteConfirmModal({ label, onConfirm, onCancel }: {
   )
 }
 
+// ─── Identify Confirm Modal ────────────────────────────────────────────────────
+
+function IdentifyConfirmModal({ artist, song, onConfirm, onDismiss }: {
+  artist: string; song: string; onConfirm: () => void; onDismiss: () => void
+}) {
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm" onClick={onDismiss} />
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
+        <div className="pointer-events-auto w-full max-w-xs rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up p-6 space-y-4">
+          <div>
+            <p className="text-sm font-medium text-fg">Is this the right song?</p>
+            <p className="mt-2 text-sm text-fg-2">
+              <span className="font-semibold">{artist}</span> — {song}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={onDismiss} className="flex-1 rounded-lg border border-white/10 py-2.5 text-sm text-fg-3 hover:text-fg transition-colors">
+              No
+            </button>
+            <button onClick={onConfirm} className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 transition-colors">
+              Yes
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── QR Modal ─────────────────────────────────────────────────────────────────
 
 function getCapabilityLevel(device: string): number {
@@ -701,7 +744,13 @@ function getCapabilityLevel(device: string): number {
   return 1
 }
 
-function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest, onRename, onRefine }: {
+const GENERIC_PRESET_NAMES = ['imported preset', 'import preset', 'my preset', 'new preset', 'preset 1', 'preset']
+
+function isGenericName(name: string) {
+  return GENERIC_PRESET_NAMES.includes(name.toLowerCase().trim())
+}
+
+function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest, onRename, onRefine, autoRename }: {
   item: HistoryItem
   currentDevice: NuxDevice
   onDeviceChange: (d: NuxDevice) => void
@@ -709,8 +758,9 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
   onDeleteRequest: () => void
   onRename: (name: string) => void
   onRefine: () => void
+  autoRename?: boolean
 }) {
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(autoRename ?? false)
   const [name, setName] = useState(item.qr.presetName)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -787,9 +837,17 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
               )}
             </div>
 
-            <button onClick={onRefine} className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm">
-              Refine tone
-            </button>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <DeviceDropdown value={currentDevice} onChange={onDeviceChange} />
+                <button onClick={onRefine} className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm">
+                  Refine tone
+                </button>
+              </div>
+              {isDowngrade && downgradeNote && (
+                <p className="text-[11px] text-amber-400/80">{downgradeNote}</p>
+              )}
+            </div>
 
             <div className="grid grid-cols-3 gap-2">
               <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
@@ -830,16 +888,6 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className="border-t border-white/10 pt-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-fg-3">Target device</span>
-                <DeviceDropdown value={currentDevice} onChange={onDeviceChange} />
-              </div>
-              {isDowngrade && downgradeNote && (
-                <p className="text-[11px] text-amber-400/80">{downgradeNote}</p>
-              )}
             </div>
 
             <button onClick={onDeleteRequest} className="flex w-full items-center justify-center gap-1.5 py-1.5 text-xs text-fg-4 hover:text-fg-2 transition-colors">
@@ -908,9 +956,17 @@ function ChatQrModal({ qr, description, onClose, onRefine, currentDevice, onDevi
               })()}
             </div>
 
-            <button onClick={onRefine} className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm">
-              Refine tone
-            </button>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <DeviceDropdown value={currentDevice} onChange={onDeviceChange} />
+                <button onClick={onRefine} className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm">
+                  Refine tone
+                </button>
+              </div>
+              {isDowngrade && downgradeNote && (
+                <p className="text-[11px] text-amber-400/80">{downgradeNote}</p>
+              )}
+            </div>
 
             <div className="grid grid-cols-3 gap-2">
               <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
@@ -951,16 +1007,6 @@ function ChatQrModal({ qr, description, onClose, onRefine, currentDevice, onDevi
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className="border-t border-white/10 pt-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-fg-3">Target device</span>
-                <DeviceDropdown value={currentDevice} onChange={onDeviceChange} />
-              </div>
-              {isDowngrade && downgradeNote && (
-                <p className="text-[11px] text-amber-400/80">{downgradeNote}</p>
-              )}
             </div>
           </div>
 
@@ -1064,20 +1110,36 @@ function LocalLlmInfoModal({ onClose }: { onClose: () => void }) {
 
 function DeviceDropdown({ value, onChange }: { value: NuxDevice; onChange: (d: NuxDevice) => void }) {
   const [open, setOpen] = useState(false)
+  const [rect, setRect] = useState<DOMRect | null>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
   const current = NUX_DEVICES.find(d => d.id === value)!
+
+  const handleOpen = () => {
+    if (btnRef.current) setRect(btnRef.current.getBoundingClientRect())
+    setOpen(o => !o)
+  }
+
+  const listStyle: React.CSSProperties = rect ? {
+    position: 'fixed',
+    bottom: window.innerHeight - rect.top + 4,
+    left: rect.left + rect.width / 2 - 96,
+    width: 192,
+  } : {}
+
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 rounded-lg border border-white/10 bg-surface-2 px-3 py-1.5 text-xs text-fg hover:bg-surface-3 transition-colors"
+        ref={btnRef}
+        onClick={handleOpen}
+        className="flex items-center gap-2 rounded-lg border border-white/10 bg-surface-2 px-3 py-2.5 text-sm text-fg hover:bg-surface-3 transition-colors"
       >
         <span>{current.label}</span>
         <ChevronIcon open={open} />
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 z-20 mb-1 w-48 rounded-lg border border-white/10 bg-surface-2 shadow-xl overflow-hidden">
+          <div className="fixed inset-0 z-[60]" onClick={() => setOpen(false)} />
+          <div className="z-[61] rounded-lg border border-white/10 bg-surface-2 shadow-xl overflow-hidden" style={listStyle}>
             {NUX_DEVICES.map(d => (
               <button
                 key={d.id}
@@ -1201,9 +1263,20 @@ function HeaderModelPill({ settingsVersion, quotaVersion }: { settingsVersion: n
   }, [config?.provider, config?.apiKey, config?.baseUrl])
 
   const isByok = !!config?.apiKey || !!config?.baseUrl
-  if (!config || config.provider === 'builtin' || !isByok) return <BuiltinPill quotaVersion={quotaVersion} />
+  const needsKey = config && config.provider !== 'builtin' && config.provider !== 'anthropic' && !isByok
+  if (!config || config.provider === 'builtin') return <BuiltinPill quotaVersion={quotaVersion} />
+  if (config.provider === 'anthropic' && !isByok) return <BuiltinPill quotaVersion={quotaVersion} />
 
-
+  if (needsKey) {
+    const providerLabel = PROVIDERS.find(p => p.id === config.provider)?.label ?? config.provider
+    return (
+      <div className="flex items-center gap-1.5 rounded-full border border-red-500/40 bg-surface-2 px-3 py-1 text-xs select-none">
+        <span className="font-medium text-fg-2">{providerLabel}</span>
+        <span className="text-fg-4">·</span>
+        <span className="text-red-400">no API key</span>
+      </div>
+    )
+  }
 
   const handleChange = (model: string) => {
     const settings = getApiSettings()
@@ -1436,8 +1509,10 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [provider, setProvider] = useState<AiProvider>(saved?.provider ?? 'builtin')
   const [configs, setConfigs] = useState<Partial<Record<AiProvider, ProviderConfig>>>(saved?.configs ?? {})
   const [showKey, setShowKey] = useState(false)
-  const [didSave, setDidSave] = useState(false)
+  const [savedFlash, setSavedFlash] = useState(false)
   const [closing, setClosing] = useState(false)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isFirstRender = useRef(true)
   const [isPwa] = useState(() => typeof window !== 'undefined' && 'serviceWorker' in navigator && (window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true))
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'done'>('idle')
   const [showAbout, setShowAbout] = useState(false)
@@ -1478,6 +1553,18 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
     return () => { cancelled = true }
   }, [provider, apiKey, baseUrl])
 
+  // Auto-save whenever provider or configs change (skip first render)
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return }
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      saveApiSettings({ provider, configs })
+      setSavedFlash(true)
+      setTimeout(() => setSavedFlash(false), 1500)
+    }, 600)
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
+  }, [provider, configs])
+
   const handleClose = () => {
     setClosing(true)
     setTimeout(() => onClose(), 240)
@@ -1511,18 +1598,20 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
     setConfigs(prev => ({ ...prev, [provider]: { ...prev[provider] ?? { apiKey: '' }, model: val } }))
   }
 
-  const handleSave = () => {
-    saveApiSettings({ provider, configs })
-    setDidSave(true)
-    setTimeout(() => setDidSave(false), 1500)
-  }
-
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/50" onClick={handleClose} />
       <aside className={`fixed right-0 top-0 z-50 flex h-full w-80 flex-col bg-surface shadow-2xl ${closing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}>
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-          <h2 className="text-sm font-medium text-fg">Settings</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-medium text-fg">Settings</h2>
+            {savedFlash && (
+              <span className="flex items-center gap-1 text-xs text-green-400">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Saved
+              </span>
+            )}
+          </div>
           <button onClick={handleClose} className="text-fg-3 hover:text-fg transition-colors">
             <CloseIcon />
           </button>
@@ -1697,16 +1786,6 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
             </p>
           </div>}
 
-          <button
-            onClick={handleSave}
-            className={`w-full rounded-lg py-2.5 text-sm font-medium transition-colors ${
-              didSave
-                ? 'bg-green-600/20 text-green-400 border border-green-600/30'
-                : 'bg-primary text-on-primary hover:opacity-90'
-            }`}
-          >
-            {didSave ? 'Saved' : 'Save'}
-          </button>
 
           {/* Check for updates — PWA only */}
           {isPwa && (
@@ -2237,6 +2316,7 @@ export default function Page() {
   const [quotaVersion, setQuotaVersion] = useState(0)
   const [currentDevice, setCurrentDevice] = useState<NuxDevice>(() => getDefaultDevice())
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
+  const [pendingImport, setPendingImport] = useState<{ qr: QrResult; guess: { artist: string; song: string } } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
   const [popupQr, setPopupQr] = useState<{ qr: QrResult; description: string } | null>(null)
   const [showQrPanel, setShowQrPanel] = useState(false)
@@ -2406,7 +2486,7 @@ export default function Page() {
     })
   }, [])
 
-  const refineFromHistoryItem = useCallback((item: HistoryItem) => {
+  const refineFromHistoryItem = useCallback(async (item: HistoryItem) => {
     setSelectedHistoryItem(null)
     setSidebarOpen(false)
     const convId = uuidv4()
@@ -2429,8 +2509,9 @@ export default function Page() {
       id: uuidv4(), role: 'user',
       content: `I want to refine an existing preset called "${item.qr.presetName}" on my ${item.qr.deviceName}.\n\nCurrent settings:\n${settingsList}${importContext}`,
     }
+    const assistantMsgId = uuidv4()
     const assistantMsg: ChatMessage = {
-      id: uuidv4(), role: 'assistant',
+      id: assistantMsgId, role: 'assistant',
       content: isImported
         ? `I've analysed your imported "${item.qr.presetName}" preset. I can see the amp, cabinet, and effects settings — what would you like to change or improve?`
         : `I can see your "${item.qr.presetName}" preset. What would you like to change about this tone?`,
@@ -2441,7 +2522,38 @@ export default function Page() {
     persistConversation(convId, msgs, item.qr)
     setConversations(loadConversations())
     requestAnimationFrame(() => textareaRef.current?.focus())
-  }, [persistConversation])
+
+    if (item.qr.qrString) {
+      setLoading(true)
+      try {
+        const converted = await convertPreset(item.qr.qrString, currentDevice, item.presetName)
+        if (converted) {
+          const savedItem = saveToHistory(converted)
+          setQrHistory(prev => [savedItem, ...prev.filter(h => h.id !== savedItem.id)].slice(0, 20))
+          setCurrentQr(converted)
+          const convertedSettingsList = converted.settings.filter(s => s.enabled).map(s => {
+            const paramStr = s.params && Object.keys(s.params).length
+              ? ` (${Object.entries(s.params).map(([k, v]) => `${k}: ${v}`).join(', ')})`
+              : ''
+            return `• ${s.slot}: ${s.selection}${paramStr}`
+          }).join('\n')
+          const convertedUserContent = `I want to refine a preset called "${converted.presetName}" on my ${converted.deviceName}.\n\nCurrent settings:\n${convertedSettingsList}${importContext}`
+          const convertedAssistantContent = `Here is your patch converted to ${converted.deviceName}. Would you like to make any further changes to it?`
+          const updatedMsgs = msgs.map(m =>
+            m.id === assistantMsgId
+              ? { ...m, content: convertedAssistantContent, qr: converted }
+              : { ...m, content: convertedUserContent }
+          )
+          setMessages(updatedMsgs)
+          persistConversation(convId, updatedMsgs, converted)
+        }
+      } catch (err) {
+        setError(friendlyError(err))
+      } finally {
+        setLoading(false)
+      }
+    }
+  }, [persistConversation, currentDevice])
 
   const send = useCallback(async (text: string) => {
     const trimmed = text.trim()
@@ -2472,7 +2584,7 @@ export default function Page() {
     abortRef.current = abort
 
     try {
-      const res = await sendChat(newMessages.map(({ role, content }) => ({ role, content })), abort.signal)
+      const res = await sendChat(newMessages.map(({ role, content }) => ({ role, content })), abort.signal, currentDevice)
       setQuotaVersion(v => v + 1)
       const aiMsg: ChatMessage = { id: uuidv4(), role: 'assistant', content: res.message, qr: res.qr, sources: res.sources }
       if (ttsEnabledRef.current && typeof window !== 'undefined' && window.speechSynthesis) {
@@ -2578,13 +2690,21 @@ export default function Page() {
         onCollapse={() => setSidebarCollapsed(true)}
         onQrImported={async (file) => {
           const bitmap = await createImageBitmap(file)
-          const [scanned, importNote] = await Promise.all([
+          const [scanned, ocrText] = await Promise.all([
             decodeQrFromFile(file),
             ocrImageText(bitmap),
           ])
           if (!scanned) return
           const decoded = await decodeQr(scanned.qrString)
           if (!decoded) return
+
+          // Use OCR text, or fall back to cleaned filename if OCR is unavailable
+          const filenameHint = file.name.replace(/\.[^.]+$/, '').replace(/[_\-\.]+/g, ' ').trim()
+          const IGNORED_FILENAMES = ['download', 'qr', 'image', 'photo', 'file', 'scan']
+          const importNote = ocrText || (
+            filenameHint && !IGNORED_FILENAMES.includes(filenameHint.toLowerCase()) ? filenameHint : ''
+          )
+
           const qr: QrResult = {
             qrString: scanned.qrString,
             imageBase64: scanned.imageBase64,
@@ -2594,10 +2714,17 @@ export default function Page() {
             importNote: importNote || undefined,
             imported: true,
           }
+          setSidebarOpen(false)
+          if (importNote) {
+            const guess = await identifyQr(importNote)
+            if (guess.artist && guess.song) {
+              setPendingImport({ qr, guess: { artist: guess.artist, song: guess.song } })
+              return
+            }
+          }
           const item = saveToHistory(qr)
           setQrHistory(prev => [item, ...prev].slice(0, 20))
           setSelectedHistoryItem(item)
-          setSidebarOpen(false)
         }}
         onSettings={() => setShowSettings(true)}
         onDeleteAllChats={() => requestDelete('all conversations', () => {
@@ -2808,7 +2935,7 @@ export default function Page() {
           qr={popupQr.qr}
           description={popupQr.description}
           onClose={() => { setPopupQr(null); requestAnimationFrame(() => { scrollToBottom(); textareaRef.current?.focus() }) }}
-          onRefine={() => { setPopupQr(null); requestAnimationFrame(() => textareaRef.current?.focus()) }}
+          onRefine={() => { setPopupQr(null); send('Please refine this tone') }}
           currentDevice={currentDevice}
           onDeviceChange={d => setCurrentDevice(d)}
         />
@@ -2837,6 +2964,27 @@ export default function Page() {
           onDeleteRequest={() => requestDelete(selectedHistoryItem.presetName, () => handleDeleteHistoryItem(selectedHistoryItem.id))}
           onRename={name => handleRenameHistoryItem(selectedHistoryItem.id, name)}
           onRefine={() => refineFromHistoryItem(selectedHistoryItem)}
+          autoRename={isGenericName(selectedHistoryItem.presetName)}
+        />
+      )}
+
+      {pendingImport && (
+        <IdentifyConfirmModal
+          artist={pendingImport.guess.artist}
+          song={pendingImport.guess.song}
+          onConfirm={() => {
+            const updatedQr = { ...pendingImport.qr, importNote: `${pendingImport.guess.artist} — ${pendingImport.guess.song}` }
+            const item = saveToHistory(updatedQr)
+            setQrHistory(prev => [item, ...prev].slice(0, 20))
+            setSelectedHistoryItem(item)
+            setPendingImport(null)
+          }}
+          onDismiss={() => {
+            const item = saveToHistory(pendingImport.qr)
+            setQrHistory(prev => [item, ...prev].slice(0, 20))
+            setSelectedHistoryItem(item)
+            setPendingImport(null)
+          }}
         />
       )}
     </div>

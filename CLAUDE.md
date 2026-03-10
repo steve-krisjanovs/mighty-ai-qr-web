@@ -52,19 +52,24 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 ---
 
-## Resume — Last Session (v1.5.0)
+## Resume — Next Session
 
-Features added this session — still needs testing:
-- **Convert button in chat QR popup** (`ChatQrModal`) — test it generates a code for the selected target device and saves to history
-- **Downgrade warning** — open a Pro device code, switch target to Standard or Basic, confirm amber warning appears
-- **Device dropdown override** — change device in chat input or QR modal, reload page, confirm it resets to saved default (not persisted)
-- **Collapsible QR groups** in sidebar — collapse/expand
-- **Friendly error messages** — put a bad API key in Settings, try chat or convert, confirm readable message (not raw API error)
+Needs docker compose + test:
+_(none — all retested)_
 
 ---
 
 ## TODO / Bugs
 
-- **BUG**: `Cannot read properties of undefined (reading 'id')` appears randomly in chat responses — intermittent, root cause unknown, likely a null/undefined message or chunk object not being guarded before accessing `.id`
+### Priority (next session)
+
+- ~~**BUG**: "Refine tone" button in QR popup does nothing useful~~ — **FIXED**: now calls `send('Please refine this tone')` automatically.
+- **BUG**: Friendly error messages not working — provider errors (e.g. Gemini with no key) show raw "400 status code (no body)" instead of a readable message. Likely affects all providers.
+- **BUG**: QR import is completely broken — importing a QR image does nothing, no popup, just returns to the current chat.
+
+### Backlog
+
 - **TODO**: Add UI nudges prompting the user to set up their own BYOK and Tavily API key (e.g. banner or settings hint). Add a boolean in the settings pane to dismiss/stop the nagging once the user has seen it.
 - **TODO**: Make the default free tier work with any configured API provider, not just Anthropic.
+- **BUG**: `Cannot read properties of undefined (reading 'id')` appears randomly in chat responses — intermittent, root cause unknown, likely a null/undefined message or chunk object not being guarded before accessing `.id`. Hard to fix without a reliable repro — capture a stack trace when it happens before investigating.
+- **BUG**: Fix icon alignment in the sidebar — chat history and QR history group headers/items have misaligned icons. (screenshot needed)

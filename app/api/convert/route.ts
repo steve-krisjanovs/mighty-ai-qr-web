@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   if (!deviceId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { qrString, targetDevice } = body
+  const { qrString, targetDevice, presetName: nameOverride } = body
 
   if (!qrString || typeof qrString !== 'string' || !targetDevice || typeof targetDevice !== 'string') {
     return NextResponse.json({ error: 'Missing qrString or targetDevice' }, { status: 400 })
@@ -41,6 +41,8 @@ export async function POST(request: NextRequest) {
   const targetConfig = DEVICES[targetDevice as keyof typeof DEVICES]
   if (!targetConfig) return NextResponse.json({ error: 'Unknown target device' }, { status: 400 })
 
+  const displayName = (typeof nameOverride === 'string' && nameOverride.trim()) ? nameOverride.trim() : decoded.presetName
+
   const settingsText = decoded.settings.map(s =>
     `- ${s.slot}: ${s.selection}${s.enabled ? '' : ' (off)'}${
       s.params && Object.keys(s.params).length > 0
@@ -51,11 +53,11 @@ export async function POST(request: NextRequest) {
 
   const conversionMessage = `Convert this preset to my ${targetConfig.displayName}. Recreate it as faithfully as possible, adapting the effects to what's available on the ${targetConfig.displayName}.
 
-Source preset: "${decoded.presetName}" (from ${decoded.deviceName})
+Source preset: "${displayName}" (from ${decoded.deviceName})
 Settings:
 ${settingsText}
 
-Please generate a QR code for the ${targetConfig.displayName} using the closest available settings. Keep the same preset name.`
+Please generate a QR code for the ${targetConfig.displayName} using the closest available settings. Use the preset name "${displayName}".`
 
   const userApiKey   = (request.headers.get('x-user-api-key') ?? '').trim()
   const userProvider = (request.headers.get('x-provider') ?? '').trim()
@@ -67,8 +69,14 @@ Please generate a QR code for the ${targetConfig.displayName} using the closest 
 
   const messages = [{ role: 'user' as const, content: conversionMessage }]
   const isByok = !!userApiKey || !!userBaseUrl
+  const needsKey = !isByok && !!userProvider && userProvider !== 'anthropic' && userProvider !== 'builtin'
 
   console.log(`[convert] targetDevice=${targetDevice} provider=${userProvider || 'builtin'} byok=${isByok}`)
+
+  if (needsKey) {
+    const providerLabel = userProvider.charAt(0).toUpperCase() + userProvider.slice(1)
+    return NextResponse.json({ error: `No API key configured for ${providerLabel}. Add one in Settings or switch back to the free tier.` }, { status: 400 })
+  }
 
   try {
     let result
