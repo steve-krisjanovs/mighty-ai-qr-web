@@ -161,6 +161,19 @@ export function saveDefaultDevice(device: NuxDevice) {
   localStorage.setItem(DEVICE_KEY, device)
 }
 
+// ─── Hint dismissed ───────────────────────────────────────────────────────────
+
+const HINT_KEY = 'maq_hint_dismissed'
+
+export function getHintDismissed(): boolean {
+  if (typeof window === 'undefined') return false
+  return localStorage.getItem(HINT_KEY) === 'true'
+}
+
+export function saveHintDismissed(v: boolean) {
+  localStorage.setItem(HINT_KEY, v ? 'true' : 'false')
+}
+
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
 export type Theme = 'dark' | 'oled' | 'light' | 'tweed' | 'amber' | 'british' | 'oxblood' | 'silver' | 'pedalboard' | 'blackface' | 'plexi' | 'tweed-lt' | 'amber-lt' | 'british-lt' | 'oxblood-lt' | 'silver-lt' | 'pedalboard-lt' | 'blackface-lt' | 'plexi-lt'

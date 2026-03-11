@@ -13,6 +13,7 @@ import {
   getApiSettings, saveApiSettings, getActiveConfig,
   getTheme, saveTheme,
   getDefaultDevice, saveDefaultDevice,
+  getHintDismissed, saveHintDismissed,
   type AiProvider, type ProviderConfig, type Theme, type NuxDevice,
   NUX_DEVICES,
 } from '@/lib/storage'
@@ -1479,7 +1480,7 @@ function ModelBar({ settingsVersion, compact = false, inline = false, compactDro
   )
 }
 
-function SettingsPanel({ onClose }: { onClose: () => void }) {
+function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onClose: () => void; hintDismissed: boolean; onHintDismissedChange: (v: boolean) => void }) {
   const saved = getApiSettings()
   const [provider, setProvider] = useState<AiProvider>(saved?.provider ?? 'builtin')
   const [configs, setConfigs] = useState<Partial<Record<AiProvider, ProviderConfig>>>(saved?.configs ?? {})
@@ -1761,6 +1762,23 @@ function SettingsPanel({ onClose }: { onClose: () => void }) {
             </p>
           </div>}
 
+          {/* Free tier hint + Tavily note */}
+          {provider === 'builtin' && (
+            <div className="space-y-3">
+              <label className="flex cursor-pointer items-center justify-between gap-3">
+                <span className="text-xs text-fg-3">Show free tier hint in chat</span>
+                <button
+                  role="switch"
+                  aria-checked={!hintDismissed}
+                  onClick={() => { const next = !hintDismissed; saveHintDismissed(!next); onHintDismissedChange(!next) }}
+                  className={`relative h-5 w-9 rounded-full transition-colors ${!hintDismissed ? 'bg-primary' : 'bg-surface-3'}`}
+                >
+                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${!hintDismissed ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </button>
+              </label>
+              <p className="text-[11px] text-fg-4">Web search for artist/song tones requires a <span className="font-mono text-fg-3">TAVILY_API_KEY</span> environment variable (self-hosted only).</p>
+            </div>
+          )}
 
           {/* Check for updates — PWA only */}
           {isPwa && (
@@ -2094,6 +2112,20 @@ function ConvItem({ conv, active, onSelect, onDeleteRequest, onRename }: {
   )
 }
 
+// ─── BYOK Hint Banner ─────────────────────────────────────────────────────────
+
+function ByokHintBanner({ onDismiss, onOpenSettings }: { onDismiss: () => void; onOpenSettings: () => void }) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-surface-2 px-3 py-2 text-xs text-fg-3 animate-fade-in">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-primary"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <span className="flex-1">Using shared free tier. <button onClick={onOpenSettings} className="text-primary hover:underline">Add your own API key</button> for unlimited use — Anthropic gives free credits on signup.</span>
+      <button onClick={onDismiss} className="shrink-0 text-fg-4 hover:text-fg-2 transition-colors" aria-label="Dismiss">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  )
+}
+
 // ─── Suggestion Screen ────────────────────────────────────────────────────────
 
 function SuggestionScreen({ onSend }: { onSend: (text: string) => void }) {
@@ -2290,6 +2322,8 @@ export default function Page() {
   const [settingsVersion, setSettingsVersion] = useState(0)
   const [quotaVersion, setQuotaVersion] = useState(0)
   const [currentDevice, setCurrentDevice] = useState<NuxDevice>(() => getDefaultDevice())
+  const [hintDismissed, setHintDismissed] = useState(() => getHintDismissed())
+  const [currentProvider, setCurrentProvider] = useState<AiProvider>(() => getApiSettings()?.provider ?? 'builtin')
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
   const [pendingImport, setPendingImport] = useState<{ qr: QrResult; guess: { artist: string; song: string } } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
@@ -2346,6 +2380,7 @@ export default function Page() {
   }, [])
 
   useEffect(() => { setCurrentDevice(getDefaultDevice()) }, [settingsVersion])
+  useEffect(() => { setCurrentProvider(getApiSettings()?.provider ?? 'builtin') }, [settingsVersion])
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -2779,6 +2814,12 @@ export default function Page() {
                 </div>
               )}
               <div className="mx-auto w-full max-w-2xl space-y-4">
+              {messages.length === 0 && !hintDismissed && currentProvider === 'builtin' && (
+                <ByokHintBanner
+                  onDismiss={() => { saveHintDismissed(true); setHintDismissed(true) }}
+                  onOpenSettings={() => setShowSettings(true)}
+                />
+              )}
               {messages.length === 0 && input.trim() ? (
                 <div className="flex h-full flex-col items-center justify-center animate-fade-in">
                   <p className="text-sm text-fg-4">Edit your message below and send to continue from here.</p>
@@ -2918,7 +2959,7 @@ export default function Page() {
         />
       )}
 
-      {showSettings && <SettingsPanel onClose={() => { setShowSettings(false); setSettingsVersion(v => v + 1) }} />}
+      {showSettings && <SettingsPanel onClose={() => { setShowSettings(false); setSettingsVersion(v => v + 1) }} hintDismissed={hintDismissed} onHintDismissedChange={v => { setHintDismissed(v) }} />}
 
       {showErrorExplain && error && (
         <ErrorExplainModal error={error} onClose={() => setShowErrorExplain(false)} />
