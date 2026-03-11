@@ -64,12 +64,19 @@ _(none — all retested)_
 ### Priority (next session)
 
 - ~~**BUG**: "Refine tone" button in QR popup does nothing useful~~ — **FIXED**: now calls `send('Please refine this tone')` automatically.
-- **BUG**: Friendly error messages not working — provider errors (e.g. Gemini with no key) show raw "400 status code (no body)" instead of a readable message. Likely affects all providers.
-- **BUG**: QR import is completely broken — importing a QR image does nothing, no popup, just returns to the current chat.
+- ~~**BUG**: Friendly error messages not working~~ — **FIXED**: 400/bad-request case added to `friendlyError`.
+- ~~**BUG**: QR import hanging~~ — **FIXED**: moved QR scan server-side (sharp + jsQR, auto-rotates EXIF).
+- ~~**BUG**: New chat scroll~~ — **FIXED**: reset chatRef.scrollTop to 0, dropped textarea autofocus.
+- **TODO**: Redesign QR import + save workflow — read ALL QR popup rules carefully before touching anything, regressions are high risk here.
+  - **Import flow**: decode → show popup with ONE button "Refine tone" (no auto-save, no photo thumbnail ever saved)
+  - **Chat flow**: remove auto-save on AI-generated QRs entirely. Instead show a "Save to collection" button on the QR card in chat. User explicitly saves when satisfied.
+  - **Render clean QR on save**: when saving (via "Save to collection"), re-render a fresh clean QR image from the qrString — never store a photo crop as a thumbnail.
+  - **History item tap**: unchanged — opens QR popup, "Refine tone" spawns new chat if needed.
+  - **Watch out for**: pendingImport state, song confirm modal, QR popup open/close state, selectedHistoryItem, ChatQrModal vs QrModal, all the existing popup transition rules.
 
 ### Backlog
 
 - **TODO**: Add UI nudges prompting the user to set up their own BYOK and Tavily API key (e.g. banner or settings hint). Add a boolean in the settings pane to dismiss/stop the nagging once the user has seen it.
 - **TODO**: Make the default free tier work with any configured API provider, not just Anthropic.
 - **BUG**: `Cannot read properties of undefined (reading 'id')` appears randomly in chat responses — intermittent, root cause unknown, likely a null/undefined message or chunk object not being guarded before accessing `.id`. Hard to fix without a reliable repro — capture a stack trace when it happens before investigating.
-- **BUG**: Fix icon alignment in the sidebar — chat history and QR history group headers/items have misaligned icons. (screenshot needed)
+- ~~**BUG**: Fix icon alignment in the sidebar~~ — **FIXED**: scrollbar-gutter:stable + tab bar margin adjustment.
