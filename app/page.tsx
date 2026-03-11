@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { v4 as uuidv4 } from 'uuid'
-import { sendChat, initAuth, fetchModels, decodeQr, convertPreset, identifyQr } from '@/lib/api'
+import { sendChat, initAuth, fetchModels, decodeQr, convertPreset, identifyQr, scanQrFromFile } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteHistoryItem, renameHistoryItem, clearAllHistory,
   loadConversations, upsertConversation,
@@ -315,35 +315,6 @@ function parseNuxQr(qrString: string): { presetName: string; deviceName: string 
   } catch { return null }
 }
 
-async function decodeQrFromFile(file: File): Promise<{ qrString: string; imageBase64: string } | null> {
-  const jsQR = (await import('jsqr')).default
-  const bitmap = await createImageBitmap(file)
-  const MAX_DIM = 1024
-  const scale = Math.min(1, MAX_DIM / Math.max(bitmap.width, bitmap.height))
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.round(bitmap.width * scale)
-  canvas.height = Math.round(bitmap.height * scale)
-  const ctx = canvas.getContext('2d')!
-  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-  const code = jsQR(imageData.data, imageData.width, imageData.height)
-  if (!code?.data) return null
-
-  // Crop just the QR matrix using jsQR location corners (+ padding) so imageBase64
-  // contains only the QR code, not any pre-baked labels from the original image.
-  const loc = code.location
-  const pad = 12
-  const minX = Math.max(0, Math.min(loc.topLeftCorner.x, loc.bottomLeftCorner.x) - pad)
-  const minY = Math.max(0, Math.min(loc.topLeftCorner.y, loc.topRightCorner.y) - pad)
-  const maxX = Math.min(canvas.width, Math.max(loc.topRightCorner.x, loc.bottomRightCorner.x) + pad)
-  const maxY = Math.min(canvas.height, Math.max(loc.bottomLeftCorner.y, loc.bottomRightCorner.y) + pad)
-  const cropCanvas = document.createElement('canvas')
-  cropCanvas.width = maxX - minX
-  cropCanvas.height = maxY - minY
-  cropCanvas.getContext('2d')!.drawImage(canvas, minX, minY, maxX - minX, maxY - minY, 0, 0, maxX - minX, maxY - minY)
-  const imageBase64 = cropCanvas.toDataURL('image/png')
-  return { qrString: code.data, imageBase64 }
-}
 
 const OCR_FALSE_FLAGS = [
   'mighty ai', 'mighty amp', 'mightyamp', 'nux', 'plugpro', 'plug pro',
@@ -1850,13 +1821,13 @@ function QrDeviceGroup({ deviceName, items, onQrSelect, onClose, onDeleteRequest
 
   return (
     <div>
-      <div className="flex items-center px-3 pt-3 pb-1 sticky top-0 z-10 bg-surface gap-1">
+      <div className="flex w-full items-center px-3 pt-3 pb-1 sticky top-0 z-10 bg-surface gap-1">
         <button onClick={() => setCollapsed(c => !c)} className="flex flex-1 items-center gap-1 min-w-0 text-left">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 text-fg-4 transition-transform ${collapsed ? '-rotate-90' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-fg-4 truncate">{deviceName}</span>
         </button>
-        <button onClick={downloadZip} title="Download all as ZIP" className="flex h-6 w-6 shrink-0 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <button onClick={downloadZip} title="Download all as ZIP" className="flex h-7 w-7 shrink-0 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </button>
       </div>
       {!collapsed && items.map(item => (
@@ -2691,12 +2662,16 @@ export default function Page() {
         onClose={() => setSidebarOpen(false)}
         onCollapse={() => setSidebarCollapsed(true)}
         onQrImported={async (file) => {
-          const scanned = await decodeQrFromFile(file)
+          try {
+          const scanned = await scanQrFromFile(file)
           if (!scanned) { setError("Couldn't find a QR code in this image."); return }
           const decoded = await decodeQr(scanned.qrString)
           if (!decoded) { setError("QR code found but couldn't be decoded — it may not be a NUX preset."); return }
-          const bitmap = await createImageBitmap(file)
-          const ocrText = await ocrImageText(bitmap)
+          let ocrText = ''
+          if (typeof window !== 'undefined' && 'TextDetector' in window) {
+            const bitmap = await createImageBitmap(file)
+            ocrText = await ocrImageText(bitmap)
+          }
 
           // Use OCR text, or fall back to cleaned filename if OCR is unavailable
           const filenameHint = file.name.replace(/\.[^.]+$/, '').replace(/[_\-\.]+/g, ' ').trim()
@@ -2725,6 +2700,7 @@ export default function Page() {
           const item = saveToHistory(qr)
           setQrHistory(prev => [item, ...prev].slice(0, 20))
           setSelectedHistoryItem(item)
+          } catch (err) { setError(friendlyError(err)) }
         }}
         onSettings={() => setShowSettings(true)}
         onDeleteAllChats={() => requestDelete('all conversations', () => {
