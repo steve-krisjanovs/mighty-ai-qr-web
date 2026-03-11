@@ -342,7 +342,7 @@ export async function runChat(client: Anthropic, messages: ChatMessage[], model 
     }
 
     // generateQR (or web_search limit hit — treat next tool use as generateQR)
-    const params = toolUse.input as ProPresetParams
+    const params = coerceParams(toolUse.input as Record<string, unknown>)
     const qrResult = await generateQR(params)
 
     const followUp = await client.messages.create({
@@ -424,10 +424,10 @@ function coerceParams(raw: Record<string, unknown>): ProPresetParams {
     coerced.wah = { enabled: b(w.enabled, false), pedal: n(w.pedal, 50) }
   }
 
-  // Optional effects — only include if present and has an id
+  // Optional effects — only include if present and id is a finite number
   for (const key of ['efx','compressor','modulation','delay','reverb'] as const) {
     const e = raw[key] as Record<string, unknown> | undefined
-    if (!e || n(e.id, 0) === 0) continue
+    if (!e || e.id === undefined || e.id === null || !isFinite(Number(e.id))) continue
     ;(coerced as unknown as Record<string, unknown>)[key] = {
       id: n(e.id, 1), enabled: b(e.enabled ?? e.active, false),
       p1: n(e.p1 ?? e.param1, 50), p2: n(e.p2 ?? e.param2, 50),
