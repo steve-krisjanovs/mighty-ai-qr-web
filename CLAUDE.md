@@ -57,6 +57,7 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 Needs docker compose + test:
 - **#3 sidebar icon alignment** — group header download icon `w-full` + `h-7 w-7` fix committed, not yet deployed
 - **#6 song preset name on confirm** — `presetName` set from song guess on import confirm, not yet deployed
+- **cabinet TypeError fix** — `coerceParams()` now used in Anthropic path; effect id=0 guard fixed — committed, not yet deployed
 
 ---
 
@@ -79,5 +80,5 @@ Needs docker compose + test:
 
 - **TODO**: Add UI nudges prompting the user to set up their own BYOK and Tavily API key (e.g. banner or settings hint). Add a boolean in the settings pane to dismiss/stop the nagging once the user has seen it.
 - **TODO**: Make the default free tier work with any configured API provider, not just Anthropic.
-- **BUG**: `Cannot read properties of undefined (reading 'id')` appears randomly in chat responses — intermittent, root cause unknown, likely a null/undefined message or chunk object not being guarded before accessing `.id`. Hard to fix without a reliable repro — capture a stack trace when it happens before investigating.
+- ~~**BUG**: `Cannot read properties of undefined (reading 'id')` appears randomly in chat responses~~ — **FIXED**: `qr-encoder.ts` line 36 `p.cabinet!.id` crashed when Anthropic model omitted `cabinet` (not required in schema). Anthropic `runChat` path now uses `coerceParams()` same as OpenAI path. Also fixed `coerceParams` effect guard (`n(e.id,0)===0` incorrectly dropped effects with id=0 on 0-indexed devices).
 - ~~**BUG**: Fix icon alignment in the sidebar~~ — **FIXED**: scrollbar-gutter:stable + tab bar margin adjustment.
