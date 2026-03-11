@@ -55,7 +55,8 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 ## Resume — Next Session
 
 Needs docker compose + test:
-_(none — all retested)_
+- **#3 sidebar icon alignment** — group header download icon `w-full` + `h-7 w-7` fix committed, not yet deployed
+- **#6 song preset name on confirm** — `presetName` set from song guess on import confirm, not yet deployed
 
 ---
 
