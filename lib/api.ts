@@ -116,6 +116,22 @@ export async function sendChat(messages: Message[], signal?: AbortSignal, device
   }
 }
 
+export async function scanQrFromFile(file: File): Promise<{ qrString: string; imageBase64: string } | null> {
+  let token = getToken()
+  if (!token) { await authenticate(); token = getToken()! }
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await fetch(`${BASE}/scan-qr`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  })
+  if (!res.ok) return null
+  const data = await res.json()
+  if (!data.found) return null
+  return { qrString: data.qrString, imageBase64: data.imageBase64 }
+}
+
 export interface DecodeResult {
   presetName: string
   deviceName: string
