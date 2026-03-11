@@ -78,7 +78,7 @@ Needs docker compose + test:
 
 ### Backlog
 
-- **TODO**: Add UI nudges prompting the user to set up their own BYOK and Tavily API key (e.g. banner or settings hint). Add a boolean in the settings pane to dismiss/stop the nagging once the user has seen it.
+- ~~**TODO**: Add UI nudges prompting the user to set up their own BYOK and Tavily API key~~ — **DONE**: `ByokHintBanner` shows above suggestions when on free tier; dismissible via X or settings toggle. Tavily env-var note in Settings (self-hosted only).
 - **TODO**: Make the default free tier work with any configured API provider, not just Anthropic.
 - **TODO**: Unify `runChat` + `runChatOpenAI` — add a thin adapter that converts Anthropic SDK responses to OpenAI-compatible shape, so all providers share one code path. Currently split because Anthropic returns tool input as parsed JSON content blocks while OpenAI returns raw JSON strings.
 - ~~**BUG**: `Cannot read properties of undefined (reading 'id')` appears randomly in chat responses~~ — **FIXED**: `qr-encoder.ts` line 36 `p.cabinet!.id` crashed when Anthropic model omitted `cabinet` (not required in schema). Anthropic `runChat` path now uses `coerceParams()` same as OpenAI path. Also fixed `coerceParams` effect guard (`n(e.id,0)===0` incorrectly dropped effects with id=0 on 0-indexed devices).
