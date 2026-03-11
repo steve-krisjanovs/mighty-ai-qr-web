@@ -54,10 +54,25 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 ## Resume — Next Session
 
-Needs docker compose + test:
-- **#3 sidebar icon alignment** — group header download icon `w-full` + `h-7 w-7` fix committed, not yet deployed
-- **#6 song preset name on confirm** — `presetName` set from song guess on import confirm, not yet deployed
-- **cabinet TypeError fix** — `coerceParams()` now used in Anthropic path; effect id=0 guard fixed — committed, not yet deployed
+### Branch state
+- Active work branch: `feature/qr-import-workflow` (branched off `feature/standard-devices`, contains all of it)
+- Merge order: `feature/qr-import-workflow` → `main` directly (no intermediate step needed)
+
+### Step 1 — Compose and test everything
+```bash
+docker compose --env-file .env.local up -d --build
+```
+
+### Test checklist (all committed, none yet deployed)
+- **#3 sidebar icon alignment** — group header download icon `w-full` + `h-7 w-7`; check on mobile + desktop
+- **#6 song preset name on confirm** — import a QR with a recognisable song, confirm the song guess, verify preset is named after the song
+- **cabinet TypeError fix** — ask AI for a tone on a pro device; should no longer crash randomly
+- **BYOK hint banner** — on free tier (builtin), suggestion screen should show the slim hint banner; dismiss via X; check toggle in Settings
+- **QR import redesign** — import a QR photo → popup opens with "Refine tone" only (no save button, no auto-save to history) → tap Refine tone → new chat opens with preset context → AI generates QR → tap View QR code → popup shows Save to collection button → tap it → QR appears in history with clean image
+- **History tap** — unchanged: tap a history item → QrModal opens → Refine tone still works
+
+### Step 2 — PR to main
+Once all tests pass, open a PR from `feature/qr-import-workflow` into `main`.
 
 ---
 
@@ -69,12 +84,7 @@ Needs docker compose + test:
 - ~~**BUG**: Friendly error messages not working~~ — **FIXED**: 400/bad-request case added to `friendlyError`.
 - ~~**BUG**: QR import hanging~~ — **FIXED**: moved QR scan server-side (sharp + jsQR, auto-rotates EXIF).
 - ~~**BUG**: New chat scroll~~ — **FIXED**: reset chatRef.scrollTop to 0, dropped textarea autofocus.
-- **TODO**: Redesign QR import + save workflow — read ALL QR popup rules carefully before touching anything, regressions are high risk here.
-  - **Import flow**: decode → show popup with ONE button "Refine tone" (no auto-save, no photo thumbnail ever saved)
-  - **Chat flow**: remove auto-save on AI-generated QRs entirely. Instead show a "Save to collection" button on the QR card in chat. User explicitly saves when satisfied.
-  - **Render clean QR on save**: when saving (via "Save to collection"), re-render a fresh clean QR image from the qrString — never store a photo crop as a thumbnail.
-  - **History item tap**: unchanged — opens QR popup, "Refine tone" spawns new chat if needed.
-  - **Watch out for**: pendingImport state, song confirm modal, QR popup open/close state, selectedHistoryItem, ChatQrModal vs QrModal, all the existing popup transition rules.
+- ~~**TODO**: Redesign QR import + save workflow~~ — **DONE** (on `feature/qr-import-workflow`, not yet tested): import opens `ChatQrModal` with Refine tone only (no save, no photo persisted); chat QRs get Save to collection inside the popup; history tap unchanged.
 
 ### Backlog
 
