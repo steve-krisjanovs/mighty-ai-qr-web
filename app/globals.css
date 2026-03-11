@@ -17,6 +17,9 @@
   --fg-4:       #5f6368;
   --scrollbar:  rgba(255,255,255,0.15);
   --scrollbar-h:rgba(255,255,255,0.25);
+  --error-bg:     rgba(127,29,29,0.25);
+  --error-border: rgba(185,28,28,0.35);
+  --error-fg:     #f87171;
 }
 
 [data-theme="light"] {
@@ -325,6 +328,14 @@ html, body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-h); }
+
+/* Light-mode error colours */
+[data-theme="light"],
+[data-theme$="-lt"] {
+  --error-bg:     rgba(254,226,226,0.9);
+  --error-border: rgba(185,28,28,0.3);
+  --error-fg:     #b91c1c;
+}
 
 /* Light-mode border override — white/10 is invisible on light bg */
 [data-theme="light"] .border-white\/10,

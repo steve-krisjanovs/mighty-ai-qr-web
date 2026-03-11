@@ -316,11 +316,13 @@ function parseNuxQr(qrString: string): { presetName: string; deviceName: string 
 async function decodeQrFromFile(file: File): Promise<{ qrString: string; imageBase64: string } | null> {
   const jsQR = (await import('jsqr')).default
   const bitmap = await createImageBitmap(file)
+  const MAX_DIM = 1024
+  const scale = Math.min(1, MAX_DIM / Math.max(bitmap.width, bitmap.height))
   const canvas = document.createElement('canvas')
-  canvas.width = bitmap.width
-  canvas.height = bitmap.height
+  canvas.width = Math.round(bitmap.width * scale)
+  canvas.height = Math.round(bitmap.height * scale)
   const ctx = canvas.getContext('2d')!
-  ctx.drawImage(bitmap, 0, 0)
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
   const code = jsQR(imageData.data, imageData.width, imageData.height)
   if (!code?.data) return null
@@ -2689,14 +2691,12 @@ export default function Page() {
         onClose={() => setSidebarOpen(false)}
         onCollapse={() => setSidebarCollapsed(true)}
         onQrImported={async (file) => {
-          const bitmap = await createImageBitmap(file)
-          const [scanned, ocrText] = await Promise.all([
-            decodeQrFromFile(file),
-            ocrImageText(bitmap),
-          ])
+          const scanned = await decodeQrFromFile(file)
           if (!scanned) { setError("Couldn't find a QR code in this image."); return }
           const decoded = await decodeQr(scanned.qrString)
           if (!decoded) { setError("QR code found but couldn't be decoded — it may not be a NUX preset."); return }
+          const bitmap = await createImageBitmap(file)
+          const ocrText = await ocrImageText(bitmap)
 
           // Use OCR text, or fall back to cleaned filename if OCR is unavailable
           const filenameHint = file.name.replace(/\.[^.]+$/, '').replace(/[_\-\.]+/g, ' ').trim()
@@ -2843,13 +2843,14 @@ export default function Page() {
             </div>
 
             {error && (
-              <div className="relative mx-4 mb-2 rounded-xl border border-red-900/50 bg-red-950/30 px-4 py-2.5 pr-8">
-                <button onClick={() => setError(null)} className="absolute top-2.5 right-2.5 text-red-600 hover:text-fg-2"><CloseIcon /></button>
-                <span className="text-sm text-red-400">{error}</span>
+              <div className="relative mx-4 mb-2 rounded-xl border px-4 py-2.5 pr-8" style={{ background: 'var(--error-bg)', borderColor: 'var(--error-border)' }}>
+                <button onClick={() => setError(null)} className="absolute top-2.5 right-2.5 hover:text-fg-2" style={{ color: 'var(--error-fg)' }}><CloseIcon /></button>
+                <span className="text-sm" style={{ color: 'var(--error-fg)' }}>{error}</span>
                 {getErrorExplanation(error) && (
                   <button
                     onClick={() => setShowErrorExplain(true)}
-                    className="mt-1 block text-[11px] text-red-500/70 hover:text-red-400 underline underline-offset-2"
+                    className="mt-1 block text-[11px] underline underline-offset-2 opacity-70 hover:opacity-100"
+                    style={{ color: 'var(--error-fg)' }}
                   >
                     What does this mean?
                   </button>
@@ -2973,7 +2974,7 @@ export default function Page() {
           artist={pendingImport.guess.artist}
           song={pendingImport.guess.song}
           onConfirm={() => {
-            const updatedQr = { ...pendingImport.qr, importNote: `${pendingImport.guess.artist} — ${pendingImport.guess.song}` }
+            const updatedQr = { ...pendingImport.qr, presetName: pendingImport.guess.song, importNote: `${pendingImport.guess.artist} — ${pendingImport.guess.song}` }
             const item = saveToHistory(updatedQr)
             setQrHistory(prev => [item, ...prev].slice(0, 20))
             setSelectedHistoryItem(item)
