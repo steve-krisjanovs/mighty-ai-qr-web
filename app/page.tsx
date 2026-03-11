@@ -43,6 +43,8 @@ async function downloadQrZip(items: HistoryItem[], filename: string) {
 function friendlyError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err)
   const lower = msg.toLowerCase()
+  if (lower.includes('400') || lower.includes('bad request'))
+    return 'The provider rejected the request (400). Your API key may be invalid or the selected model may not be supported — check Settings.'
   if (lower.includes('401') || lower.includes('authentication') || lower.includes('auth_subevent') || lower.includes('invalid_api_key') || lower.includes('incorrect api key'))
     return 'API key is invalid or missing. Check your key in Settings.'
   if (lower.includes('403') || lower.includes('permission') || lower.includes('forbidden'))
@@ -1976,7 +1978,7 @@ function Sidebar({
           </div>
         </div>
 
-        <div className="flex items-center border-b border-white/10 mx-3">
+        <div className="flex items-center border-b border-white/10 ml-3 mr-[17px]">
           {(['chats', 'qr'] as const).map(t => (
             <button
               key={t}
@@ -2009,7 +2011,7 @@ function Sidebar({
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto py-2">
+        <div className="flex-1 overflow-y-auto py-2 [scrollbar-gutter:stable]">
           {tab === 'chats' ? (
             conversations.length === 0
               ? <p className="px-4 py-6 text-center text-xs text-fg-4">No conversations yet</p>
