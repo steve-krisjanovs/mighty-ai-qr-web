@@ -879,11 +879,12 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
 
 // ─── Chat QR Modal ────────────────────────────────────────────────────────────
 
-function ChatQrModal({ qr, description, onClose, onRefine, currentDevice, onDeviceChange }: {
-  qr: QrResult; description: string; onClose: () => void; onRefine: () => void
+function ChatQrModal({ qr, description, onClose, onRefine, onSave, currentDevice, onDeviceChange }: {
+  qr: QrResult; description: string; onClose: () => void; onRefine: () => void; onSave?: () => void
   currentDevice: NuxDevice; onDeviceChange: (d: NuxDevice) => void
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [saved, setSaved] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, qr.presetName)
   const { share, shareLabel } = useQrShare(canvasRef, qr.presetName)
@@ -941,6 +942,15 @@ function ChatQrModal({ qr, description, onClose, onRefine, currentDevice, onDevi
               </div>
               {isDowngrade && downgradeNote && (
                 <p className="text-[11px] text-amber-400/80">{downgradeNote}</p>
+              )}
+              {onSave && (
+                <button
+                  onClick={() => { if (!saved) { onSave(); setSaved(true) } }}
+                  disabled={saved}
+                  className={`w-full rounded-xl border py-2.5 text-sm font-medium transition-colors ${saved ? 'border-green-500/30 text-green-400 cursor-default' : 'border-white/10 text-fg-3 hover:border-white/20 hover:text-fg'}`}
+                >
+                  {saved ? 'Saved to collection' : 'Save to collection'}
+                </button>
               )}
             </div>
 
@@ -2326,6 +2336,7 @@ export default function Page() {
   const [currentProvider, setCurrentProvider] = useState<AiProvider>(() => getApiSettings()?.provider ?? 'builtin')
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
   const [pendingImport, setPendingImport] = useState<{ qr: QrResult; guess: { artist: string; song: string } } | null>(null)
+  const [importedQrPopup, setImportedQrPopup] = useState<QrResult | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
   const [popupQr, setPopupQr] = useState<{ qr: QrResult; description: string } | null>(null)
   const [showQrPanel, setShowQrPanel] = useState(false)
@@ -2563,6 +2574,12 @@ export default function Page() {
     }
   }, [persistConversation, currentDevice])
 
+  const refineFromImportedQr = useCallback((qr: QrResult) => {
+    setImportedQrPopup(null)
+    const tempItem: HistoryItem = { id: uuidv4(), presetName: qr.presetName, deviceName: qr.deviceName, imageBase64: qr.imageBase64, timestamp: Date.now(), qr }
+    refineFromHistoryItem(tempItem)
+  }, [refineFromHistoryItem])
+
   const send = useCallback(async (text: string) => {
     const trimmed = text.trim()
     if (!trimmed || loading) return
@@ -2601,7 +2618,6 @@ export default function Page() {
       }
       const finalMessages = [...newMessages, aiMsg]
       let newQr = currentQr
-      const historyItem = res.qr ? saveToHistory(res.qr) : null
       if (res.qr) newQr = res.qr
 
       flushSync(() => {
@@ -2609,8 +2625,6 @@ export default function Page() {
         if (res.qr) {
           setCurrentQr(res.qr)
           setCurrentQrDescription(res.message)
-          // Don't auto-show — user taps "View QR code" to open
-          if (historyItem) setQrHistory(prev => [historyItem, ...prev].slice(0, 20))
         }
       })
 
@@ -2732,9 +2746,7 @@ export default function Page() {
               return
             }
           }
-          const item = saveToHistory(qr)
-          setQrHistory(prev => [item, ...prev].slice(0, 20))
-          setSelectedHistoryItem(item)
+          setImportedQrPopup(qr)
           } catch (err) { setError(friendlyError(err)) }
         }}
         onSettings={() => setShowSettings(true)}
@@ -2948,12 +2960,24 @@ export default function Page() {
         </div>
       </div>
 
+      {importedQrPopup && (
+        <ChatQrModal
+          qr={importedQrPopup}
+          description=""
+          onClose={() => setImportedQrPopup(null)}
+          onRefine={() => refineFromImportedQr(importedQrPopup)}
+          currentDevice={currentDevice}
+          onDeviceChange={d => setCurrentDevice(d)}
+        />
+      )}
+
       {popupQr && (
         <ChatQrModal
           qr={popupQr.qr}
           description={popupQr.description}
           onClose={() => { setPopupQr(null); requestAnimationFrame(() => { scrollToBottom(); textareaRef.current?.focus() }) }}
           onRefine={() => { setPopupQr(null); send('Please refine this tone') }}
+          onSave={() => { const item = saveToHistory(popupQr.qr); setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== popupQr.qr.qrString)].slice(0, 20)) }}
           currentDevice={currentDevice}
           onDeviceChange={d => setCurrentDevice(d)}
         />
@@ -2992,15 +3016,11 @@ export default function Page() {
           song={pendingImport.guess.song}
           onConfirm={() => {
             const updatedQr = { ...pendingImport.qr, presetName: pendingImport.guess.song, importNote: `${pendingImport.guess.artist} — ${pendingImport.guess.song}` }
-            const item = saveToHistory(updatedQr)
-            setQrHistory(prev => [item, ...prev].slice(0, 20))
-            setSelectedHistoryItem(item)
+            setImportedQrPopup(updatedQr)
             setPendingImport(null)
           }}
           onDismiss={() => {
-            const item = saveToHistory(pendingImport.qr)
-            setQrHistory(prev => [item, ...prev].slice(0, 20))
-            setSelectedHistoryItem(item)
+            setImportedQrPopup(pendingImport.qr)
             setPendingImport(null)
           }}
         />
