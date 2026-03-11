@@ -2415,10 +2415,8 @@ export default function Page() {
     setError(null)
     setInput('')
     requestAnimationFrame(() => {
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
-        textareaRef.current.focus()
-      }
+      if (chatRef.current) chatRef.current.scrollTop = 0
+      if (textareaRef.current) textareaRef.current.style.height = 'auto'
     })
   }, [])
 
