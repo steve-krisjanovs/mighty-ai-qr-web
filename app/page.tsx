@@ -2611,11 +2611,11 @@ export default function Page() {
   }, [])
 
   // Persist conversation — reads from localStorage to avoid stale state
-  const persistConversation = useCallback((id: string, msgs: ChatMessage[], lastQr: QrResult | null) => {
+  const persistConversation = useCallback((id: string, msgs: ChatMessage[], lastQr: QrResult | null, titleOverride?: string) => {
     const existing = loadConversations().find(c => c.id === id)
     upsertConversation({
       id,
-      title: autoTitle(msgs),
+      title: titleOverride ?? autoTitle(msgs),
       messages: msgs,
       lastQr,
       createdAt: existing?.createdAt ?? Date.now(),
@@ -2724,7 +2724,7 @@ export default function Page() {
     }
     const msgs = [assistantMsg]
     setMessages(msgs)
-    persistConversation(convId, msgs, item.qr)
+    persistConversation(convId, msgs, item.qr, item.presetName)
     setConversations(loadConversations())
     requestAnimationFrame(() => textareaRef.current?.focus())
   }, [persistConversation])
@@ -2746,7 +2746,7 @@ export default function Page() {
       const assistantMsg: ChatMessage = { id: uuidv4(), role: 'assistant', content: `Here's your "${label}" preset for ${qr.deviceName}. Let me know if you'd like to change anything.`, qr }
       const msgs = [assistantMsg]
       setMessages(msgs)
-      persistConversation(convId, msgs, qr)
+      persistConversation(convId, msgs, qr, qr.presetName)
       setConversations(loadConversations())
     }
   }, [currentDevice, persistConversation])
@@ -2938,7 +2938,7 @@ export default function Page() {
           const qr: QrResult = {
             qrString: scanned.qrString,
             imageBase64: scanned.imageBase64,
-            presetName: decoded.presetName,
+            presetName: decoded.presetName === 'Imported Preset' && importNote ? importNote : decoded.presetName,
             deviceName: decoded.deviceName,
             deviceId: decoded.deviceId,
             settings: decoded.settings,

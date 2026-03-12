@@ -496,6 +496,78 @@ const QR_ID_VERSION_TO_DEVICE: Record<string, DeviceType> = {
   '7_1':  '2040bt',
 }
 
+function stdEnabled(b: number): boolean { return b !== 0x00 }
+
+function decodeStandardSettings(d: Buffer, deviceId: DeviceType): SettingRow[] {
+  const settings: SettingRow[] = []
+
+  if (deviceId === 'plugair_v1' || deviceId === 'plugair_v2' || deviceId === 'mightyair') {
+    const ampNames = deviceId === 'plugair_v2' ? PLUG_AIR_V2_AMP_NAMES : PLUG_AIR_V1_AMP_NAMES
+    const modNames = deviceId === 'plugair_v2' ? PLUG_AIR_V2_MOD_NAMES : PLUG_AIR_V1_MOD_NAMES
+    const revNames = deviceId === 'plugair_v2' ? PLUG_AIR_V2_REVERB_NAMES : PLUG_AIR_V1_REVERB_NAMES
+    settings.push({ slot: 'Amp', enabled: true, selection: ampNames[d[9]] ?? `Amp #${d[9]}`,
+      params: { Gain: d[10], Level: d[11], Bass: d[12], Mid: d[13], Treble: d[14], ...(d[15] ? { Tone: d[15] } : {}) } })
+    settings.push({ slot: 'Cabinet', enabled: stdEnabled(d[16]), selection: PLUG_AIR_CAB_NAMES[d[17]] ?? `Cab #${d[17]}`,
+      params: { Level: d[18] } })
+    settings.push({ slot: 'Noise Gate', enabled: stdEnabled(d[0]), selection: 'Noise Gate',
+      params: { Threshold: d[1], Sustain: d[2] } })
+    if (stdEnabled(d[3]))  settings.push({ slot: 'EFX', enabled: true, selection: PLUG_AIR_EFX_NAMES[d[4]] ?? `EFX #${d[4]}`,
+      params: { P1: d[5], P2: d[6], P3: d[7] } })
+    if (stdEnabled(d[19])) settings.push({ slot: 'Modulation', enabled: true, selection: modNames[d[20]] ?? `Mod #${d[20]}`,
+      params: { Rate: d[21], Depth: d[22], Mix: d[23] } })
+    if (stdEnabled(d[24])) settings.push({ slot: 'Delay', enabled: true, selection: PLUG_AIR_DELAY_NAMES[d[25]] ?? `Delay #${d[25]}`,
+      params: { Time: d[26], Feedback: d[27], Mix: d[28] } })
+    if (stdEnabled(d[29])) settings.push({ slot: 'Reverb', enabled: true, selection: revNames[d[30]] ?? `Reverb #${d[30]}`,
+      params: { Decay: d[31], Damp: d[32], Mix: d[33] } })
+
+  } else if (deviceId === 'lite') {
+    settings.push({ slot: 'Amp', enabled: true, selection: LITE_AMP_NAMES[0],
+      params: { Gain: d[7], Level: d[8], Tone: d[12] } })
+    settings.push({ slot: 'Noise Gate', enabled: stdEnabled(d[0]), selection: 'Noise Gate',
+      params: { Threshold: d[1], Sustain: d[2] } })
+    if (stdEnabled(d[13])) settings.push({ slot: 'Modulation', enabled: true, selection: LITE_MOD_NAMES[d[14]] ?? `Mod #${d[14]}`,
+      params: { Rate: d[15], Depth: d[16] } })
+    if (stdEnabled(d[18])) {
+      const ambType = d[19]
+      if (ambType >= 10) {
+        const revId = ambType - 10
+        settings.push({ slot: 'Reverb', enabled: true, selection: LITE_AMBIENCE_NAMES[ambType] ?? `Reverb #${revId}`,
+          params: { Decay: d[21], Mix: d[22] } })
+      } else {
+        settings.push({ slot: 'Delay', enabled: true, selection: LITE_AMBIENCE_NAMES[ambType] ?? `Delay #${ambType}`,
+          params: { Time: d[24], Feedback: d[25], Mix: d[26] } })
+      }
+    }
+
+  } else if (deviceId === '8bt') {
+    settings.push({ slot: 'Amp', enabled: true, selection: LITE_AMP_NAMES[0],
+      params: { Gain: d[7], Level: d[8], Tone: d[12] } })
+    settings.push({ slot: 'Noise Gate', enabled: stdEnabled(d[0]), selection: 'Noise Gate',
+      params: { Threshold: d[1], Sustain: d[2] } })
+    if (stdEnabled(d[13])) settings.push({ slot: 'Modulation', enabled: true, selection: LITE_MOD_NAMES[d[14]] ?? `Mod #${d[14]}`,
+      params: { Rate: d[15], Depth: d[16] } })
+    if (stdEnabled(d[32])) settings.push({ slot: 'Reverb', enabled: true, selection: LITE_8BT_REVERB_NAMES[d[20]] ?? `Reverb #${d[20]}`,
+      params: { Decay: d[21], Mix: d[22] } })
+    if (stdEnabled(d[33])) settings.push({ slot: 'Delay', enabled: true, selection: LITE_8BT_DELAY_NAMES[d[23]] ?? `Delay #${d[23]}`,
+      params: { Time: d[24], Feedback: d[25], Mix: d[26] } })
+
+  } else if (deviceId === '2040bt') {
+    settings.push({ slot: 'Amp', enabled: true, selection: BT2040_AMP_NAMES[0],
+      params: { Gain: d[5], Level: d[6], Bass: d[7], Mid: d[8], Treble: d[9] } })
+    settings.push({ slot: 'Noise Gate', enabled: stdEnabled(d[0]), selection: 'Noise Gate',
+      params: { Threshold: d[1] } })
+    if (stdEnabled(d[2]))  settings.push({ slot: 'Wah', enabled: true, selection: 'Wah Pedal', params: { Pedal: d[3] } })
+    if (stdEnabled(d[10])) settings.push({ slot: 'Modulation', enabled: true, selection: BT2040_MOD_NAMES[d[11]] ?? `Mod #${d[11]}`,
+      params: { Rate: d[12], Depth: d[13], Mix: d[14] } })
+    if (stdEnabled(d[15])) settings.push({ slot: 'Delay', enabled: true, selection: BT2040_DELAY_NAMES[d[16]] ?? `Delay #${d[16]}`,
+      params: { Time: d[17], Feedback: d[18], Mix: d[19] } })
+    if (stdEnabled(d[20])) settings.push({ slot: 'Reverb', enabled: true, selection: BT2040_REVERB_NAMES[d[21]] ?? `Reverb #${d[21]}`,
+      params: { Decay: d[22], Damp: d[23], Mix: d[24] } })
+  }
+
+  return settings
+}
+
 export function decodeQRString(qrString: string): { presetName: string; deviceName: string; deviceId?: string; settings: SettingRow[] } | null {
   if (!qrString.startsWith('nux://MightyAmp:')) return null
   try {
@@ -504,7 +576,9 @@ export function decodeQRString(qrString: string): { presetName: string; deviceNa
     const deviceId = QR_ID_VERSION_TO_DEVICE[`${buf[0]}_${buf[1]}`]
 
     if (buf.length < 115) {
-      return { presetName: 'Imported Preset', deviceName, deviceId, settings: [] }
+      const d = buf.slice(2)
+      const settings = deviceId ? decodeStandardSettings(d, deviceId) : []
+      return { presetName: 'Imported Preset', deviceName, deviceId, settings }
     }
 
     const d = buf.slice(2)
