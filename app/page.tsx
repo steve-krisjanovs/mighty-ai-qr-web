@@ -482,21 +482,55 @@ function useQrShare(canvasRef: React.RefObject<HTMLCanvasElement | null>, preset
 
 // ─── QR Card ──────────────────────────────────────────────────────────────────
 
-function QrCard({ qr, description, className = '' }: { qr: QrResult; description?: string; className?: string }) {
+function QrCard({ qr, description, className = '', nameOverride, onRename }: { qr: QrResult; description?: string; className?: string; nameOverride?: string; onRename?: (name: string) => void }) {
+  const displayName = nameOverride ?? qr.presetName
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [editName, setEditName] = useState(displayName)
+  const nameInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const download = useQrDownload(canvasRef, qr.presetName)
-  const { share, shareLabel } = useQrShare(canvasRef, qr.presetName)
-  const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(qr.presetName + ' guitar tone')}`
+  const download = useQrDownload(canvasRef, displayName)
+  const { share, shareLabel } = useQrShare(canvasRef, displayName)
+  const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(displayName + ' guitar tone')}`
+
+  useEffect(() => { if (!editingName) setEditName(displayName) }, [displayName, editingName])
+  useEffect(() => { if (editingName) nameInputRef.current?.focus() }, [editingName])
+
+  const commitCardRename = () => {
+    const trimmed = editName.trim()
+    if (trimmed && onRename) onRename(trimmed)
+    else setEditName(displayName)
+    setEditingName(false)
+  }
 
   return (
     <div className={`rounded-2xl border border-white/10 bg-surface-2 overflow-hidden ${className}`}>
       <div className="flex justify-center bg-white p-4">
-        <QrImage ref={canvasRef} imageBase64={qr.imageBase64} presetName={qr.presetName} deviceName={qr.deviceName} guitar={qr.guitar} />
+        <QrImage ref={canvasRef} imageBase64={qr.imageBase64} presetName={displayName} deviceName={qr.deviceName} guitar={qr.guitar} />
       </div>
       <div className="p-4 space-y-3">
         <div>
-          <p className="text-sm font-medium text-fg leading-tight">{qr.presetName}</p>
+          {onRename && editingName ? (
+            <input
+              ref={nameInputRef}
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              onBlur={commitCardRename}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitCardRename()
+                if (e.key === 'Escape') { setEditName(displayName); setEditingName(false) }
+              }}
+              className="w-full rounded-lg border border-primary/50 bg-surface-3 px-3 py-1.5 text-sm font-medium text-fg outline-none"
+            />
+          ) : onRename ? (
+            <button onClick={() => setEditingName(true)} className="text-left group">
+              <p className="text-sm font-medium text-fg leading-tight group-hover:text-primary transition-colors">
+                {displayName} <span className="text-[10px] text-fg-4 group-hover:text-fg-3">rename</span>
+              </p>
+            </button>
+          ) : (
+            <p className="text-sm font-medium text-fg leading-tight">{displayName}</p>
+          )}
           <p className="text-xs text-fg-3 mt-0.5">{qr.deviceName}</p>
           {description && (
             <p className="text-[11px] text-fg-4 leading-relaxed mt-1.5">{description}</p>
@@ -726,14 +760,14 @@ function isGenericName(name: string) {
   return GENERIC_PRESET_NAMES.includes(name.toLowerCase().trim())
 }
 
-function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest, onRename, onRefine, autoRename }: {
+function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest, onRename, onOpen, autoRename }: {
   item: HistoryItem
   currentDevice: NuxDevice
   onDeviceChange: (d: NuxDevice) => void
   onClose: () => void
   onDeleteRequest: () => void
   onRename: (name: string) => void
-  onRefine: () => void
+  onOpen: () => void
   autoRename?: boolean
 }) {
   const [editing, setEditing] = useState(autoRename ?? false)
@@ -745,8 +779,6 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
   const { share, shareLabel } = useQrShare(canvasRef, item.qr.presetName)
 
   const sourceDev = item.qr.deviceId
-  const isDeviceMismatch = !!sourceDev && sourceDev !== currentDevice
-  const targetDeviceLabel = NUX_DEVICES.find(d => d.id === currentDevice)?.label ?? currentDevice
   const isDowngrade = !!sourceDev && getCapabilityLevel(sourceDev) > getCapabilityLevel(currentDevice)
   const downgradeNote = isDowngrade
     ? getCapabilityLevel(sourceDev!) === 3 && getCapabilityLevel(currentDevice) === 2
@@ -816,8 +848,8 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <DeviceDropdown value={currentDevice} onChange={onDeviceChange} />
-                <button onClick={onRefine} className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm">
-                  Refine tone
+                <button onClick={onOpen} className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm">
+                  Open in chat
                 </button>
               </div>
               {isDowngrade && downgradeNote && (
@@ -879,17 +911,19 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
 
 // ─── Chat QR Modal ────────────────────────────────────────────────────────────
 
-function ChatQrModal({ qr, description, onClose, onRefine, onSave, currentDevice, onDeviceChange }: {
-  qr: QrResult; description: string; onClose: () => void; onRefine: () => void; onSave?: () => void
-  currentDevice: NuxDevice; onDeviceChange: (d: NuxDevice) => void
+function ChatQrModal({ qr, description, onClose, onRefine, onSave, initialSaved, currentDevice, onDeviceChange }: {
+  qr: QrResult; description: string; onClose: () => void; onRefine: () => void; onSave?: (name: string) => void
+  initialSaved?: boolean; currentDevice: NuxDevice; onDeviceChange: (d: NuxDevice) => void
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [saved, setSaved] = useState(initialSaved ?? false)
+  const [name, setName] = useState(qr.presetName)
+  const [editing, setEditing] = useState(false)
+  const nameInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const download = useQrDownload(canvasRef, qr.presetName)
-  const { share, shareLabel } = useQrShare(canvasRef, qr.presetName)
-  const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(qr.presetName + ' guitar tone')}`
-  const targetDeviceLabel = NUX_DEVICES.find(d => d.id === currentDevice)?.label ?? currentDevice
+  const download = useQrDownload(canvasRef, name)
+  const { share, shareLabel } = useQrShare(canvasRef, name)
+  const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(name + ' guitar tone')}`
   const sourceDev = qr.deviceId
   const isDowngrade = !!sourceDev && getCapabilityLevel(sourceDev) > getCapabilityLevel(currentDevice)
   const downgradeNote = isDowngrade
@@ -899,6 +933,15 @@ function ChatQrModal({ qr, description, onClose, onRefine, onSave, currentDevice
         ? 'Compressor, 5-band EQ, and cabinet will be dropped; amps and effects adapted to nearest match.'
         : 'Cabinet and effects will be adapted to nearest match on your device.'
     : null
+
+  useEffect(() => { if (editing) nameInputRef.current?.focus() }, [editing])
+
+  const commitName = () => {
+    const trimmed = name.trim()
+    if (!trimmed) setName(qr.presetName)
+    else setName(trimmed)
+    setEditing(false)
+  }
 
   return (
     <>
@@ -914,13 +957,31 @@ function ChatQrModal({ qr, description, onClose, onRefine, onSave, currentDevice
             >
               <CloseIcon />
             </button>
-            <QrImage ref={canvasRef} imageBase64={qr.imageBase64} presetName={qr.presetName} deviceName={qr.deviceName} guitar={qr.guitar} />
+            <QrImage ref={canvasRef} imageBase64={qr.imageBase64} presetName={name} deviceName={qr.deviceName} guitar={qr.guitar} />
           </div>
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0">
             <div>
-              <p className="text-sm font-medium text-fg">{qr.presetName}</p>
+              {editing ? (
+                <input
+                  ref={nameInputRef}
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  onBlur={commitName}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') commitName()
+                    if (e.key === 'Escape') { setName(qr.presetName); setEditing(false) }
+                  }}
+                  className="w-full rounded-lg border border-primary/50 bg-surface-2 px-3 py-1.5 text-sm font-medium text-fg outline-none"
+                />
+              ) : (
+                <button onClick={() => setEditing(true)} className="text-left group">
+                  <p className="text-sm font-medium text-fg group-hover:text-primary transition-colors">
+                    {name} <span className="text-[10px] text-fg-4 group-hover:text-fg-3">rename</span>
+                  </p>
+                </button>
+              )}
               <p className="text-xs text-fg-3 mt-0.5">{qr.deviceName}</p>
               {description && (() => {
                 const excerpt = description
@@ -945,7 +1006,7 @@ function ChatQrModal({ qr, description, onClose, onRefine, onSave, currentDevice
               )}
               {onSave && (
                 <button
-                  onClick={() => { if (!saved) { onSave(); setSaved(true) } }}
+                  onClick={() => { if (!saved) { onSave(name); setSaved(true) } }}
                   disabled={saved}
                   className={`w-full rounded-xl border py-2.5 text-sm font-medium transition-colors ${saved ? 'border-green-500/30 text-green-400 cursor-default' : 'border-white/10 text-fg-3 hover:border-white/20 hover:text-fg'}`}
                 >
@@ -999,6 +1060,65 @@ function ChatQrModal({ qr, description, onClose, onRefine, onSave, currentDevice
         </div>
       </div>
     </>
+  )
+}
+
+// ─── Desktop QR Panel ────────────────────────────────────────────────────────
+
+function QrDesktopPanel({ qr, description, currentDevice, onDeviceChange, onClose, isSaved, onSave, onRefine }: {
+  qr: QrResult; description: string; currentDevice: NuxDevice; onDeviceChange: (d: NuxDevice) => void
+  onClose: () => void; isSaved: boolean; onSave: (name: string) => void; onRefine: () => void
+}) {
+  const [name, setName] = useState(qr.presetName)
+  useEffect(() => { setName(qr.presetName) }, [qr.presetName])
+
+  const srcDev = qr.deviceId
+  const isDowngrade = !!srcDev && getCapabilityLevel(srcDev) > getCapabilityLevel(currentDevice)
+  const downgradeNote = isDowngrade
+    ? getCapabilityLevel(srcDev!) === 3 && getCapabilityLevel(currentDevice) === 2
+      ? 'Compressor and 5-band EQ will be dropped; amps and effects adapted to nearest match.'
+      : getCapabilityLevel(srcDev!) === 3 && getCapabilityLevel(currentDevice) === 1
+        ? 'Compressor, 5-band EQ, and cabinet will be dropped; amps and effects adapted to nearest match.'
+        : 'Cabinet and effects will be adapted to nearest match on your device.'
+    : null
+
+  return (
+    <div className="hidden w-[360px] shrink-0 flex-col overflow-y-auto bg-bg p-5 lg:flex border-l border-white/5">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs font-semibold uppercase tracking-wider text-fg-4">QR Code</p>
+        <button onClick={onClose} title="Close" className="flex h-7 w-7 items-center justify-center rounded-lg text-fg-3 hover:bg-surface-2 hover:text-fg transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div className="animate-fade-in space-y-3">
+        <QrCard qr={qr} description={description} nameOverride={name} onRename={n => setName(n)} />
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <DeviceDropdown value={currentDevice} onChange={onDeviceChange} />
+            <button
+              onClick={onRefine}
+              className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm"
+            >
+              Refine tone
+            </button>
+          </div>
+          {isDowngrade && downgradeNote && (
+            <p className="text-[11px] text-amber-400/80">{downgradeNote}</p>
+          )}
+          {!isSaved && (
+            <button
+              onClick={() => onSave(name)}
+              className="w-full rounded-xl border border-white/10 py-2.5 text-sm font-medium text-fg-3 hover:border-white/20 hover:text-fg transition-colors"
+            >
+              Save to collection
+            </button>
+          )}
+          {isSaved && (
+            <p className="text-center text-xs text-green-400/70 py-1">Saved to collection</p>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -1775,17 +1895,16 @@ function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onCl
           {/* Free tier hint + Tavily note */}
           {provider === 'builtin' && (
             <div className="space-y-3">
-              <label className="flex cursor-pointer items-center justify-between gap-3">
+              <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => { const next = !hintDismissed; saveHintDismissed(next); onHintDismissedChange(next) }}>
                 <span className="text-xs text-fg-3">Show free tier hint in chat</span>
-                <button
+                <div
                   role="switch"
                   aria-checked={!hintDismissed}
-                  onClick={() => { const next = !hintDismissed; saveHintDismissed(!next); onHintDismissedChange(!next) }}
                   className={`relative h-5 w-9 rounded-full transition-colors ${!hintDismissed ? 'bg-primary' : 'bg-surface-3'}`}
                 >
                   <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${!hintDismissed ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                </button>
-              </label>
+                </div>
+              </div>
               <p className="text-[11px] text-fg-4">Web search for artist/song tones requires a <span className="font-mono text-fg-3">TAVILY_API_KEY</span> environment variable (self-hosted only).</p>
             </div>
           )}
@@ -2505,7 +2624,7 @@ export default function Page() {
     })
   }, [])
 
-  const refineFromHistoryItem = useCallback(async (item: HistoryItem) => {
+  const openHistoryItemInChat = useCallback((item: HistoryItem) => {
     setSelectedHistoryItem(null)
     setSidebarOpen(false)
     const convId = uuidv4()
@@ -2513,6 +2632,20 @@ export default function Page() {
     setCurrentQr(item.qr)
     setError(null)
     setInput('')
+    const label = item.qr.importNote || item.qr.presetName
+    const assistantMsg: ChatMessage = {
+      id: uuidv4(), role: 'assistant',
+      content: `Here's your "${label}" preset for ${item.qr.deviceName}. Let me know if you'd like to change anything.`,
+      qr: item.qr,
+    }
+    const msgs = [assistantMsg]
+    setMessages(msgs)
+    persistConversation(convId, msgs, item.qr)
+    setConversations(loadConversations())
+    requestAnimationFrame(() => textareaRef.current?.focus())
+  }, [persistConversation])
+
+  const refineFromHistoryItem = useCallback((item: HistoryItem) => {
     const enabledSettings = item.qr.settings.filter(s => s.enabled)
     const settingsList = enabledSettings.map(s => {
       const paramStr = s.params && Object.keys(s.params).length
@@ -2524,13 +2657,17 @@ export default function Page() {
     const importContext = isImported
       ? `\n\nThis preset was imported from an external source — not generated by you. Please interpret the settings to understand the musical character and intent before making any changes. When refining, preserve the core character unless the user asks to change it.`
       : ''
+    const convId = uuidv4()
+    setActiveConvId(convId)
+    setCurrentQr(item.qr)
+    setError(null)
+    setInput('')
     const userMsg: ChatMessage = {
       id: uuidv4(), role: 'user',
       content: `I want to refine an existing preset called "${item.qr.presetName}" on my ${item.qr.deviceName}.\n\nCurrent settings:\n${settingsList}${importContext}`,
     }
-    const assistantMsgId = uuidv4()
     const assistantMsg: ChatMessage = {
-      id: assistantMsgId, role: 'assistant',
+      id: uuidv4(), role: 'assistant',
       content: isImported
         ? `I've analysed your imported "${item.qr.presetName}" preset. I can see the amp, cabinet, and effects settings — what would you like to change or improve?`
         : `I can see your "${item.qr.presetName}" preset. What would you like to change about this tone?`,
@@ -2541,38 +2678,7 @@ export default function Page() {
     persistConversation(convId, msgs, item.qr)
     setConversations(loadConversations())
     requestAnimationFrame(() => textareaRef.current?.focus())
-
-    if (item.qr.qrString) {
-      setLoading(true)
-      try {
-        const converted = await convertPreset(item.qr.qrString, currentDevice, item.presetName)
-        if (converted) {
-          const savedItem = saveToHistory(converted)
-          setQrHistory(prev => [savedItem, ...prev.filter(h => h.id !== savedItem.id)].slice(0, 20))
-          setCurrentQr(converted)
-          const convertedSettingsList = converted.settings.filter(s => s.enabled).map(s => {
-            const paramStr = s.params && Object.keys(s.params).length
-              ? ` (${Object.entries(s.params).map(([k, v]) => `${k}: ${v}`).join(', ')})`
-              : ''
-            return `• ${s.slot}: ${s.selection}${paramStr}`
-          }).join('\n')
-          const convertedUserContent = `I want to refine a preset called "${converted.presetName}" on my ${converted.deviceName}.\n\nCurrent settings:\n${convertedSettingsList}${importContext}`
-          const convertedAssistantContent = `Here is your patch converted to ${converted.deviceName}. Would you like to make any further changes to it?`
-          const updatedMsgs = msgs.map(m =>
-            m.id === assistantMsgId
-              ? { ...m, content: convertedAssistantContent, qr: converted }
-              : { ...m, content: convertedUserContent }
-          )
-          setMessages(updatedMsgs)
-          persistConversation(convId, updatedMsgs, converted)
-        }
-      } catch (err) {
-        setError(friendlyError(err))
-      } finally {
-        setLoading(false)
-      }
-    }
-  }, [persistConversation, currentDevice])
+  }, [persistConversation])
 
   const refineFromImportedQr = useCallback((qr: QrResult) => {
     setImportedQrPopup(null)
@@ -2826,7 +2932,7 @@ export default function Page() {
                 </div>
               )}
               <div className="mx-auto w-full max-w-2xl space-y-4">
-              {messages.length === 0 && !hintDismissed && currentProvider === 'builtin' && (
+              {!hintDismissed && currentProvider === 'builtin' && (
                 <ByokHintBanner
                   onDismiss={() => { saveHintDismissed(true); setHintDismissed(true) }}
                   onOpenSettings={() => setShowSettings(true)}
@@ -2944,17 +3050,16 @@ export default function Page() {
 
           {/* QR Panel — desktop */}
           {showQrPanel && currentQr && (
-            <div className="hidden w-[360px] shrink-0 flex-col overflow-y-auto bg-bg p-5 lg:flex border-l border-white/5">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-fg-4">QR Code</p>
-                <button onClick={() => setShowQrPanel(false)} title="Close" className="flex h-7 w-7 items-center justify-center rounded-lg text-fg-3 hover:bg-surface-2 hover:text-fg transition-colors">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
-              </div>
-              <div className="animate-fade-in">
-                <QrCard qr={currentQr} description={currentQrDescription} />
-              </div>
-            </div>
+            <QrDesktopPanel
+              qr={currentQr}
+              description={currentQrDescription}
+              currentDevice={currentDevice}
+              onDeviceChange={d => setCurrentDevice(d)}
+              onClose={() => setShowQrPanel(false)}
+              isSaved={qrHistory.some(h => h.qr.qrString === currentQr.qrString)}
+              onSave={name => { const q = { ...currentQr, presetName: name }; const item = saveToHistory(q); setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== currentQr.qrString)].slice(0, 20)) }}
+              onRefine={() => { setShowQrPanel(false); requestAnimationFrame(() => textareaRef.current?.focus()) }}
+            />
           )}
 
         </div>
@@ -2976,8 +3081,9 @@ export default function Page() {
           qr={popupQr.qr}
           description={popupQr.description}
           onClose={() => { setPopupQr(null); requestAnimationFrame(() => { scrollToBottom(); textareaRef.current?.focus() }) }}
-          onRefine={() => { setPopupQr(null); send('Please refine this tone') }}
-          onSave={() => { const item = saveToHistory(popupQr.qr); setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== popupQr.qr.qrString)].slice(0, 20)) }}
+          onRefine={() => { setPopupQr(null); requestAnimationFrame(() => textareaRef.current?.focus()) }}
+          onSave={name => { const q = { ...popupQr.qr, presetName: name }; const item = saveToHistory(q); setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== popupQr.qr.qrString)].slice(0, 20)) }}
+          initialSaved={qrHistory.some(h => h.qr.qrString === popupQr.qr.qrString)}
           currentDevice={currentDevice}
           onDeviceChange={d => setCurrentDevice(d)}
         />
@@ -3005,7 +3111,7 @@ export default function Page() {
           onClose={() => setSelectedHistoryItem(null)}
           onDeleteRequest={() => requestDelete(selectedHistoryItem.presetName, () => handleDeleteHistoryItem(selectedHistoryItem.id))}
           onRename={name => handleRenameHistoryItem(selectedHistoryItem.id, name)}
-          onRefine={() => refineFromHistoryItem(selectedHistoryItem)}
+          onOpen={() => openHistoryItemInChat(selectedHistoryItem)}
           autoRename={isGenericName(selectedHistoryItem.presetName)}
         />
       )}
@@ -3020,7 +3126,6 @@ export default function Page() {
             setPendingImport(null)
           }}
           onDismiss={() => {
-            setImportedQrPopup(pendingImport.qr)
             setPendingImport(null)
           }}
         />
