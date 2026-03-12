@@ -1063,6 +1063,132 @@ function ChatQrModal({ qr, description, onClose, onRefine, onSave, initialSaved,
   )
 }
 
+// ─── Import QR Modal ─────────────────────────────────────────────────────────
+
+function ImportQrModal({ qr, onClose, onSave, onRefine, converting }: {
+  qr: QrResult; onClose: () => void; onSave: (name: string) => void; onRefine: () => void; converting?: boolean
+}) {
+  const [name, setName] = useState(qr.presetName)
+  const [editing, setEditing] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const nameInputRef = useRef<HTMLInputElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const download = useQrDownload(canvasRef, name)
+  const { share, shareLabel } = useQrShare(canvasRef, name)
+
+  useEffect(() => { if (editing) nameInputRef.current?.focus() }, [editing])
+
+  const commitName = () => {
+    const trimmed = name.trim()
+    if (!trimmed) setName(qr.presetName)
+    else setName(trimmed)
+    setEditing(false)
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up overflow-hidden flex flex-col max-h-[90svh]" onClick={e => e.stopPropagation()}>
+
+          <div className="relative flex justify-center bg-white p-4 shrink-0">
+            <button onClick={onClose} className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-black/15 hover:bg-black/30 text-black/50 hover:text-black/80 transition-colors">
+              <CloseIcon />
+            </button>
+            <QrImage ref={canvasRef} imageBase64={qr.imageBase64} presetName={name} deviceName={qr.deviceName} guitar={qr.guitar} />
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0">
+            <div>
+              {editing ? (
+                <input
+                  ref={nameInputRef}
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  onBlur={commitName}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') commitName()
+                    if (e.key === 'Escape') { setName(qr.presetName); setEditing(false) }
+                  }}
+                  className="w-full rounded-lg border border-primary/50 bg-surface-2 px-3 py-1.5 text-sm font-medium text-fg outline-none"
+                />
+              ) : (
+                <button onClick={() => setEditing(true)} className="text-left group">
+                  <p className="text-sm font-medium text-fg group-hover:text-primary transition-colors">
+                    {name} <span className="text-[10px] text-fg-4 group-hover:text-fg-3">rename</span>
+                  </p>
+                </button>
+              )}
+              <p className="text-xs text-fg-3 mt-0.5">{qr.deviceName}</p>
+              {qr.importNote && <p className="text-xs text-fg-4 italic mt-1">"{qr.importNote}"</p>}
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
+                <DownloadIcon /> Download
+              </button>
+              <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(name + ' guitar tone')}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
+                <YoutubeIcon /> Reference
+              </a>
+              <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
+                <FacebookIcon /> {shareLabel}
+              </button>
+            </div>
+
+            <div className="border-t border-white/10 pt-3">
+              <button onClick={() => setSettingsOpen(o => !o)} className="flex w-full items-center justify-between text-xs text-fg-3 hover:text-fg transition-colors">
+                <span>Tone settings</span>
+                <ChevronIcon open={settingsOpen} />
+              </button>
+              <div className={`grid transition-all duration-200 ease-in-out ${settingsOpen ? 'grid-rows-[1fr] mt-2' : 'grid-rows-[0fr]'}`}>
+                <div className="overflow-hidden">
+                  <div className="space-y-1.5">
+                    {qr.settings.map((slot, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${slot.enabled ? 'bg-green-400' : 'bg-fg-4'}`} />
+                        <div className="min-w-0">
+                          <span className="text-[11px] text-fg-3">{slot.slot}: </span>
+                          <span className="text-[11px] text-fg">{slot.selection}</span>
+                          {slot.params && Object.keys(slot.params).length > 0 && (
+                            <div className="mt-0.5 flex flex-wrap gap-x-3">
+                              {Object.entries(slot.params).slice(0, 4).map(([k, v]) => (
+                                <span key={k} className="text-[10px] text-fg-4">{k}: {v}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              {converting && (
+                <p className="text-center text-[11px] text-fg-4 animate-pulse">Converting for your device…</p>
+              )}
+              <button
+                onClick={() => onSave(name)}
+                disabled={converting}
+                className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 disabled:opacity-50 transition-colors shadow-sm"
+              >
+                Save to collection
+              </button>
+              <button
+                onClick={onRefine}
+                className="w-full rounded-xl border border-white/10 py-2.5 text-sm font-medium text-fg-3 hover:border-white/20 hover:text-fg transition-colors"
+              >
+                Refine tone
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── Desktop QR Panel ────────────────────────────────────────────────────────
 
 function QrDesktopPanel({ qr, description, currentDevice, onDeviceChange, onClose, isSaved, onSave, onRefine }: {
@@ -2065,7 +2191,7 @@ function Sidebar({
   onDeleteAllChats: () => void
   onDeleteAllQr: () => void
 }) {
-  const [tab, setTab] = useState<'chats' | 'qr'>('chats')
+  const [tab, setTab] = useState<'chats' | 'qr'>('qr')
   const scanInputRef = useRef<HTMLInputElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
 
@@ -2097,7 +2223,7 @@ function Sidebar({
         </div>
 
         <div className="flex items-center border-b border-white/10 ml-3 mr-[17px]">
-          {(['chats', 'qr'] as const).map(t => (
+          {(['qr', 'chats'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -2456,6 +2582,8 @@ export default function Page() {
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
   const [pendingImport, setPendingImport] = useState<{ qr: QrResult; guess: { artist: string; song: string } } | null>(null)
   const [importedQrPopup, setImportedQrPopup] = useState<QrResult | null>(null)
+  const [importConverting, setImportConverting] = useState(false)
+  const pendingConvertedPatchRef = useRef<Partial<QrResult> | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
   const [popupQr, setPopupQr] = useState<{ qr: QrResult; description: string } | null>(null)
   const [showQrPanel, setShowQrPanel] = useState(false)
@@ -2654,8 +2782,9 @@ export default function Page() {
       return `• ${s.slot}: ${s.selection}${paramStr}`
     }).join('\n')
     const isImported = !!item.qr.imported
+    const songRef = item.qr.importNote ? ` — song reference: ${item.qr.importNote}` : ''
     const importContext = isImported
-      ? `\n\nThis preset was imported from an external source — not generated by you. Please interpret the settings to understand the musical character and intent before making any changes. When refining, preserve the core character unless the user asks to change it.`
+      ? `\n\nThis preset was imported from an external source${songRef}. Please interpret the settings to understand the musical character and intent before making any changes. When refining, preserve the core character unless the user asks to change it.`
       : ''
     const convId = uuidv4()
     setActiveConvId(convId)
@@ -2666,10 +2795,11 @@ export default function Page() {
       id: uuidv4(), role: 'user',
       content: `I want to refine an existing preset called "${item.qr.presetName}" on my ${item.qr.deviceName}.\n\nCurrent settings:\n${settingsList}${importContext}`,
     }
+    const displayRef = item.qr.importNote || item.qr.presetName
     const assistantMsg: ChatMessage = {
       id: uuidv4(), role: 'assistant',
       content: isImported
-        ? `I've analysed your imported "${item.qr.presetName}" preset. I can see the amp, cabinet, and effects settings — what would you like to change or improve?`
+        ? `I've analysed your imported "${displayRef}" preset. I can see the amp, cabinet, and effects settings — what would you like to change or improve?`
         : `I can see your "${item.qr.presetName}" preset. What would you like to change about this tone?`,
       qr: item.qr,
     }
@@ -2835,16 +2965,38 @@ export default function Page() {
             filenameHint && !IGNORED_FILENAMES.includes(filenameHint.toLowerCase()) ? filenameHint : ''
           )
 
+          const importedDeviceId = decoded.deviceId
           const qr: QrResult = {
             qrString: scanned.qrString,
             imageBase64: scanned.imageBase64,
             presetName: decoded.presetName,
             deviceName: decoded.deviceName,
+            deviceId: importedDeviceId,
             settings: decoded.settings,
             importNote: importNote || undefined,
             imported: true,
           }
           setSidebarOpen(false)
+
+          // Auto-convert in background if device mismatch — show popup immediately, update when done
+          pendingConvertedPatchRef.current = null
+          if (importedDeviceId && importedDeviceId !== currentDevice) {
+            setImportConverting(true)
+            convertPreset(scanned.qrString, currentDevice, decoded.presetName).then(converted => {
+              if (converted) {
+                const patch: Partial<QrResult> = {
+                  qrString: converted.qrString,
+                  imageBase64: converted.imageBase64,
+                  deviceName: converted.deviceName,
+                  settings: converted.settings,
+                }
+                pendingConvertedPatchRef.current = patch
+                // If popup is already open, update it immediately
+                setImportedQrPopup(prev => prev ? { ...prev, ...patch } : null)
+              }
+            }).catch(() => {}).finally(() => setImportConverting(false))
+          }
+
           if (importNote) {
             const guess = await identifyQr(importNote)
             if (guess.artist && guess.song) {
@@ -3066,13 +3218,17 @@ export default function Page() {
       </div>
 
       {importedQrPopup && (
-        <ChatQrModal
+        <ImportQrModal
           qr={importedQrPopup}
-          description=""
+          converting={importConverting}
           onClose={() => setImportedQrPopup(null)}
+          onSave={name => {
+            const q = { ...importedQrPopup, presetName: name }
+            const item = saveToHistory(q)
+            setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== q.qrString)].slice(0, 20))
+            setImportedQrPopup(null)
+          }}
           onRefine={() => refineFromImportedQr(importedQrPopup)}
-          currentDevice={currentDevice}
-          onDeviceChange={d => setCurrentDevice(d)}
         />
       )}
 
@@ -3121,7 +3277,9 @@ export default function Page() {
           artist={pendingImport.guess.artist}
           song={pendingImport.guess.song}
           onConfirm={() => {
-            const updatedQr = { ...pendingImport.qr, presetName: pendingImport.guess.song, importNote: `${pendingImport.guess.artist} — ${pendingImport.guess.song}` }
+            const patch = pendingConvertedPatchRef.current ?? {}
+            pendingConvertedPatchRef.current = null
+            const updatedQr = { ...pendingImport.qr, ...patch, presetName: pendingImport.guess.song, importNote: `${pendingImport.guess.artist} — ${pendingImport.guess.song}` }
             setImportedQrPopup(updatedQr)
             setPendingImport(null)
           }}
