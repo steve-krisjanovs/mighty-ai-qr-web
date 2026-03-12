@@ -2479,7 +2479,7 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
             <div className="mt-2 animate-fade-in space-y-2">
               <button
                 onClick={() => onQrOpen(msg.qr!, msg.content)}
-                className="flex items-center gap-2 rounded-xl border border-white/10 bg-surface-3 px-4 py-2 text-sm text-fg hover:bg-[#444] transition-colors"
+                className="flex items-center gap-2 rounded-xl border border-white/10 bg-surface-3 px-4 py-2 text-sm text-fg hover:bg-surface-2 transition-colors"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/>
@@ -2502,7 +2502,7 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
                   ))}
                 </div>
               ) : msg.qr.imported ? (
-                <p className="text-[11px] text-fg-4 italic">No guitar setup — ask me for pickup and knob suggestions.</p>
+                <p className="text-xs text-fg-3">No guitar setup included — ask me for pickup and knob suggestions.</p>
               ) : null}
             </div>
           )}
