@@ -3206,7 +3206,7 @@ export default function Page() {
           artist={pendingImport.guess.artist}
           song={pendingImport.guess.song}
           onConfirm={() => {
-            const updatedQr = { ...pendingImport.qr, presetName: pendingImport.guess.song, importNote: `${pendingImport.guess.artist} — ${pendingImport.guess.song}` }
+            const updatedQr = { ...pendingImport.qr, presetName: `${pendingImport.guess.artist} — ${pendingImport.guess.song}`, importNote: `${pendingImport.guess.artist} — ${pendingImport.guess.song}` }
             setPendingImport(null)
             finishImport(updatedQr)
           }}
