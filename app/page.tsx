@@ -2908,6 +2908,7 @@ export default function Page() {
         onCollapse={() => setSidebarCollapsed(true)}
         onQrImported={async (file) => {
           try {
+          startNewChat()
           const scanned = await scanQrFromFile(file)
           if (!scanned) { setError("Couldn't find a QR code in this image."); return }
           const decoded = await decodeQr(scanned.qrString)
