@@ -1110,7 +1110,8 @@ function DeviceMismatchModal({ qr, targetDevice, onConvert, onSaveOriginal, onCl
             <p className="text-xs text-fg-3 mt-1.5">This preset is for <span className="text-fg">{qr.deviceName}</span>, but your device is <span className="text-fg">{targetLabel}</span>.</p>
           </div>
           <div className="space-y-2">
-            <button onClick={onConvert} disabled={converting} className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 disabled:opacity-50 transition-colors">
+            <button onClick={onConvert} disabled={converting} className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+              {converting && <svg className="animate-spin h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>}
               {converting ? 'Converting…' : `Convert to ${targetLabel}`}
             </button>
             <button onClick={onSaveOriginal} disabled={converting} className="w-full rounded-xl border border-white/10 py-2.5 text-sm font-medium text-fg-3 hover:border-white/20 hover:text-fg disabled:opacity-50 transition-colors">
