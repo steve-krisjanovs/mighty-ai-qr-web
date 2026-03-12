@@ -746,10 +746,10 @@ function IdentifyConfirmModal({ artist, song, onConfirm, onDismiss }: {
   )
 }
 
-function ImportNameModal({ qr, onSave, onCancel }: {
-  qr: QrResult; onSave: (name: string) => void; onCancel: () => void
+function ImportNameModal({ qr, suggestedName, onSave, onCancel }: {
+  qr: QrResult; suggestedName?: string; onSave: (name: string) => void; onCancel: () => void
 }) {
-  const [name, setName] = useState(qr.importNote ?? '')
+  const [name, setName] = useState(suggestedName ?? qr.importNote ?? '')
   const inputRef = useRef<HTMLInputElement>(null)
   useEffect(() => { inputRef.current?.focus(); inputRef.current?.select() }, [])
   const commit = () => { const t = name.trim(); if (t) onSave(t) }
@@ -1134,7 +1134,7 @@ function ImportToast({ item, onRename, onRefine, onDismiss }: {
   }, [onDismiss])
 
   return (
-    <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-xl bg-surface border border-white/10 shadow-xl px-4 py-3 animate-fade-in max-w-[calc(100vw-2rem)]">
+    <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 rounded-xl bg-surface border border-white/10 shadow-2xl px-4 py-3 animate-fade-in max-w-[calc(100vw-2rem)]">
       <span className="text-sm text-fg truncate">Saved: <span className="font-medium">{item.presetName}</span></span>
       <button onClick={() => { onRename(); onDismiss() }} className="text-xs text-primary hover:underline shrink-0">Rename</button>
       <button onClick={() => { onRefine(); onDismiss() }} className="text-xs text-primary hover:underline shrink-0">Refine</button>
@@ -2536,7 +2536,7 @@ export default function Page() {
   const [currentProvider, setCurrentProvider] = useState<AiProvider>(() => getApiSettings()?.provider ?? 'builtin')
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
   const [pendingImport, setPendingImport] = useState<{ qr: QrResult; guess: { artist: string; song: string } } | null>(null)
-  const [importNamePending, setImportNamePending] = useState<{ qr: QrResult } | null>(null)
+  const [importNamePending, setImportNamePending] = useState<{ qr: QrResult; suggestedName: string } | null>(null)
   const [deviceMismatchPending, setDeviceMismatchPending] = useState<{ qr: QrResult } | null>(null)
   const [deviceMismatchConverting, setDeviceMismatchConverting] = useState(false)
   const [importToast, setImportToast] = useState<{ item: HistoryItem } | null>(null)
@@ -3236,6 +3236,7 @@ export default function Page() {
       {importNamePending && (
         <ImportNameModal
           qr={importNamePending.qr}
+          suggestedName={importNamePending.suggestedName}
           onCancel={() => setImportNamePending(null)}
           onSave={name => {
             const qr = { ...importNamePending.qr, presetName: name, importNote: name }
@@ -3257,7 +3258,7 @@ export default function Page() {
           onDismiss={() => {
             const qr = pendingImport.qr
             setPendingImport(null)
-            setImportNamePending({ qr })
+            setImportNamePending({ qr, suggestedName: `${pendingImport.guess.artist} — ${pendingImport.guess.song}` })
           }}
         />
       )}
