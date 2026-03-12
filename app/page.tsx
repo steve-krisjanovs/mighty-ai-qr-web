@@ -2488,7 +2488,7 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
                 </svg>
                 View QR code
               </button>
-              {msg.qr.guitar && (msg.qr.guitar.pickup || msg.qr.guitar.pickupType || (msg.qr.guitar.controls?.length ?? 0) > 0) && (
+              {msg.qr.guitar && (msg.qr.guitar.pickup || msg.qr.guitar.pickupType || (msg.qr.guitar.controls?.length ?? 0) > 0) ? (
                 <div className="flex flex-wrap gap-1.5">
                   {(msg.qr.guitar.pickup || msg.qr.guitar.pickupType) && (
                     <span className="rounded-full border border-white/10 bg-surface-2 px-2.5 py-1 text-[11px] text-fg-3">
@@ -2501,7 +2501,9 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
                     </span>
                   ))}
                 </div>
-              )}
+              ) : msg.qr.imported ? (
+                <p className="text-[11px] text-fg-4 italic">No guitar setup — ask me for pickup and knob suggestions.</p>
+              ) : null}
             </div>
           )}
         </>
@@ -2717,10 +2719,9 @@ export default function Page() {
     setError(null)
     setInput('')
     const label = item.qr.importNote || item.qr.presetName
-    const importNote = item.qr.imported ? '\n\nNo guitar setup recommendations for imported presets — ask me if you\'d like pickup and knob suggestions.' : ''
     const assistantMsg: ChatMessage = {
       id: uuidv4(), role: 'assistant',
-      content: `Here's your "${label}" preset for ${item.qr.deviceName}. Let me know if you'd like to change anything.${importNote}`,
+      content: `Here's your "${label}" preset for ${item.qr.deviceName}. Let me know if you'd like to change anything.`,
       qr: item.qr,
     }
     const msgs = [assistantMsg]
@@ -2744,7 +2745,7 @@ export default function Page() {
       setError(null)
       setInput('')
       const label = qr.importNote || qr.presetName
-      const assistantMsg: ChatMessage = { id: uuidv4(), role: 'assistant', content: `Here's your "${label}" preset for ${qr.deviceName}. Let me know if you'd like to change anything.\n\nNo guitar setup recommendations for imported presets — ask me if you'd like pickup and knob suggestions.`, qr }
+      const assistantMsg: ChatMessage = { id: uuidv4(), role: 'assistant', content: `Here's your "${label}" preset for ${qr.deviceName}. Let me know if you'd like to change anything.`, qr }
       const msgs = [assistantMsg]
       setMessages(msgs)
       persistConversation(convId, msgs, qr, qr.presetName)
