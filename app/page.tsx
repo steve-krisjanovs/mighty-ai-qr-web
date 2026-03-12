@@ -2736,8 +2736,20 @@ export default function Page() {
       const item = saveToHistory(qr)
       setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== qr.qrString)].slice(0, 20))
       setImportToast({ item })
+      // Populate the new chat with the imported QR
+      const convId = uuidv4()
+      setActiveConvId(convId)
+      setCurrentQr(qr)
+      setError(null)
+      setInput('')
+      const label = qr.importNote || qr.presetName
+      const assistantMsg: ChatMessage = { id: uuidv4(), role: 'assistant', content: `Here's your "${label}" preset for ${qr.deviceName}. Let me know if you'd like to change anything.`, qr }
+      const msgs = [assistantMsg]
+      setMessages(msgs)
+      persistConversation(convId, msgs, qr)
+      setConversations(loadConversations())
     }
-  }, [currentDevice])
+  }, [currentDevice, persistConversation])
 
   const refineFromHistoryItem = useCallback((item: HistoryItem) => {
     const enabledSettings = item.qr.settings.filter(s => s.enabled)
@@ -3171,6 +3183,7 @@ export default function Page() {
               const item = saveToHistory(qToSave)
               setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== qToSave.qrString)].slice(0, 20))
               setImportToast({ item })
+              openHistoryItemInChat(item)
             } catch { setError('Conversion failed — saving original.') } finally {
               setDeviceMismatchConverting(false)
               setDeviceMismatchPending(null)
@@ -3180,6 +3193,7 @@ export default function Page() {
             const item = saveToHistory(deviceMismatchPending.qr)
             setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== deviceMismatchPending.qr.qrString)].slice(0, 20))
             setImportToast({ item })
+            openHistoryItemInChat(item)
             setDeviceMismatchPending(null)
           }}
         />
