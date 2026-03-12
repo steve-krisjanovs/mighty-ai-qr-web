@@ -746,6 +746,37 @@ function IdentifyConfirmModal({ artist, song, onConfirm, onDismiss }: {
   )
 }
 
+function ImportNameModal({ qr, onSave, onCancel }: {
+  qr: QrResult; onSave: (name: string) => void; onCancel: () => void
+}) {
+  const [name, setName] = useState(qr.importNote ?? '')
+  const inputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => { inputRef.current?.focus(); inputRef.current?.select() }, [])
+  const commit = () => { const t = name.trim(); if (t) onSave(t) }
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm" onClick={onCancel} />
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
+        <div className="pointer-events-auto w-full max-w-xs rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up p-6 space-y-4" onClick={e => e.stopPropagation()}>
+          <p className="text-sm font-medium text-fg">Name this preset</p>
+          <input
+            ref={inputRef}
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') onCancel() }}
+            placeholder="Artist — Song (version)"
+            className="w-full rounded-lg border border-white/10 bg-surface-2 px-3 py-2 text-sm text-fg placeholder:text-fg-4 outline-none focus:border-primary/50"
+          />
+          <div className="flex gap-2">
+            <button onClick={onCancel} className="flex-1 rounded-lg border border-white/10 py-2.5 text-sm text-fg-3 hover:text-fg transition-colors">Cancel</button>
+            <button onClick={commit} disabled={!name.trim()} className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 disabled:opacity-40 transition-colors">Save</button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── QR Modal ─────────────────────────────────────────────────────────────────
 
 function getCapabilityLevel(device: string): number {
@@ -2505,6 +2536,7 @@ export default function Page() {
   const [currentProvider, setCurrentProvider] = useState<AiProvider>(() => getApiSettings()?.provider ?? 'builtin')
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
   const [pendingImport, setPendingImport] = useState<{ qr: QrResult; guess: { artist: string; song: string } } | null>(null)
+  const [importNamePending, setImportNamePending] = useState<{ qr: QrResult } | null>(null)
   const [deviceMismatchPending, setDeviceMismatchPending] = useState<{ qr: QrResult } | null>(null)
   const [deviceMismatchConverting, setDeviceMismatchConverting] = useState(false)
   const [importToast, setImportToast] = useState<{ item: HistoryItem } | null>(null)
@@ -3201,6 +3233,18 @@ export default function Page() {
         />
       )}
 
+      {importNamePending && (
+        <ImportNameModal
+          qr={importNamePending.qr}
+          onCancel={() => setImportNamePending(null)}
+          onSave={name => {
+            const qr = { ...importNamePending.qr, presetName: name, importNote: name }
+            setImportNamePending(null)
+            finishImport(qr)
+          }}
+        />
+      )}
+
       {pendingImport && (
         <IdentifyConfirmModal
           artist={pendingImport.guess.artist}
@@ -3213,7 +3257,7 @@ export default function Page() {
           onDismiss={() => {
             const qr = pendingImport.qr
             setPendingImport(null)
-            finishImport(qr)
+            setImportNamePending({ qr })
           }}
         />
       )}
