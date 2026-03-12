@@ -1063,129 +1063,52 @@ function ChatQrModal({ qr, description, onClose, onRefine, onSave, initialSaved,
   )
 }
 
-// ─── Import QR Modal ─────────────────────────────────────────────────────────
+// ─── Device Mismatch Modal ───────────────────────────────────────────────────
 
-function ImportQrModal({ qr, onClose, onSave, onRefine, converting }: {
-  qr: QrResult; onClose: () => void; onSave: (name: string) => void; onRefine: () => void; converting?: boolean
+function DeviceMismatchModal({ qr, targetDevice, onConvert, onSaveOriginal, onClose, converting }: {
+  qr: QrResult; targetDevice: NuxDevice; onConvert: () => void; onSaveOriginal: () => void; onClose: () => void; converting: boolean
 }) {
-  const [name, setName] = useState(qr.presetName)
-  const [editing, setEditing] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const nameInputRef = useRef<HTMLInputElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const download = useQrDownload(canvasRef, name)
-  const { share, shareLabel } = useQrShare(canvasRef, name)
-
-  useEffect(() => { if (editing) nameInputRef.current?.focus() }, [editing])
-
-  const commitName = () => {
-    const trimmed = name.trim()
-    if (!trimmed) setName(qr.presetName)
-    else setName(trimmed)
-    setEditing(false)
-  }
-
+  const targetLabel = NUX_DEVICES.find(d => d.id === targetDevice)?.label ?? targetDevice
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up overflow-hidden flex flex-col max-h-[90svh]" onClick={e => e.stopPropagation()}>
-
-          <div className="relative flex justify-center bg-white p-4 shrink-0">
-            <button onClick={onClose} className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-black/15 hover:bg-black/30 text-black/50 hover:text-black/80 transition-colors">
-              <CloseIcon />
-            </button>
-            <QrImage ref={canvasRef} imageBase64={qr.imageBase64} presetName={name} deviceName={qr.deviceName} guitar={qr.guitar} />
+        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up p-6 space-y-4" onClick={e => e.stopPropagation()}>
+          <div>
+            <p className="text-sm font-semibold text-fg">Device mismatch</p>
+            <p className="text-xs text-fg-3 mt-1.5">This preset is for <span className="text-fg">{qr.deviceName}</span>, but your device is <span className="text-fg">{targetLabel}</span>.</p>
           </div>
-
-          <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0">
-            <div>
-              {editing ? (
-                <input
-                  ref={nameInputRef}
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  onBlur={commitName}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') commitName()
-                    if (e.key === 'Escape') { setName(qr.presetName); setEditing(false) }
-                  }}
-                  className="w-full rounded-lg border border-primary/50 bg-surface-2 px-3 py-1.5 text-sm font-medium text-fg outline-none"
-                />
-              ) : (
-                <button onClick={() => setEditing(true)} className="text-left group">
-                  <p className="text-sm font-medium text-fg group-hover:text-primary transition-colors">
-                    {name} <span className="text-[10px] text-fg-4 group-hover:text-fg-3">rename</span>
-                  </p>
-                </button>
-              )}
-              <p className="text-xs text-fg-3 mt-0.5">{qr.deviceName}</p>
-              {qr.importNote && <p className="text-xs text-fg-4 italic mt-1">"{qr.importNote}"</p>}
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
-                <DownloadIcon /> Download
-              </button>
-              <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(name + ' guitar tone')}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
-                <YoutubeIcon /> Reference
-              </a>
-              <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
-                <FacebookIcon /> {shareLabel}
-              </button>
-            </div>
-
-            <div className="border-t border-white/10 pt-3">
-              <button onClick={() => setSettingsOpen(o => !o)} className="flex w-full items-center justify-between text-xs text-fg-3 hover:text-fg transition-colors">
-                <span>Tone settings</span>
-                <ChevronIcon open={settingsOpen} />
-              </button>
-              <div className={`grid transition-all duration-200 ease-in-out ${settingsOpen ? 'grid-rows-[1fr] mt-2' : 'grid-rows-[0fr]'}`}>
-                <div className="overflow-hidden">
-                  <div className="space-y-1.5">
-                    {qr.settings.map((slot, i) => (
-                      <div key={i} className="flex items-start gap-2">
-                        <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${slot.enabled ? 'bg-green-400' : 'bg-fg-4'}`} />
-                        <div className="min-w-0">
-                          <span className="text-[11px] text-fg-3">{slot.slot}: </span>
-                          <span className="text-[11px] text-fg">{slot.selection}</span>
-                          {slot.params && Object.keys(slot.params).length > 0 && (
-                            <div className="mt-0.5 flex flex-wrap gap-x-3">
-                              {Object.entries(slot.params).slice(0, 4).map(([k, v]) => (
-                                <span key={k} className="text-[10px] text-fg-4">{k}: {v}</span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2 pt-1">
-              {converting && (
-                <p className="text-center text-[11px] text-fg-4 animate-pulse">Converting for your device…</p>
-              )}
-              <button
-                onClick={() => onSave(name)}
-                disabled={converting}
-                className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 disabled:opacity-50 transition-colors shadow-sm"
-              >
-                Save to collection
-              </button>
-              <button
-                onClick={onRefine}
-                className="w-full rounded-xl border border-white/10 py-2.5 text-sm font-medium text-fg-3 hover:border-white/20 hover:text-fg transition-colors"
-              >
-                Refine tone
-              </button>
-            </div>
+          <div className="space-y-2">
+            <button onClick={onConvert} disabled={converting} className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 disabled:opacity-50 transition-colors">
+              {converting ? 'Converting…' : `Convert to ${targetLabel}`}
+            </button>
+            <button onClick={onSaveOriginal} disabled={converting} className="w-full rounded-xl border border-white/10 py-2.5 text-sm font-medium text-fg-3 hover:border-white/20 hover:text-fg disabled:opacity-50 transition-colors">
+              Save original
+            </button>
           </div>
         </div>
       </div>
     </>
+  )
+}
+
+// ─── Import Toast ─────────────────────────────────────────────────────────────
+
+function ImportToast({ item, onRename, onRefine, onDismiss }: {
+  item: HistoryItem; onRename: () => void; onRefine: () => void; onDismiss: () => void
+}) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 5000)
+    return () => clearTimeout(t)
+  }, [onDismiss])
+
+  return (
+    <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-xl bg-surface border border-white/10 shadow-xl px-4 py-3 animate-fade-in max-w-[calc(100vw-2rem)]">
+      <span className="text-sm text-fg truncate">Saved: <span className="font-medium">{item.presetName}</span></span>
+      <button onClick={() => { onRename(); onDismiss() }} className="text-xs text-primary hover:underline shrink-0">Rename</button>
+      <button onClick={() => { onRefine(); onDismiss() }} className="text-xs text-primary hover:underline shrink-0">Refine</button>
+      <button onClick={onDismiss} className="text-fg-4 hover:text-fg ml-1 shrink-0"><CloseIcon /></button>
+    </div>
   )
 }
 
@@ -2581,9 +2504,9 @@ export default function Page() {
   const [currentProvider, setCurrentProvider] = useState<AiProvider>(() => getApiSettings()?.provider ?? 'builtin')
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
   const [pendingImport, setPendingImport] = useState<{ qr: QrResult; guess: { artist: string; song: string } } | null>(null)
-  const [importedQrPopup, setImportedQrPopup] = useState<QrResult | null>(null)
-  const [importConverting, setImportConverting] = useState(false)
-  const pendingConvertedPatchRef = useRef<Partial<QrResult> | null>(null)
+  const [deviceMismatchPending, setDeviceMismatchPending] = useState<{ qr: QrResult } | null>(null)
+  const [deviceMismatchConverting, setDeviceMismatchConverting] = useState(false)
+  const [importToast, setImportToast] = useState<{ item: HistoryItem } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
   const [popupQr, setPopupQr] = useState<{ qr: QrResult; description: string } | null>(null)
   const [showQrPanel, setShowQrPanel] = useState(false)
@@ -2773,6 +2696,16 @@ export default function Page() {
     requestAnimationFrame(() => textareaRef.current?.focus())
   }, [persistConversation])
 
+  const finishImport = useCallback((qr: QrResult) => {
+    if (qr.deviceId && qr.deviceId !== currentDevice) {
+      setDeviceMismatchPending({ qr })
+    } else {
+      const item = saveToHistory(qr)
+      setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== qr.qrString)].slice(0, 20))
+      setImportToast({ item })
+    }
+  }, [currentDevice])
+
   const refineFromHistoryItem = useCallback((item: HistoryItem) => {
     const enabledSettings = item.qr.settings.filter(s => s.enabled)
     const settingsList = enabledSettings.map(s => {
@@ -2809,12 +2742,6 @@ export default function Page() {
     setConversations(loadConversations())
     requestAnimationFrame(() => textareaRef.current?.focus())
   }, [persistConversation])
-
-  const refineFromImportedQr = useCallback((qr: QrResult) => {
-    setImportedQrPopup(null)
-    const tempItem: HistoryItem = { id: uuidv4(), presetName: qr.presetName, deviceName: qr.deviceName, imageBase64: qr.imageBase64, timestamp: Date.now(), qr }
-    refineFromHistoryItem(tempItem)
-  }, [refineFromHistoryItem])
 
   const send = useCallback(async (text: string) => {
     const trimmed = text.trim()
@@ -2957,46 +2884,22 @@ export default function Page() {
             const bitmap = await createImageBitmap(file)
             ocrText = await ocrImageText(bitmap)
           }
-
-          // Use OCR text, or fall back to cleaned filename if OCR is unavailable
           const filenameHint = file.name.replace(/\.[^.]+$/, '').replace(/[_\-\.]+/g, ' ').trim()
           const IGNORED_FILENAMES = ['download', 'qr', 'image', 'photo', 'file', 'scan']
           const importNote = ocrText || (
             filenameHint && !IGNORED_FILENAMES.includes(filenameHint.toLowerCase()) ? filenameHint : ''
           )
-
-          const importedDeviceId = decoded.deviceId
           const qr: QrResult = {
             qrString: scanned.qrString,
             imageBase64: scanned.imageBase64,
             presetName: decoded.presetName,
             deviceName: decoded.deviceName,
-            deviceId: importedDeviceId,
+            deviceId: decoded.deviceId,
             settings: decoded.settings,
             importNote: importNote || undefined,
             imported: true,
           }
           setSidebarOpen(false)
-
-          // Auto-convert in background if device mismatch — show popup immediately, update when done
-          pendingConvertedPatchRef.current = null
-          if (importedDeviceId && importedDeviceId !== currentDevice) {
-            setImportConverting(true)
-            convertPreset(scanned.qrString, currentDevice, decoded.presetName).then(converted => {
-              if (converted) {
-                const patch: Partial<QrResult> = {
-                  qrString: converted.qrString,
-                  imageBase64: converted.imageBase64,
-                  deviceName: converted.deviceName,
-                  settings: converted.settings,
-                }
-                pendingConvertedPatchRef.current = patch
-                // If popup is already open, update it immediately
-                setImportedQrPopup(prev => prev ? { ...prev, ...patch } : null)
-              }
-            }).catch(() => {}).finally(() => setImportConverting(false))
-          }
-
           if (importNote) {
             const guess = await identifyQr(importNote)
             if (guess.artist && guess.song) {
@@ -3004,7 +2907,7 @@ export default function Page() {
               return
             }
           }
-          setImportedQrPopup(qr)
+          finishImport(qr)
           } catch (err) { setError(friendlyError(err)) }
         }}
         onSettings={() => setShowSettings(true)}
@@ -3217,18 +3120,40 @@ export default function Page() {
         </div>
       </div>
 
-      {importedQrPopup && (
-        <ImportQrModal
-          qr={importedQrPopup}
-          converting={importConverting}
-          onClose={() => setImportedQrPopup(null)}
-          onSave={name => {
-            const q = { ...importedQrPopup, presetName: name }
-            const item = saveToHistory(q)
-            setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== q.qrString)].slice(0, 20))
-            setImportedQrPopup(null)
+      {deviceMismatchPending && (
+        <DeviceMismatchModal
+          qr={deviceMismatchPending.qr}
+          targetDevice={currentDevice}
+          converting={deviceMismatchConverting}
+          onClose={() => setDeviceMismatchPending(null)}
+          onConvert={async () => {
+            setDeviceMismatchConverting(true)
+            try {
+              const converted = await convertPreset(deviceMismatchPending.qr.qrString, currentDevice, deviceMismatchPending.qr.presetName)
+              const qToSave = converted ? { ...deviceMismatchPending.qr, qrString: converted.qrString, imageBase64: converted.imageBase64, deviceName: converted.deviceName, settings: converted.settings } : deviceMismatchPending.qr
+              const item = saveToHistory(qToSave)
+              setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== qToSave.qrString)].slice(0, 20))
+              setImportToast({ item })
+            } catch { setError('Conversion failed — saving original.') } finally {
+              setDeviceMismatchConverting(false)
+              setDeviceMismatchPending(null)
+            }
           }}
-          onRefine={() => refineFromImportedQr(importedQrPopup)}
+          onSaveOriginal={() => {
+            const item = saveToHistory(deviceMismatchPending.qr)
+            setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== deviceMismatchPending.qr.qrString)].slice(0, 20))
+            setImportToast({ item })
+            setDeviceMismatchPending(null)
+          }}
+        />
+      )}
+
+      {importToast && (
+        <ImportToast
+          item={importToast.item}
+          onDismiss={() => setImportToast(null)}
+          onRename={() => setSelectedHistoryItem(importToast.item)}
+          onRefine={() => openHistoryItemInChat(importToast.item)}
         />
       )}
 
@@ -3277,14 +3202,14 @@ export default function Page() {
           artist={pendingImport.guess.artist}
           song={pendingImport.guess.song}
           onConfirm={() => {
-            const patch = pendingConvertedPatchRef.current ?? {}
-            pendingConvertedPatchRef.current = null
-            const updatedQr = { ...pendingImport.qr, ...patch, presetName: pendingImport.guess.song, importNote: `${pendingImport.guess.artist} — ${pendingImport.guess.song}` }
-            setImportedQrPopup(updatedQr)
+            const updatedQr = { ...pendingImport.qr, presetName: pendingImport.guess.song, importNote: `${pendingImport.guess.artist} — ${pendingImport.guess.song}` }
             setPendingImport(null)
+            finishImport(updatedQr)
           }}
           onDismiss={() => {
+            const qr = pendingImport.qr
             setPendingImport(null)
+            finishImport(qr)
           }}
         />
       )}
