@@ -1008,7 +1008,7 @@ function ChatQrModal({ qr, description, onClose, onRefine, onSave, initialSaved,
                 <button
                   onClick={() => { if (!saved) { onSave(name); setSaved(true) } }}
                   disabled={saved}
-                  className={`w-full rounded-xl border py-2.5 text-sm font-medium transition-colors ${saved ? 'border-green-500/30 text-green-400 cursor-default' : 'border-white/10 text-fg-3 hover:border-white/20 hover:text-fg'}`}
+                  className={`w-full rounded-xl border py-2.5 text-sm font-medium transition-colors ${saved ? 'border-green-600/40 text-green-600 cursor-default' : 'border-white/10 text-fg-3 hover:border-white/20 hover:text-fg'}`}
                 >
                   {saved ? 'Saved to collection' : 'Save to collection'}
                 </button>
@@ -1163,7 +1163,7 @@ function QrDesktopPanel({ qr, description, currentDevice, onDeviceChange, onClos
             </button>
           )}
           {isSaved && (
-            <p className="text-center text-xs text-green-400/70 py-1">Saved to collection</p>
+            <p className="text-center text-xs text-green-600 py-1">Saved to collection</p>
           )}
         </div>
       </div>
@@ -2500,6 +2500,7 @@ export default function Page() {
   const [settingsVersion, setSettingsVersion] = useState(0)
   const [quotaVersion, setQuotaVersion] = useState(0)
   const [currentDevice, setCurrentDevice] = useState<NuxDevice>(() => getDefaultDevice())
+  const [defaultDevice, setDefaultDevice] = useState<NuxDevice>(() => getDefaultDevice())
   const [hintDismissed, setHintDismissed] = useState(() => getHintDismissed())
   const [currentProvider, setCurrentProvider] = useState<AiProvider>(() => getApiSettings()?.provider ?? 'builtin')
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
@@ -2560,7 +2561,7 @@ export default function Page() {
     }
   }, [])
 
-  useEffect(() => { setCurrentDevice(getDefaultDevice()) }, [settingsVersion])
+  useEffect(() => { const d = getDefaultDevice(); setCurrentDevice(d); setDefaultDevice(d) }, [settingsVersion])
   useEffect(() => { setCurrentProvider(getApiSettings()?.provider ?? 'builtin') }, [settingsVersion])
 
   const scrollToBottom = useCallback(() => {
@@ -3071,6 +3072,9 @@ export default function Page() {
                       {ttsEnabled ? <VolumeIcon /> : <VolumeOffIcon />}
                     </button>
                     <DeviceDropdown value={currentDevice} onChange={d => setCurrentDevice(d)} />
+                    {currentDevice !== defaultDevice && (
+                      <span className="text-[10px] text-fg-4 whitespace-nowrap">Default: {NUX_DEVICES.find(d => d.id === defaultDevice)?.label ?? defaultDevice}</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button
