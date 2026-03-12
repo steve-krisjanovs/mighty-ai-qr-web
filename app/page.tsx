@@ -1125,8 +1125,8 @@ function DeviceMismatchModal({ qr, targetDevice, onConvert, onSaveOriginal, onCl
 
 // ─── Import Toast ─────────────────────────────────────────────────────────────
 
-function ImportToast({ item, onRename, onRefine, onDismiss }: {
-  item: HistoryItem; onRename: () => void; onRefine: () => void; onDismiss: () => void
+function ImportToast({ item, onRefine, onDismiss }: {
+  item: HistoryItem; onRefine: () => void; onDismiss: () => void
 }) {
   useEffect(() => {
     const t = setTimeout(onDismiss, 5000)
@@ -1136,8 +1136,7 @@ function ImportToast({ item, onRename, onRefine, onDismiss }: {
   return (
     <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 rounded-xl bg-surface border border-white/10 shadow-2xl px-4 py-3 animate-fade-in max-w-[calc(100vw-2rem)]">
       <span className="text-sm text-fg truncate">Saved: <span className="font-medium">{item.presetName}</span></span>
-      <button onClick={() => { onRename(); onDismiss() }} className="text-xs text-primary hover:underline shrink-0">Rename</button>
-      <button onClick={() => { onRefine(); onDismiss() }} className="text-xs text-primary hover:underline shrink-0">Refine</button>
+      <button onClick={() => { onRefine(); onDismiss() }} className="text-xs text-primary hover:underline shrink-0">Refine tone</button>
       <button onClick={onDismiss} className="text-fg-4 hover:text-fg ml-1 shrink-0"><CloseIcon /></button>
     </div>
   )
@@ -3188,7 +3187,6 @@ export default function Page() {
         <ImportToast
           item={importToast.item}
           onDismiss={() => setImportToast(null)}
-          onRename={() => setSelectedHistoryItem(importToast.item)}
           onRefine={() => openHistoryItemInChat(importToast.item)}
         />
       )}
