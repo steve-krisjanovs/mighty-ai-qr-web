@@ -57,14 +57,14 @@ Source preset: "${displayName}" (from ${decoded.deviceName})
 Settings:
 ${settingsText}
 
-Please generate a QR code for the ${targetConfig.displayName} using the closest available settings. Use the preset name "${displayName}".`
+Generate a QR code for the ${targetConfig.displayName} using the closest available settings. Use preset name "${displayName}". IMPORTANT: you MUST call the tool with device="${targetDevice}" — this is required.`
 
   const userApiKey   = (request.headers.get('x-user-api-key') ?? '').trim()
   const userProvider = (request.headers.get('x-provider') ?? '').trim()
   const userBaseUrl  = (request.headers.get('x-base-url') ?? '').trim()
   const userModel    = (request.headers.get('x-model') ?? '').trim()
 
-  const deviceInstruction = `The user's default NUX device is "${targetDevice}". Always use this device when generating QR codes unless the user explicitly asks for a different one.\n\n`
+  const deviceInstruction = `The user's NUX device for this conversion is "${targetDevice}" (${targetConfig.displayName}). You MUST call the QR generation tool with device="${targetDevice}". Do NOT use any other device ID.\n\n`
   const systemFull = deviceInstruction + SYSTEM_PROMPT_FULL
 
   const messages = [{ role: 'user' as const, content: conversionMessage }]
@@ -102,6 +102,11 @@ Please generate a QR code for the ${targetConfig.displayName} using the closest 
     if (!result.qr) {
       console.log('[convert] no QR generated')
       return NextResponse.json({ error: 'No QR code generated. Try again or refine manually.' }, { status: 500 })
+    }
+
+    if (result.qr.deviceId && result.qr.deviceId !== targetDevice) {
+      console.log(`[convert] wrong device in result: got ${result.qr.deviceId}, expected ${targetDevice}`)
+      return NextResponse.json({ error: `Conversion generated wrong device (${result.qr.deviceId}). Try again.` }, { status: 500 })
     }
 
     console.log('[convert] done')
