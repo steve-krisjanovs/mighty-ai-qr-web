@@ -926,13 +926,12 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
 
 // ─── Chat QR Modal ────────────────────────────────────────────────────────────
 
-function ChatQrModal({ qr, description, currentDevice, onClose, onSave, onConvert, initialSaved }: {
+function ChatQrModal({ qr, description, currentDevice, onClose, onConvert }: {
   qr: QrResult; description: string; currentDevice: NuxDevice; onClose: () => void
-  onSave?: (name: string) => void; onConvert?: (converted: QrResult) => void; initialSaved?: boolean
+  onConvert?: (converted: QrResult) => void
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [converting, setConverting] = useState(false)
-  const [saved, setSaved] = useState(initialSaved ?? false)
   const [name, setName] = useState(qr.presetName)
   const [editing, setEditing] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -1023,15 +1022,6 @@ function ChatQrModal({ qr, description, currentDevice, onClose, onSave, onConver
                   </button>
                 )
               })()}
-              {onSave && (
-                <button
-                  onClick={() => { if (!saved) { onSave(name); setSaved(true) } }}
-                  disabled={saved}
-                  className={`w-full rounded-xl border py-2.5 text-sm font-medium transition-colors ${saved ? 'border-green-600/40 text-green-600 cursor-default' : 'border-white/10 text-fg-3 hover:border-white/20 hover:text-fg'}`}
-                >
-                  {saved ? 'Saved to collection' : 'Save to collection'}
-                </button>
-              )}
             </div>
 
             <div className="grid grid-cols-3 gap-2">
@@ -2672,6 +2662,11 @@ export default function Page() {
         if (res.qr) setCurrentQr(res.qr)
       })
 
+      if (res.qr) {
+        const item = saveToHistory(res.qr)
+        setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== res.qr!.qrString)].slice(0, 20))
+      }
+
       persistConversation(convId!, finalMessages, newQr)
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') { /* cancelled by user */ }
@@ -3027,13 +3022,11 @@ export default function Page() {
           description={popupQr.description}
           currentDevice={currentDevice}
           onClose={() => { setPopupQr(null); requestAnimationFrame(() => { scrollToBottom(); textareaRef.current?.focus() }) }}
-          onSave={popupQr.qr.imported ? undefined : name => { const q = { ...popupQr.qr, presetName: name }; const item = saveToHistory(q); setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== popupQr.qr.qrString)].slice(0, 20)) }}
           onConvert={converted => {
             setMessages(prev => prev.map(m => m.qr?.qrString === popupQr.qr.qrString ? { ...m, qr: converted } : m))
             setPopupQr({ qr: converted, description: popupQr.description })
             setCurrentQr(converted)
           }}
-          initialSaved={qrHistory.some(h => h.qr.qrString === popupQr.qr.qrString)}
         />
       )}
 
