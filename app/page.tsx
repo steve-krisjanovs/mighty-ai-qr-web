@@ -884,7 +884,7 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
                 </button>
               </div>
               {isDowngrade && downgradeNote && (
-                <p className="text-[11px] text-amber-400/80">{downgradeNote}</p>
+                <p className="text-[11px] text-amber-600">{downgradeNote}</p>
               )}
             </div>
 
@@ -1033,7 +1033,7 @@ function ChatQrModal({ qr, description, onClose, onRefine, onSave, initialSaved,
                 </button>
               </div>
               {isDowngrade && downgradeNote && (
-                <p className="text-[11px] text-amber-400/80">{downgradeNote}</p>
+                <p className="text-[11px] text-amber-600">{downgradeNote}</p>
               )}
               {onSave && (
                 <button
@@ -1183,7 +1183,7 @@ function QrDesktopPanel({ qr, description, currentDevice, onDeviceChange, onClos
             </button>
           </div>
           {isDowngrade && downgradeNote && (
-            <p className="text-[11px] text-amber-400/80">{downgradeNote}</p>
+            <p className="text-[11px] text-amber-600">{downgradeNote}</p>
           )}
           {!isSaved && (
             <button
@@ -3083,7 +3083,7 @@ export default function Page() {
                         if (guitar) {
                           const updatedQr = { ...target.qr, guitar }
                           setMessages(prev => prev.map(m => m.id === msgId ? { ...m, qr: updatedQr } : m))
-                          setCurrentQr(prev => (prev && prev.qrString === target.qr.qrString) ? updatedQr : prev)
+                          if (currentQr?.qrString === target.qr.qrString) setCurrentQr(updatedQr)
                         }
                       } finally { setGuitarLoadingId(null) }
                     }}
