@@ -785,14 +785,17 @@ function isGenericName(name: string) {
   return GENERIC_PRESET_NAMES.includes(name.toLowerCase().trim())
 }
 
-function QrModal({ item, onClose, onDeleteRequest, onRename, onOpen, autoRename }: {
+function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOpen, onConvert, autoRename }: {
   item: HistoryItem
+  currentDevice: NuxDevice
   onClose: () => void
   onDeleteRequest: () => void
   onRename: (name: string) => void
   onOpen: () => void
+  onConvert: (converted: QrResult) => void
   autoRename?: boolean
 }) {
+  const [converting, setConverting] = useState(false)
   const [editing, setEditing] = useState(autoRename ?? false)
   const [name, setName] = useState(item.qr.presetName)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -862,6 +865,25 @@ function QrModal({ item, onClose, onDeleteRequest, onRename, onOpen, autoRename 
               <button onClick={onOpen} className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm">
                 Open in chat
               </button>
+              {item.qr.deviceId && item.qr.deviceId !== currentDevice && (() => {
+                const label = NUX_DEVICES.find(d => d.id === currentDevice)?.label ?? currentDevice
+                return (
+                  <button
+                    onClick={async () => {
+                      setConverting(true)
+                      try {
+                        const result = await convertPreset(item.qr.qrString, currentDevice, item.qr.presetName)
+                        if (result) onConvert(result)
+                      } catch { /* ignore */ } finally { setConverting(false) }
+                    }}
+                    disabled={converting}
+                    className="w-full rounded-xl border border-white/10 py-2.5 text-sm font-medium text-fg-3 hover:border-white/20 hover:text-fg disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    {converting && <svg className="animate-spin h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>}
+                    {converting ? 'Converting…' : `Convert to ${label}`}
+                  </button>
+                )
+              })()}
             </div>
 
             <div className="grid grid-cols-3 gap-2">
@@ -918,11 +940,12 @@ function QrModal({ item, onClose, onDeleteRequest, onRename, onOpen, autoRename 
 
 // ─── Chat QR Modal ────────────────────────────────────────────────────────────
 
-function ChatQrModal({ qr, description, onClose, onRefine, onSave, initialSaved }: {
-  qr: QrResult; description: string; onClose: () => void; onRefine: () => void; onSave?: (name: string) => void
-  initialSaved?: boolean
+function ChatQrModal({ qr, description, currentDevice, onClose, onRefine, onSave, onConvert, initialSaved }: {
+  qr: QrResult; description: string; currentDevice: NuxDevice; onClose: () => void; onRefine: () => void
+  onSave?: (name: string) => void; onConvert?: (converted: QrResult) => void; initialSaved?: boolean
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [converting, setConverting] = useState(false)
   const [saved, setSaved] = useState(initialSaved ?? false)
   const [name, setName] = useState(qr.presetName)
   const [editing, setEditing] = useState(false)
@@ -996,6 +1019,25 @@ function ChatQrModal({ qr, description, onClose, onRefine, onSave, initialSaved 
               <button onClick={onRefine} className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm">
                 Refine tone
               </button>
+              {qr.deviceId && qr.deviceId !== currentDevice && onConvert && (() => {
+                const label = NUX_DEVICES.find(d => d.id === currentDevice)?.label ?? currentDevice
+                return (
+                  <button
+                    onClick={async () => {
+                      setConverting(true)
+                      try {
+                        const result = await convertPreset(qr.qrString, currentDevice, qr.presetName)
+                        if (result) onConvert(result)
+                      } catch { /* ignore */ } finally { setConverting(false) }
+                    }}
+                    disabled={converting}
+                    className="w-full rounded-xl border border-white/10 py-2.5 text-sm font-medium text-fg-3 hover:border-white/20 hover:text-fg disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    {converting && <svg className="animate-spin h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>}
+                    {converting ? 'Converting…' : `Convert to ${label}`}
+                  </button>
+                )
+              })()}
               {onSave && (
                 <button
                   onClick={() => { if (!saved) { onSave(name); setSaved(true) } }}
@@ -1196,54 +1238,6 @@ function LocalLlmInfoModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-function DeviceDropdown({ value, onChange }: { value: NuxDevice; onChange: (d: NuxDevice) => void }) {
-  const [open, setOpen] = useState(false)
-  const [rect, setRect] = useState<DOMRect | null>(null)
-  const btnRef = useRef<HTMLButtonElement>(null)
-  const current = NUX_DEVICES.find(d => d.id === value)!
-
-  const handleOpen = () => {
-    if (btnRef.current) setRect(btnRef.current.getBoundingClientRect())
-    setOpen(o => !o)
-  }
-
-  const listStyle: React.CSSProperties = rect ? {
-    position: 'fixed',
-    bottom: window.innerHeight - rect.top + 4,
-    left: rect.left + rect.width / 2 - 96,
-    width: 192,
-  } : {}
-
-  return (
-    <div className="relative">
-      <button
-        ref={btnRef}
-        onClick={handleOpen}
-        className="flex items-center gap-2 rounded-lg border border-white/10 bg-surface-2 px-3 py-2.5 text-sm text-fg hover:bg-surface-3 transition-colors"
-      >
-        <span>{current.label}</span>
-        <ChevronIcon open={open} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-[60]" onClick={() => setOpen(false)} />
-          <div className="z-[61] rounded-lg border border-white/10 bg-surface-2 shadow-xl overflow-hidden" style={listStyle}>
-            {NUX_DEVICES.map(d => (
-              <button
-                key={d.id}
-                onClick={() => { onChange(d.id); setOpen(false) }}
-                className={`flex w-full items-center justify-between px-3 py-2 text-xs transition-colors ${value === d.id ? 'text-primary bg-primary/10' : 'text-fg-2 hover:bg-surface-3 hover:text-fg'}`}
-              >
-                <span>{d.label}</span>
-                {value === d.id && <span className="text-primary">✓</span>}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
 
 function ProviderDropdown({ value, onChange }: { value: AiProvider; onChange: (p: AiProvider) => void }) {
   const [open, setOpen] = useState(false)
@@ -2444,7 +2438,6 @@ export default function Page() {
   const [settingsVersion, setSettingsVersion] = useState(0)
   const [quotaVersion, setQuotaVersion] = useState(0)
   const [currentDevice, setCurrentDevice] = useState<NuxDevice>(() => getDefaultDevice())
-  const [defaultDevice, setDefaultDevice] = useState<NuxDevice>(() => getDefaultDevice())
   const [hintDismissed, setHintDismissed] = useState(() => getHintDismissed())
   const [currentProvider, setCurrentProvider] = useState<AiProvider>(() => getApiSettings()?.provider ?? 'builtin')
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
@@ -2504,7 +2497,7 @@ export default function Page() {
     }
   }, [])
 
-  useEffect(() => { const d = getDefaultDevice(); setCurrentDevice(d); setDefaultDevice(d) }, [settingsVersion])
+  useEffect(() => { setCurrentDevice(getDefaultDevice()) }, [settingsVersion])
   useEffect(() => { setCurrentProvider(getApiSettings()?.provider ?? 'builtin') }, [settingsVersion])
 
   const scrollToBottom = useCallback(() => {
@@ -3026,10 +3019,13 @@ export default function Page() {
                     >
                       {ttsEnabled ? <VolumeIcon /> : <VolumeOffIcon />}
                     </button>
-                    <DeviceDropdown value={currentDevice} onChange={d => setCurrentDevice(d)} />
-                    {currentDevice !== defaultDevice && (
-                      <span className="text-[10px] text-fg-4 whitespace-nowrap">Default: {NUX_DEVICES.find(d => d.id === defaultDevice)?.label ?? defaultDevice}</span>
-                    )}
+                    <button
+                      onClick={() => setShowSettings(true)}
+                      title="Change device in Settings"
+                      className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-surface-2 px-2.5 py-1.5 text-xs text-fg-3 hover:bg-surface-3 hover:text-fg transition-colors"
+                    >
+                      {NUX_DEVICES.find(d => d.id === currentDevice)?.label ?? currentDevice}
+                    </button>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button
@@ -3108,9 +3104,15 @@ export default function Page() {
         <ChatQrModal
           qr={popupQr.qr}
           description={popupQr.description}
+          currentDevice={currentDevice}
           onClose={() => { setPopupQr(null); requestAnimationFrame(() => { scrollToBottom(); textareaRef.current?.focus() }) }}
           onRefine={() => { setPopupQr(null); requestAnimationFrame(() => textareaRef.current?.focus()) }}
           onSave={name => { const q = { ...popupQr.qr, presetName: name }; const item = saveToHistory(q); setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== popupQr.qr.qrString)].slice(0, 20)) }}
+          onConvert={converted => {
+            setMessages(prev => prev.map(m => m.qr?.qrString === popupQr.qr.qrString ? { ...m, qr: converted } : m))
+            setPopupQr({ qr: converted, description: popupQr.description })
+            setCurrentQr(converted)
+          }}
           initialSaved={qrHistory.some(h => h.qr.qrString === popupQr.qr.qrString)}
         />
       )}
@@ -3132,7 +3134,13 @@ export default function Page() {
       {selectedHistoryItem && (
         <QrModal
           item={selectedHistoryItem}
+          currentDevice={currentDevice}
           onClose={() => setSelectedHistoryItem(null)}
+          onConvert={converted => {
+            const newItem = saveToHistory(converted)
+            setQrHistory(prev => [newItem, ...prev].slice(0, 20))
+            setSelectedHistoryItem(null)
+          }}
           onDeleteRequest={() => requestDelete(selectedHistoryItem.presetName, () => handleDeleteHistoryItem(selectedHistoryItem.id))}
           onRename={name => handleRenameHistoryItem(selectedHistoryItem.id, name)}
           onOpen={() => openHistoryItemInChat(selectedHistoryItem)}
