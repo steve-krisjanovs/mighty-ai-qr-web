@@ -779,22 +779,14 @@ function ImportNameModal({ qr, suggestedName, onSave, onCancel }: {
 
 // ─── QR Modal ─────────────────────────────────────────────────────────────────
 
-function getCapabilityLevel(device: string): number {
-  if (['plugpro', 'space', 'litemk2', '8btmk2'].includes(device)) return 3
-  if (['plugair_v1', 'plugair_v2', 'mightyair'].includes(device)) return 2
-  return 1
-}
-
 const GENERIC_PRESET_NAMES = ['imported preset', 'import preset', 'my preset', 'new preset', 'preset 1', 'preset']
 
 function isGenericName(name: string) {
   return GENERIC_PRESET_NAMES.includes(name.toLowerCase().trim())
 }
 
-function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest, onRename, onOpen, autoRename }: {
+function QrModal({ item, onClose, onDeleteRequest, onRename, onOpen, autoRename }: {
   item: HistoryItem
-  currentDevice: NuxDevice
-  onDeviceChange: (d: NuxDevice) => void
   onClose: () => void
   onDeleteRequest: () => void
   onRename: (name: string) => void
@@ -808,16 +800,6 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, name)
   const { share, shareLabel } = useQrShare(canvasRef, item.qr.presetName)
-
-  const sourceDev = item.qr.deviceId
-  const isDowngrade = !!sourceDev && getCapabilityLevel(sourceDev) > getCapabilityLevel(currentDevice)
-  const downgradeNote = isDowngrade
-    ? getCapabilityLevel(sourceDev!) === 3 && getCapabilityLevel(currentDevice) === 2
-      ? 'Compressor and 5-band EQ will be dropped; amps and effects adapted to nearest match.'
-      : getCapabilityLevel(sourceDev!) === 3 && getCapabilityLevel(currentDevice) === 1
-        ? 'Compressor, 5-band EQ, and cabinet will be dropped; amps and effects adapted to nearest match.'
-        : 'Cabinet and effects will be adapted to nearest match on your device.'
-    : null
 
   const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(item.qr.presetName + ' guitar tone')}`
 
@@ -877,15 +859,9 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <DeviceDropdown value={currentDevice} onChange={onDeviceChange} />
-                <button onClick={onOpen} className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm">
-                  Open in chat
-                </button>
-              </div>
-              {isDowngrade && downgradeNote && (
-                <p className="text-[11px] text-amber-600">{downgradeNote}</p>
-              )}
+              <button onClick={onOpen} className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm">
+                Open in chat
+              </button>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
@@ -942,9 +918,9 @@ function QrModal({ item, currentDevice, onDeviceChange, onClose, onDeleteRequest
 
 // ─── Chat QR Modal ────────────────────────────────────────────────────────────
 
-function ChatQrModal({ qr, description, onClose, onRefine, onSave, initialSaved, currentDevice, onDeviceChange }: {
+function ChatQrModal({ qr, description, onClose, onRefine, onSave, initialSaved }: {
   qr: QrResult; description: string; onClose: () => void; onRefine: () => void; onSave?: (name: string) => void
-  initialSaved?: boolean; currentDevice: NuxDevice; onDeviceChange: (d: NuxDevice) => void
+  initialSaved?: boolean
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [saved, setSaved] = useState(initialSaved ?? false)
@@ -955,15 +931,6 @@ function ChatQrModal({ qr, description, onClose, onRefine, onSave, initialSaved,
   const download = useQrDownload(canvasRef, name)
   const { share, shareLabel } = useQrShare(canvasRef, name)
   const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(name + ' guitar tone')}`
-  const sourceDev = qr.deviceId
-  const isDowngrade = !!sourceDev && getCapabilityLevel(sourceDev) > getCapabilityLevel(currentDevice)
-  const downgradeNote = isDowngrade
-    ? getCapabilityLevel(sourceDev!) === 3 && getCapabilityLevel(currentDevice) === 2
-      ? 'Compressor and 5-band EQ will be dropped; amps and effects adapted to nearest match.'
-      : getCapabilityLevel(sourceDev!) === 3 && getCapabilityLevel(currentDevice) === 1
-        ? 'Compressor, 5-band EQ, and cabinet will be dropped; amps and effects adapted to nearest match.'
-        : 'Cabinet and effects will be adapted to nearest match on your device.'
-    : null
 
   useEffect(() => { if (editing) nameInputRef.current?.focus() }, [editing])
 
@@ -1026,15 +993,9 @@ function ChatQrModal({ qr, description, onClose, onRefine, onSave, initialSaved,
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <DeviceDropdown value={currentDevice} onChange={onDeviceChange} />
-                <button onClick={onRefine} className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm">
-                  Refine tone
-                </button>
-              </div>
-              {isDowngrade && downgradeNote && (
-                <p className="text-[11px] text-amber-600">{downgradeNote}</p>
-              )}
+              <button onClick={onRefine} className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm">
+                Refine tone
+              </button>
               {onSave && (
                 <button
                   onClick={() => { if (!saved) { onSave(name); setSaved(true) } }}
@@ -1139,65 +1100,6 @@ function ImportToast({ item, onRefine, onDismiss }: {
       <span className="text-sm text-fg truncate">Saved: <span className="font-medium">{item.presetName}</span></span>
       <button onClick={() => { onRefine(); onDismiss() }} className="text-xs text-primary hover:underline shrink-0">Refine tone</button>
       <button onClick={onDismiss} className="text-fg-4 hover:text-fg ml-1 shrink-0"><CloseIcon /></button>
-    </div>
-  )
-}
-
-// ─── Desktop QR Panel ────────────────────────────────────────────────────────
-
-function QrDesktopPanel({ qr, description, currentDevice, onDeviceChange, onClose, isSaved, onSave, onRefine }: {
-  qr: QrResult; description: string; currentDevice: NuxDevice; onDeviceChange: (d: NuxDevice) => void
-  onClose: () => void; isSaved: boolean; onSave: (name: string) => void; onRefine: () => void
-}) {
-  const [name, setName] = useState(qr.presetName)
-  useEffect(() => { setName(qr.presetName) }, [qr.presetName])
-
-  const srcDev = qr.deviceId
-  const isDowngrade = !!srcDev && getCapabilityLevel(srcDev) > getCapabilityLevel(currentDevice)
-  const downgradeNote = isDowngrade
-    ? getCapabilityLevel(srcDev!) === 3 && getCapabilityLevel(currentDevice) === 2
-      ? 'Compressor and 5-band EQ will be dropped; amps and effects adapted to nearest match.'
-      : getCapabilityLevel(srcDev!) === 3 && getCapabilityLevel(currentDevice) === 1
-        ? 'Compressor, 5-band EQ, and cabinet will be dropped; amps and effects adapted to nearest match.'
-        : 'Cabinet and effects will be adapted to nearest match on your device.'
-    : null
-
-  return (
-    <div className="hidden w-[360px] shrink-0 flex-col overflow-y-auto bg-bg p-5 lg:flex border-l border-white/5">
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-fg-4">QR Code</p>
-        <button onClick={onClose} title="Close" className="flex h-7 w-7 items-center justify-center rounded-lg text-fg-3 hover:bg-surface-2 hover:text-fg transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>
-      </div>
-      <div className="animate-fade-in space-y-3">
-        <QrCard qr={qr} description={description} nameOverride={name} onRename={n => setName(n)} />
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <DeviceDropdown value={currentDevice} onChange={onDeviceChange} />
-            <button
-              onClick={onRefine}
-              className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm"
-            >
-              Refine tone
-            </button>
-          </div>
-          {isDowngrade && downgradeNote && (
-            <p className="text-[11px] text-amber-600">{downgradeNote}</p>
-          )}
-          {!isSaved && (
-            <button
-              onClick={() => onSave(name)}
-              className="w-full rounded-xl border border-white/10 py-2.5 text-sm font-medium text-fg-3 hover:border-white/20 hover:text-fg transition-colors"
-            >
-              Save to collection
-            </button>
-          )}
-          {isSaved && (
-            <p className="text-center text-xs text-green-600 py-1">Saved to collection</p>
-          )}
-        </div>
-      </div>
     </div>
   )
 }
@@ -2530,7 +2432,6 @@ export default function Page() {
   const [activeConvId, setActiveConvId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [currentQr, setCurrentQr] = useState<QrResult | null>(null)
-  const [currentQrDescription, setCurrentQrDescription] = useState<string>('')
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -2554,7 +2455,6 @@ export default function Page() {
   const [importToast, setImportToast] = useState<{ item: HistoryItem } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
   const [popupQr, setPopupQr] = useState<{ qr: QrResult; description: string } | null>(null)
-  const [showQrPanel, setShowQrPanel] = useState(false)
   const [guitarLoadingId, setGuitarLoadingId] = useState<string | null>(null)
 
   const requestDelete = useCallback((label: string, onConfirm: () => void) => {
@@ -2601,8 +2501,6 @@ export default function Page() {
       setActiveConvId(latest.id)
       setMessages(latest.messages)
       setCurrentQr(latest.lastQr)
-      const lastQrMsg = [...latest.messages].reverse().find(m => m.qr)
-      setCurrentQrDescription(lastQrMsg?.content ?? '')
     }
   }, [])
 
@@ -2642,8 +2540,6 @@ export default function Page() {
     setActiveConvId(null)
     setMessages([])
     setCurrentQr(null)
-    setCurrentQrDescription('')
-    setShowQrPanel(false)
     setSuggestions(getRandomSuggestions())
     setError(null)
     setInput('')
@@ -2660,10 +2556,6 @@ export default function Page() {
     setActiveConvId(id)
     setMessages(conv.messages)
     setCurrentQr(conv.lastQr)
-    const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
-    setShowQrPanel(!!conv.lastQr && isDesktop)
-    const lastQrMsg = [...conv.messages].reverse().find(m => m.qr)
-    setCurrentQrDescription(lastQrMsg?.content ?? '')
     setError(null)
     setInput('')
   }, [])
@@ -2843,10 +2735,7 @@ export default function Page() {
 
       flushSync(() => {
         setMessages(finalMessages)
-        if (res.qr) {
-          setCurrentQr(res.qr)
-          setCurrentQrDescription(res.message)
-        }
+        if (res.qr) setCurrentQr(res.qr)
       })
 
       persistConversation(convId!, finalMessages, newQr)
@@ -2976,7 +2865,6 @@ export default function Page() {
           setActiveConvId(null)
           setMessages([])
           setCurrentQr(null)
-          setCurrentQrDescription('')
         })}
         onDeleteAllQr={() => requestDelete('all QR codes', () => {
           clearAllHistory()
@@ -3069,11 +2957,7 @@ export default function Page() {
                     onDismiss={() => setActiveMessageId(null)}
                     onEdit={handleEditMsg}
                     onDelete={handleDeleteMsg}
-                    onQrOpen={(qr, description) => {
-                      const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
-                      if (isDesktop) { setCurrentQr(qr); setCurrentQrDescription(description); setShowQrPanel(true) }
-                      else setPopupQr({ qr, description })
-                    }}
+                    onQrOpen={(qr, description) => setPopupQr({ qr, description })}
                     onGuitarSuggest={async (msgId) => {
                       const target = messages.find(m => m.id === msgId)
                       if (!target?.qr) return
@@ -3082,7 +2966,7 @@ export default function Page() {
                         const guitar = await suggestGuitar(target.qr.settings, target.qr.deviceName)
                         if (guitar) {
                           setMessages(prev => prev.map(m => m.id === msgId ? { ...m, qr: { ...m.qr!, guitar } } : m))
-                          if (currentQr && currentQr.qrString === target.qr.qrString) setCurrentQr({ ...target.qr, guitar })
+                          if (popupQr && popupQr.qr.qrString === target.qr.qrString) setPopupQr(prev => prev ? { ...prev, qr: { ...prev.qr, guitar } } : prev)
                         }
                       } finally { setGuitarLoadingId(null) }
                     }}
@@ -3178,19 +3062,6 @@ export default function Page() {
             </div>
           </div>
 
-          {/* QR Panel — desktop */}
-          {showQrPanel && currentQr && (
-            <QrDesktopPanel
-              qr={currentQr}
-              description={currentQrDescription}
-              currentDevice={currentDevice}
-              onDeviceChange={d => setCurrentDevice(d)}
-              onClose={() => setShowQrPanel(false)}
-              isSaved={qrHistory.some(h => h.qr.qrString === currentQr.qrString)}
-              onSave={name => { const q = { ...currentQr, presetName: name }; const item = saveToHistory(q); setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== currentQr.qrString)].slice(0, 20)) }}
-              onRefine={() => { setShowQrPanel(false); requestAnimationFrame(() => textareaRef.current?.focus()) }}
-            />
-          )}
 
         </div>
       </div>
@@ -3241,8 +3112,6 @@ export default function Page() {
           onRefine={() => { setPopupQr(null); requestAnimationFrame(() => textareaRef.current?.focus()) }}
           onSave={name => { const q = { ...popupQr.qr, presetName: name }; const item = saveToHistory(q); setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== popupQr.qr.qrString)].slice(0, 20)) }}
           initialSaved={qrHistory.some(h => h.qr.qrString === popupQr.qr.qrString)}
-          currentDevice={currentDevice}
-          onDeviceChange={d => setCurrentDevice(d)}
         />
       )}
 
@@ -3263,8 +3132,6 @@ export default function Page() {
       {selectedHistoryItem && (
         <QrModal
           item={selectedHistoryItem}
-          currentDevice={currentDevice}
-          onDeviceChange={d => setCurrentDevice(d)}
           onClose={() => setSelectedHistoryItem(null)}
           onDeleteRequest={() => requestDelete(selectedHistoryItem.presetName, () => handleDeleteHistoryItem(selectedHistoryItem.id))}
           onRename={name => handleRenameHistoryItem(selectedHistoryItem.id, name)}
