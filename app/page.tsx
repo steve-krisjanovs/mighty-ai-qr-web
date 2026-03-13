@@ -3027,7 +3027,7 @@ export default function Page() {
           description={popupQr.description}
           currentDevice={currentDevice}
           onClose={() => { setPopupQr(null); requestAnimationFrame(() => { scrollToBottom(); textareaRef.current?.focus() }) }}
-          onSave={name => { const q = { ...popupQr.qr, presetName: name }; const item = saveToHistory(q); setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== popupQr.qr.qrString)].slice(0, 20)) }}
+          onSave={popupQr.qr.imported ? undefined : name => { const q = { ...popupQr.qr, presetName: name }; const item = saveToHistory(q); setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== popupQr.qr.qrString)].slice(0, 20)) }}
           onConvert={converted => {
             setMessages(prev => prev.map(m => m.qr?.qrString === popupQr.qr.qrString ? { ...m, qr: converted } : m))
             setPopupQr({ qr: converted, description: popupQr.description })
