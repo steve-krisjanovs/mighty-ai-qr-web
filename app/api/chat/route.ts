@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   const userModel       = (request.headers.get('x-model') ?? '').trim()
   const defaultDevice   = (request.headers.get('x-default-device') ?? 'plugpro').trim()
 
-  const deviceInstruction = `The user's default NUX device is "${defaultDevice}". Always use this device when generating QR codes unless the user explicitly asks for a different one.\n\n`
+  const deviceInstruction = `The user's NUX device is "${defaultDevice}". You MUST call the generateQR tool with device="${defaultDevice}". Do NOT use any other device ID, even if a previous QR in the conversation was for a different device.\n\n`
   const systemFull = deviceInstruction + SYSTEM_PROMPT_FULL
 
   const isByok = !!userApiKey || !!userBaseUrl
