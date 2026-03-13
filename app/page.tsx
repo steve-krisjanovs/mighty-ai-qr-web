@@ -2369,6 +2369,7 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
                   <path d="M21 16h-3a2 2 0 0 0-2 2v3M21 21v.01M12 7v3a2 2 0 0 1-2 2H7M3 12h.01M12 3h.01M12 16v.01M16 12h1M21 12v.01M12 21v-1"/>
                 </svg>
                 View QR code
+                {msg.qr!.deviceName && <span className="text-fg-4 text-xs">· {msg.qr!.deviceName}</span>}
               </button>
             </div>
           )}
