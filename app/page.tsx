@@ -3081,9 +3081,8 @@ export default function Page() {
                       try {
                         const guitar = await suggestGuitar(target.qr.settings, target.qr.deviceName)
                         if (guitar) {
-                          const updatedQr = { ...target.qr, guitar }
-                          setMessages(prev => prev.map(m => m.id === msgId ? { ...m, qr: updatedQr } : m))
-                          if (currentQr?.qrString === target.qr.qrString) setCurrentQr(updatedQr)
+                          setMessages(prev => prev.map(m => m.id === msgId ? { ...m, qr: { ...m.qr!, guitar } } : m))
+                          if (currentQr && currentQr.qrString === target.qr.qrString) setCurrentQr({ ...target.qr, guitar })
                         }
                       } finally { setGuitarLoadingId(null) }
                     }}
