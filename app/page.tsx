@@ -3083,7 +3083,7 @@ export default function Page() {
                         if (guitar) {
                           const updatedQr = { ...target.qr, guitar }
                           setMessages(prev => prev.map(m => m.id === msgId ? { ...m, qr: updatedQr } : m))
-                          setCurrentQr(prev => prev?.qrString === target.qr.qrString ? updatedQr : prev)
+                          setCurrentQr(prev => (prev && prev.qrString === target.qr.qrString) ? updatedQr : prev)
                         }
                       } finally { setGuitarLoadingId(null) }
                     }}
