@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { v4 as uuidv4 } from 'uuid'
-import { sendChat, initAuth, fetchModels, decodeQr, convertPreset, identifyQr, scanQrFromFile, suggestGuitar } from '@/lib/api'
+import { sendChat, initAuth, fetchModels, decodeQr, convertPreset, identifyQr, scanQrFromFile } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteHistoryItem, renameHistoryItem, clearAllHistory,
   loadConversations, upsertConversation,
@@ -343,8 +343,8 @@ async function ocrImageText(bitmap: ImageBitmap): Promise<string> {
 
 // ─── QR Image (canvas — bakes header/footer into the PNG) ─────────────────────
 
-const QrImage = forwardRef<HTMLCanvasElement, { imageBase64: string; presetName: string; deviceName?: string; guitar?: import('@/lib/types').GuitarSetup; size?: number }>(
-  function QrImage({ imageBase64, presetName, deviceName, guitar, size = 176 }, ref) {
+const QrImage = forwardRef<HTMLCanvasElement, { imageBase64: string; presetName: string; deviceName?: string; size?: number }>(
+  function QrImage({ imageBase64, presetName, deviceName, size = 176 }, ref) {
     const internalRef = useRef<HTMLCanvasElement>(null)
     const canvasRef = (ref as React.RefObject<HTMLCanvasElement>) ?? internalRef
 
@@ -354,18 +354,12 @@ const QrImage = forwardRef<HTMLCanvasElement, { imageBase64: string; presetName:
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
-      const guitarParts = [
-        guitar?.pickup ? `${guitar.pickup}${guitar.pickupType ? ` (${guitar.pickupType})` : ''}` : null,
-        ...(Array.isArray(guitar?.controls) ? guitar.controls : []).map(c => `${c.label}: ${c.value}/10`),
-      ].filter(Boolean) as string[]
-      const guitarLine = guitarParts.join('  ·  ')
-
       const img = new Image()
       img.onload = () => {
         const dpr = window.devicePixelRatio || 1
         const pad = 16
         const headerH = 30
-        const footerH = guitarLine ? 58 : 44
+        const footerH = 44
         const w = size + pad * 2
         const h = size + headerH + footerH
 
@@ -395,19 +389,11 @@ const QrImage = forwardRef<HTMLCanvasElement, { imageBase64: string; presetName:
           ctx.font      = '500 9px system-ui,sans-serif'
           ctx.fillText(deviceName, w / 2, headerH + size + 27, w - pad * 2)
         }
-
-        if (guitarLine) {
-          ctx.fillStyle = 'rgba(0,0,0,0.32)'
-          ctx.font      = '500 9px system-ui,sans-serif'
-          ctx.fillText(guitarLine, w / 2, headerH + size + 41, w - pad * 2)
-        }
       }
       img.src = imageBase64
-    }, [imageBase64, presetName, deviceName, guitar, size, canvasRef])
+    }, [imageBase64, presetName, deviceName, size, canvasRef])
 
-    const hasGuitar = guitar && (guitar.pickup || guitar.pickupType || (guitar.controls?.length ?? 0) > 0)
-    const totalH = size + (hasGuitar ? 88 : 74)
-    return <canvas ref={canvasRef} style={{ width: size, height: totalH }} />
+    return <canvas ref={canvasRef} style={{ width: size, height: size + 74 }} />
   }
 )
 
@@ -506,7 +492,7 @@ function QrCard({ qr, description, className = '', nameOverride, onRename }: { q
   return (
     <div className={`rounded-2xl border border-white/10 bg-surface-2 overflow-hidden ${className}`}>
       <div className="flex justify-center bg-white p-4">
-        <QrImage ref={canvasRef} imageBase64={qr.imageBase64} presetName={displayName} deviceName={qr.deviceName} guitar={qr.guitar} />
+        <QrImage ref={canvasRef} imageBase64={qr.imageBase64} presetName={displayName} deviceName={qr.deviceName}/>
       </div>
       <div className="p-4 space-y-3">
         <div>
@@ -830,7 +816,7 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
             >
               <CloseIcon />
             </button>
-            <QrImage ref={canvasRef} imageBase64={item.qr.imageBase64} presetName={name} deviceName={item.qr.deviceName} guitar={item.qr.guitar} />
+            <QrImage ref={canvasRef} imageBase64={item.qr.imageBase64} presetName={name} deviceName={item.qr.deviceName}/>
           </div>
 
           {/* Scrollable content */}
@@ -978,7 +964,7 @@ function ChatQrModal({ qr, description, currentDevice, onClose, onRefine, onSave
             >
               <CloseIcon />
             </button>
-            <QrImage ref={canvasRef} imageBase64={qr.imageBase64} presetName={name} deviceName={qr.deviceName} guitar={qr.guitar} />
+            <QrImage ref={canvasRef} imageBase64={qr.imageBase64} presetName={name} deviceName={qr.deviceName}/>
           </div>
 
           {/* Content */}
@@ -2307,7 +2293,7 @@ function SourcesBar({ sources }: { sources: { title: string; url: string }[] }) 
 
 // ─── Message Row ──────────────────────────────────────────────────────────────
 
-function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete, onQrOpen, onGuitarSuggest, guitarLoading, disabled }: {
+function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete, onQrOpen, disabled }: {
   msg: ChatMessage
   idx: number
   active: boolean
@@ -2316,8 +2302,6 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
   onEdit: (idx: number) => void
   onDelete: (idx: number) => void
   onQrOpen: (qr: QrResult, description: string) => void
-  onGuitarSuggest?: (msgId: string) => void
-  guitarLoading?: boolean
   disabled?: boolean
 }) {
   const longPress = useLongPress(disabled ? () => {} : onActivate)
@@ -2386,30 +2370,6 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
                 </svg>
                 View QR code
               </button>
-              {msg.qr.guitar && (msg.qr.guitar.pickup || msg.qr.guitar.pickupType || (msg.qr.guitar.controls?.length ?? 0) > 0) ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {(msg.qr.guitar.pickup || msg.qr.guitar.pickupType) && (
-                    <span className="rounded-full border border-white/10 bg-surface-2 px-2.5 py-1 text-[11px] text-fg-3">
-                      {[msg.qr.guitar.pickup, msg.qr.guitar.pickupType].filter(Boolean).join(' · ')}
-                    </span>
-                  )}
-                  {Array.isArray(msg.qr.guitar.controls) && msg.qr.guitar.controls.map(c => (
-                    <span key={c.label} className="rounded-full border border-white/10 bg-surface-2 px-2.5 py-1 text-[11px] text-fg-3">
-                      {c.label}: {c.value}/10
-                    </span>
-                  ))}
-                </div>
-              ) : msg.qr.imported ? (
-                <button
-                  onClick={() => onGuitarSuggest?.(msg.id)}
-                  disabled={guitarLoading}
-                  className="flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50"
-                >
-                  {guitarLoading
-                    ? <><svg className="animate-spin h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>Getting guitar setup…</>
-                    : 'Get guitar setup suggestions'}
-                </button>
-              ) : null}
             </div>
           )}
         </>
@@ -2448,7 +2408,6 @@ export default function Page() {
   const [importToast, setImportToast] = useState<{ item: HistoryItem } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
   const [popupQr, setPopupQr] = useState<{ qr: QrResult; description: string } | null>(null)
-  const [guitarLoadingId, setGuitarLoadingId] = useState<string | null>(null)
 
   const requestDelete = useCallback((label: string, onConfirm: () => void) => {
     setPendingDelete({ label, onConfirm })
@@ -2951,19 +2910,6 @@ export default function Page() {
                     onEdit={handleEditMsg}
                     onDelete={handleDeleteMsg}
                     onQrOpen={(qr, description) => setPopupQr({ qr, description })}
-                    onGuitarSuggest={async (msgId) => {
-                      const target = messages.find(m => m.id === msgId)
-                      if (!target?.qr) return
-                      setGuitarLoadingId(msgId)
-                      try {
-                        const guitar = await suggestGuitar(target.qr.settings, target.qr.deviceName)
-                        if (guitar) {
-                          setMessages(prev => prev.map(m => m.id === msgId ? { ...m, qr: { ...m.qr!, guitar } } : m))
-                          if (popupQr && popupQr.qr.qrString === target.qr.qrString) setPopupQr(prev => prev ? { ...prev, qr: { ...prev.qr, guitar } } : prev)
-                        }
-                      } finally { setGuitarLoadingId(null) }
-                    }}
-                    guitarLoading={guitarLoadingId === msg.id}
                     disabled={loading}
                   />
                 ))

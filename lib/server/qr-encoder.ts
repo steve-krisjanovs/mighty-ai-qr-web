@@ -323,7 +323,6 @@ export interface QRResult {
   deviceName: string
   deviceId?: string
   settings: SettingRow[]
-  guitar?: import('./nux').GuitarSetup
 }
 
 function buildSettings(p: ProPresetParams): SettingRow[] {
@@ -471,7 +470,7 @@ export async function generateQR(p: ProPresetParams): Promise<QRResult> {
     color: { dark: '#000000', light: '#ffffff' },
   })
 
-  return { qrString, imageBase64, presetName: p.preset_name, deviceName: device.displayName, deviceId: p.device, settings: buildSettings(p), guitar: p.guitar }
+  return { qrString, imageBase64, presetName: p.preset_name, deviceName: device.displayName, deviceId: p.device, settings: buildSettings(p) }
 }
 
 function decodeDbPro(b: number): number { return Math.round((b / 100) * 24 - 12) }

@@ -10,12 +10,6 @@ export interface QrSetting {
   params?: Record<string, number | string>
 }
 
-export interface GuitarSetup {
-  pickup?: string       // e.g. "Bridge", "Neck", "Bridge+Neck", "All three"
-  pickupType?: string   // e.g. "Humbucker", "Single-coil", "P90", "Humbucker/Single-coil"
-  controls?: { label: string; value: number }[]  // e.g. [{ label: "Vol", value: 10 }, { label: "Tone", value: 7 }]
-}
-
 export interface QrResult {
   qrString: string
   imageBase64: string
@@ -23,7 +17,6 @@ export interface QrResult {
   deviceName: string
   deviceId?: string
   settings: QrSetting[]
-  guitar?: GuitarSetup
   importNote?: string
   imported?: boolean
 }

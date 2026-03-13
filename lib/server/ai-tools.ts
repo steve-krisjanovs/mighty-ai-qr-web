@@ -66,26 +66,6 @@ Use the device specified in the system prompt unless the user requests a differe
       reverb:     { type: 'object', required: ['id', 'enabled', 'p1', 'p2'], properties: { id: { type: 'number' }, enabled: { type: 'boolean' }, p1: { type: 'number' }, p2: { type: 'number' }, p3: { type: 'number' }, p4: { type: 'number' } } },
       eq:         { type: 'object', required: ['id', 'enabled', 'bands'], properties: { id: { type: 'number' }, enabled: { type: 'boolean' }, bands: { type: 'array', items: { type: 'number', minimum: -15, maximum: 15 } } } },
       master_db:  { type: 'number', minimum: -12, maximum: 12 },
-      guitar: {
-        type: 'object',
-        description: 'Recommended guitar setup to complement this tone',
-        properties: {
-          pickup:     { type: 'string', description: 'Selected pickup(s), e.g. "Bridge", "Neck", "Bridge+Neck", "All three"' },
-          pickupType: { type: 'string', description: 'Pickup type, e.g. "Humbucker", "Single-coil", "P90", "Humbucker/Single-coil"' },
-          controls: {
-            type: 'array',
-            description: 'Volume and tone knob recommendations. Use specific labels when multiple pickups are active, e.g. "Neck Vol", "Bridge Tone". For single pickup: "Vol", "Tone". Omit controls that don\'t apply (e.g. Tele bridge has no tone knob).',
-            items: {
-              type: 'object',
-              required: ['label', 'value'],
-              properties: {
-                label: { type: 'string' },
-                value: { type: 'number', minimum: 0, maximum: 10 },
-              },
-            },
-          },
-        },
-      },
     },
   },
 }
@@ -239,21 +219,12 @@ Bass tone guide (use amp id=3 BassMate for all bass patches):
 - Driven/gritty bass: BassMate, gain 50-65, efx Blues Drive (id=6) or T Screamer (id=5) enabled
 - Heavy fuzz bass (e.g. Beastie Boys, Muse, Jack White): BassMate, gain 60-75, efx Muff Fuzz (id=11) or Eat Dist (id=8) enabled with p1 (fuzz) 70-90, p2 (tone) 50-70
 - Punk/aggressive bass: BassMate, gain 65-80, efx Dist One (id=4) or Crunch (id=10) enabled
-For bass, the guitar field should describe bass pickup position (Bridge, Neck) and pickup type (e.g. "Split-coil/P-bass", "Dual-coil/J-bass").
 
 Always pair the amp with a matching cabinet. Match Marshall amps to Marshall cabs (M1960AX/AV).
 Match Fender amps to Fender-style cabs (DR112Pro, TR212Pro). Mesa to RECT412 etc.
 Default master_db to 0. Enable noise_gate for any gain above 50.
 
-Always include a guitar setup recommendation in the guitar field:
-- pickup: which pickup(s) to select ("Bridge", "Neck", "Middle", "Bridge+Neck", "Bridge+Middle", "Neck+Middle", "All three")
-- pickupType: the ideal pickup type for this tone ("Humbucker", "Single-coil", "P90", "Humbucker/Single-coil")
-- controls: volume and tone knob settings (0–10). Rules:
-  - Single pickup active: use labels "Vol" and "Tone"
-  - Two pickups active (e.g. Bridge+Neck on a Les Paul): use "Neck Vol", "Neck Tone", "Bridge Vol", "Bridge Tone"
-  - Omit controls that don't exist on common guitars (e.g. Telecaster bridge pickup has no tone knob)
-  - Vol 10 is standard; roll back to 7–8 for mild breakup cleanup with a hot amp
-  - Tone 10 = full bright, 5–7 = warm/rounded, 0–3 = very dark/muffled`
+`
 
 export const SYSTEM_PROMPT_FULL = SHARED_HEADER + STANDARD_DEVICE_REFERENCE + `
 
@@ -435,16 +406,6 @@ function coerceParams(raw: Record<string, unknown>): ProPresetParams {
       ...(e.p4 !== undefined ? { p4: n(e.p4, 50) } : {}),
       ...(e.p5 !== undefined ? { p5: n(e.p5, 50) } : {}),
     }
-  }
-
-  if (raw.guitar && typeof raw.guitar === 'object') {
-    const g = raw.guitar as Record<string, unknown>
-    let controls = g.controls
-    // Some models return controls as an object {label: value} instead of [{label, value}]
-    if (controls && !Array.isArray(controls) && typeof controls === 'object') {
-      controls = Object.entries(controls as Record<string, unknown>).map(([label, value]) => ({ label, value: n(value, 5) }))
-    }
-    coerced.guitar = { ...g, controls } as ProPresetParams['guitar']
   }
 
   return coerced

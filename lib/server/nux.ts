@@ -71,12 +71,6 @@ export interface EQParams {
   bands: number[]
 }
 
-export interface GuitarSetup {
-  pickup?: string       // e.g. "Bridge", "Neck", "Bridge+Neck", "All three"
-  pickupType?: string   // e.g. "Humbucker", "Single-coil", "P90", "Humbucker/Single-coil"
-  controls?: { label: string; value: number }[]
-}
-
 export interface WahParams {
   enabled: boolean
   pedal: number
@@ -96,5 +90,4 @@ export interface ProPresetParams {
   reverb?: EffectParams
   eq?: EQParams
   master_db: number
-  guitar?: GuitarSetup
 }

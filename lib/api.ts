@@ -151,28 +151,6 @@ export async function decodeQr(qrString: string): Promise<DecodeResult | null> {
   return res.json()
 }
 
-export async function suggestGuitar(settings: import('./types').QrResult['settings'], deviceName: string): Promise<import('./types').GuitarSetup | null> {
-  let token = getToken()
-  if (!token) { await authenticate(); token = getToken()! }
-  const active = getActiveConfig()
-  const extraHeaders: Record<string, string> = {}
-  if (active) {
-    if (active.apiKey) extraHeaders['x-user-api-key'] = active.apiKey
-    extraHeaders['x-provider'] = active.provider
-    if (active.baseUrl) extraHeaders['x-base-url'] = active.baseUrl
-    if (active.model)   extraHeaders['x-model'] = active.model
-  }
-  try {
-    const res = await fetch(`${BASE}/guitar-suggest`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...extraHeaders },
-      body: JSON.stringify({ settings, deviceName }),
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.guitar ?? null
-  } catch { return null }
-}
 
 export async function identifyQr(importNote: string): Promise<{ artist: string | null; song: string | null }> {
   let token = getToken()
