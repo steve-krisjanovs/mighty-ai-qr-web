@@ -926,8 +926,8 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
 
 // ─── Chat QR Modal ────────────────────────────────────────────────────────────
 
-function ChatQrModal({ qr, description, currentDevice, onClose, onRefine, onSave, onConvert, initialSaved }: {
-  qr: QrResult; description: string; currentDevice: NuxDevice; onClose: () => void; onRefine: () => void
+function ChatQrModal({ qr, description, currentDevice, onClose, onSave, onConvert, initialSaved }: {
+  qr: QrResult; description: string; currentDevice: NuxDevice; onClose: () => void
   onSave?: (name: string) => void; onConvert?: (converted: QrResult) => void; initialSaved?: boolean
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -1002,9 +1002,6 @@ function ChatQrModal({ qr, description, currentDevice, onClose, onRefine, onSave
             </div>
 
             <div className="space-y-2">
-              <button onClick={onRefine} className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm">
-                Refine tone
-              </button>
               {qr.deviceId && qr.deviceId !== currentDevice && onConvert && (() => {
                 const label = NUX_DEVICES.find(d => d.id === currentDevice)?.label ?? currentDevice
                 return (
@@ -3053,7 +3050,6 @@ export default function Page() {
           description={popupQr.description}
           currentDevice={currentDevice}
           onClose={() => { setPopupQr(null); requestAnimationFrame(() => { scrollToBottom(); textareaRef.current?.focus() }) }}
-          onRefine={() => { setPopupQr(null); requestAnimationFrame(() => textareaRef.current?.focus()) }}
           onSave={name => { const q = { ...popupQr.qr, presetName: name }; const item = saveToHistory(q); setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== popupQr.qr.qrString)].slice(0, 20)) }}
           onConvert={converted => {
             setMessages(prev => prev.map(m => m.qr?.qrString === popupQr.qr.qrString ? { ...m, qr: converted } : m))
