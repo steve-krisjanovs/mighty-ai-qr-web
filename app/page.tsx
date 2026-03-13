@@ -992,9 +992,11 @@ function ChatQrModal({ qr, description, currentDevice, onClose, onSave, onConver
               <p className="text-xs text-fg-3 mt-0.5">{qr.deviceName}</p>
               {description && (() => {
                 const excerpt = description
+                  .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
                   .replace(/#{1,6}\s+[^\n]*/g, '')
                   .replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1')
                   .replace(/`[^`]+`/g, '')
+                  .replace(/\[[^\]]*\]\([^)]*\)/g, '')
                   .split('\n').map(l => l.trim()).filter(Boolean)[0] ?? ''
                 const short = excerpt.length > 160 ? excerpt.slice(0, 157) + '…' : excerpt
                 return short ? <p className="text-[11px] text-fg-4 leading-relaxed mt-2">{short}</p> : null
