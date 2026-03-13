@@ -2460,7 +2460,7 @@ export default function Page() {
     const existing = loadConversations().find(c => c.id === id)
     upsertConversation({
       id,
-      title: titleOverride ?? autoTitle(msgs),
+      title: titleOverride ?? existing?.title ?? autoTitle(msgs),
       messages: msgs,
       lastQr,
       createdAt: existing?.createdAt ?? Date.now(),
