@@ -45,6 +45,19 @@ export async function POST(request: NextRequest) {
   const deviceInstruction = `The user's NUX device is "${defaultDevice}" (${deviceDisplayName}). You MUST call the generateQR tool with device="${defaultDevice}". Do NOT use any other device ID — ignore any device mentioned in the conversation history.\n\n`
   const systemFull = deviceInstruction + SYSTEM_PROMPT_FULL
 
+  // Inject device constraint into the last user message so it appears right before the AI responds
+  // Also instruct to preserve the existing preset name on refinements
+  const messagesWithHint = [...messages]
+  const lastUserIdx = [...messagesWithHint].map(m => m.role).lastIndexOf('user')
+  if (lastUserIdx !== -1) {
+    const existingPresetName = [...messagesWithHint].reverse().find((m: {role: string; content: string}) => m.role === 'assistant' && m.content.includes('"'))?.content.match(/"([^"]+)"/)?.[1]
+    const nameHint = existingPresetName ? ` Keep the preset_name as "${existingPresetName}".` : ''
+    messagesWithHint[lastUserIdx] = {
+      ...messagesWithHint[lastUserIdx],
+      content: messagesWithHint[lastUserIdx].content + `\n\n[IMPORTANT: Use device="${defaultDevice}" in the generateQR tool call.${nameHint}]`,
+    }
+  }
+
   const isByok = !!userApiKey || !!userBaseUrl
   const needsKey = !isByok && !!userProvider && userProvider !== 'anthropic' && userProvider !== 'builtin'
 
@@ -72,16 +85,16 @@ export async function POST(request: NextRequest) {
       const freeModel = process.env.FREE_MODEL || 'claude-sonnet-4-6'
       console.log(`[chat] using server key, model=${freeModel}`)
       const serverClient = new Anthropic({ apiKey: serverKey })
-      result = await runChat(serverClient, messages, freeModel, systemFull)
+      result = await runChat(serverClient, messagesWithHint, freeModel, systemFull)
     } else if (userProvider === 'anthropic') {
       console.log(`[chat] byok anthropic model=${userModel || 'auto'}`)
       const byokClient = new Anthropic({ apiKey: userApiKey })
-      result = await runChat(byokClient, messages, userModel || undefined, systemFull)
+      result = await runChat(byokClient, messagesWithHint, userModel || undefined, systemFull)
     } else {
       const baseUrl = normalizeBaseUrl(userBaseUrl, userProvider)
       const model   = userModel || DEFAULT_MODELS[userProvider] || 'llama3.2'
       console.log(`[chat] byok openai-compat provider=${userProvider} model=${model} baseUrl=${baseUrl}`)
-      result = await runChatOpenAI(baseUrl, userApiKey || 'none', model, messages, systemFull)
+      result = await runChatOpenAI(baseUrl, userApiKey || 'none', model, messagesWithHint, systemFull)
     }
 
     console.log(`[chat] done`)
