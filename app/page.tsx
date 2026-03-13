@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { v4 as uuidv4 } from 'uuid'
-import { sendChat, initAuth, fetchModels, decodeQr, convertPreset, identifyQr, scanQrFromFile } from '@/lib/api'
+import { sendChat, initAuth, fetchModels, decodeQr, convertPreset, identifyQr, scanQrFromFile, suggestGuitar } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteHistoryItem, renameHistoryItem, clearAllHistory,
   loadConversations, upsertConversation,
@@ -2411,7 +2411,7 @@ function SourcesBar({ sources }: { sources: { title: string; url: string }[] }) 
 
 // ─── Message Row ──────────────────────────────────────────────────────────────
 
-function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete, onQrOpen, disabled }: {
+function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete, onQrOpen, onGuitarSuggest, guitarLoading, disabled }: {
   msg: ChatMessage
   idx: number
   active: boolean
@@ -2420,6 +2420,8 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
   onEdit: (idx: number) => void
   onDelete: (idx: number) => void
   onQrOpen: (qr: QrResult, description: string) => void
+  onGuitarSuggest?: (msgId: string) => void
+  guitarLoading?: boolean
   disabled?: boolean
 }) {
   const longPress = useLongPress(disabled ? () => {} : onActivate)
@@ -2502,7 +2504,15 @@ function MessageRow({ msg, idx, active, onActivate, onDismiss, onEdit, onDelete,
                   ))}
                 </div>
               ) : msg.qr.imported ? (
-                <p className="text-xs text-fg-3">No guitar setup included — ask me for pickup and knob suggestions.</p>
+                <button
+                  onClick={() => onGuitarSuggest?.(msg.id)}
+                  disabled={guitarLoading}
+                  className="flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50"
+                >
+                  {guitarLoading
+                    ? <><svg className="animate-spin h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>Getting guitar setup…</>
+                    : 'Get guitar setup suggestions'}
+                </button>
               ) : null}
             </div>
           )}
@@ -2545,6 +2555,7 @@ export default function Page() {
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
   const [popupQr, setPopupQr] = useState<{ qr: QrResult; description: string } | null>(null)
   const [showQrPanel, setShowQrPanel] = useState(false)
+  const [guitarLoadingId, setGuitarLoadingId] = useState<string | null>(null)
 
   const requestDelete = useCallback((label: string, onConfirm: () => void) => {
     setPendingDelete({ label, onConfirm })
@@ -3063,6 +3074,18 @@ export default function Page() {
                       if (isDesktop) { setCurrentQr(qr); setCurrentQrDescription(description); setShowQrPanel(true) }
                       else setPopupQr({ qr, description })
                     }}
+                    onGuitarSuggest={async (msgId) => {
+                      const target = messages.find(m => m.id === msgId)
+                      if (!target?.qr) return
+                      setGuitarLoadingId(msgId)
+                      try {
+                        const guitar = await suggestGuitar(target.qr.settings, target.qr.deviceName)
+                        if (guitar) {
+                          setMessages(prev => prev.map(m => m.id === msgId ? { ...m, qr: { ...m.qr!, guitar } } : m))
+                        }
+                      } finally { setGuitarLoadingId(null) }
+                    }}
+                    guitarLoading={guitarLoadingId === msg.id}
                     disabled={loading}
                   />
                 ))
