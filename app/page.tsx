@@ -1114,23 +1114,6 @@ function DeviceMismatchModal({ qr, targetDevice, onConvert, onSaveOriginal, onCl
 
 // ─── Import Toast ─────────────────────────────────────────────────────────────
 
-function ImportToast({ item, onRefine, onDismiss }: {
-  item: HistoryItem; onRefine: () => void; onDismiss: () => void
-}) {
-  useEffect(() => {
-    const t = setTimeout(onDismiss, 5000)
-    return () => clearTimeout(t)
-  }, [onDismiss])
-
-  return (
-    <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 rounded-xl bg-surface border border-white/10 shadow-2xl px-4 py-3 animate-fade-in max-w-[calc(100vw-2rem)]">
-      <span className="text-sm text-fg truncate">Saved: <span className="font-medium">{item.presetName}</span></span>
-      <button onClick={() => { onRefine(); onDismiss() }} className="text-xs text-primary hover:underline shrink-0">Refine tone</button>
-      <button onClick={onDismiss} className="text-fg-4 hover:text-fg ml-1 shrink-0"><CloseIcon /></button>
-    </div>
-  )
-}
-
 // ─── About Modal ──────────────────────────────────────────────────────────────
 
 function AboutModal({ onClose }: { onClose: () => void }) {
@@ -2405,7 +2388,6 @@ export default function Page() {
   const [importNamePending, setImportNamePending] = useState<{ qr: QrResult; suggestedName: string } | null>(null)
   const [deviceMismatchPending, setDeviceMismatchPending] = useState<{ qr: QrResult } | null>(null)
   const [deviceMismatchConverting, setDeviceMismatchConverting] = useState(false)
-  const [importToast, setImportToast] = useState<{ item: HistoryItem } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
   const [popupQr, setPopupQr] = useState<{ qr: QrResult; description: string } | null>(null)
 
@@ -2592,7 +2574,7 @@ export default function Page() {
     } else {
       const item = saveToHistory(qr)
       setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== qr.qrString)].slice(0, 20))
-      setImportToast({ item })
+
       // Populate the new chat with the imported QR
       const convId = uuidv4()
       setActiveConvId(convId)
@@ -3021,7 +3003,7 @@ export default function Page() {
               const qToSave = converted ? { ...deviceMismatchPending.qr, qrString: converted.qrString, imageBase64: converted.imageBase64, deviceName: converted.deviceName, settings: converted.settings } : deviceMismatchPending.qr
               const item = saveToHistory(qToSave)
               setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== qToSave.qrString)].slice(0, 20))
-              setImportToast({ item })
+        
               openHistoryItemInChat(item)
             } catch { setError('Conversion failed — saving original.') } finally {
               setDeviceMismatchConverting(false)
@@ -3031,20 +3013,13 @@ export default function Page() {
           onSaveOriginal={() => {
             const item = saveToHistory(deviceMismatchPending.qr)
             setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== deviceMismatchPending.qr.qrString)].slice(0, 20))
-            setImportToast({ item })
+      
             openHistoryItemInChat(item)
             setDeviceMismatchPending(null)
           }}
         />
       )}
 
-      {importToast && (
-        <ImportToast
-          item={importToast.item}
-          onDismiss={() => setImportToast(null)}
-          onRefine={() => openHistoryItemInChat(importToast.item)}
-        />
-      )}
 
       {popupQr && (
         <ChatQrModal
