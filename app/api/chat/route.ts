@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getDeviceIdFromRequest } from '@/lib/server/jwt'
 import { runChat, runChatOpenAI, SYSTEM_PROMPT_FULL } from '@/lib/server/ai-tools'
+import { DEVICES } from '@/lib/server/nux'
 import { checkAndIncrementQuota } from '@/lib/server/quota'
 
 const DEFAULT_MODELS: Record<string, string> = {
@@ -40,7 +41,8 @@ export async function POST(request: NextRequest) {
   const userModel       = (request.headers.get('x-model') ?? '').trim()
   const defaultDevice   = (request.headers.get('x-default-device') ?? 'plugpro').trim()
 
-  const deviceInstruction = `The user's NUX device is "${defaultDevice}". You MUST call the generateQR tool with device="${defaultDevice}". Do NOT use any other device ID, even if a previous QR in the conversation was for a different device.\n\n`
+  const deviceDisplayName = DEVICES[defaultDevice as keyof typeof DEVICES]?.displayName ?? defaultDevice
+  const deviceInstruction = `The user's NUX device is "${defaultDevice}" (${deviceDisplayName}). You MUST call the generateQR tool with device="${defaultDevice}". Do NOT use any other device ID — ignore any device mentioned in the conversation history.\n\n`
   const systemFull = deviceInstruction + SYSTEM_PROMPT_FULL
 
   const isByok = !!userApiKey || !!userBaseUrl
