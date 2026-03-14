@@ -2131,6 +2131,11 @@ function Sidebar({
   const scanInputRef = useRef<HTMLInputElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const prevQrCount = useRef(qrHistory.length)
+  useEffect(() => {
+    if (qrHistory.length > prevQrCount.current) { setQuery(''); setTab('qr') }
+    prevQrCount.current = qrHistory.length
+  }, [qrHistory.length])
 
   const q = query.toLowerCase()
   const filteredConvs = q ? conversations.filter(c => c.title.toLowerCase().includes(q)) : conversations
