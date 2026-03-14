@@ -57,17 +57,20 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 ### Branch state
 - Active work branch: `feature/qr-import-workflow` (branched off `feature/standard-devices`, contains all of it)
 - Merge order: `feature/qr-import-workflow` → `main` directly (no intermediate step needed)
-- Last session: 2026-03-12 — major UI/UX overhaul (see below)
+- Last session: 2026-03-14
 
-### What changed in the last session (2026-03-12)
-- **Desktop QR panel removed** — device selection consolidated to bottom bar Settings chip
-- **Device dropdown replaced with Settings chip** in the bottom bar
-- **Convert button added** to QR popups — lets user convert an existing QR to their current device
-- **Auto-save all AI-generated QRs** — no more "Save to collection" button in chat; every generated QR saves automatically
-- **Import flow simplified** — no more ImportToast; import opens a new chat directly with preset context
-- **Refine tone button removed** from ChatQrModal (chat-generated QR popups)
-- **Guitar suggest feature** — added then removed entirely in the same session
-- **Device injection hints** — on every chat request, the last user message gets `[Device: X | Preset: Y]` injected before sending to the AI (3rd attempt at fixing device anchoring bug — needs real-world testing)
+### What changed in the last session (2026-03-14)
+- **Device anchoring fix (4th attempt)** — rewrite stale device display names in assistant history before sending to AI; combined with last-message injection hint
+- **Device-changed hint** — bottom bar shows "Device changed — ask for a new tone" pulse when device changes mid-chat; clears on send or new chat
+- **Convert button fix** — falls back to deviceName comparison when deviceId missing on older history items
+- **Preset naming** — system prompt now requires descriptive name from song/artist; no more "My Tone" fallback
+- **Tavily narration removed** — AI no longer says "no results came back"; silently falls back to training knowledge
+- **Bass tone overhaul** — correct cabs (TR212Pro), lower gain ranges, compressor always on, no noise gate; standard device bass amps (AGL/MLD) and cabs (BS410/AGLDB810) documented
+- **Bassist on-ramp** — pinned bass chip + "Guitar is the default — playing bass? Just mention it." hint on suggestion screen
+- **Sidebar search** — unified search filters chats by title, QR codes by preset/device name
+- **Collapse/expand all** — double chevron button in QR tab collapses/expands all device groups
+- **About modal** — "What's new in v1.5" collapsible section with user-facing feature list
+- **QR popup description** — strips leading quoted preset name (was redundant with title)
 
 ### Step 1 — Build and test
 ```bash
@@ -75,13 +78,14 @@ docker compose --env-file .env.local up -d --build
 ```
 
 ### Test checklist
-- **Import flow** — import a QR photo → new chat opens with preset context → AI generates QR for the correct device → QR auto-saves to history (no save button needed)
-- **Convert button** — open a QR from history on device A → tap Convert → it generates a new QR for the current default device
-- **Settings chip** — bottom bar chip opens Settings; device shown correctly; changing device updates bottom bar label
-- **Auto-save** — ask AI to generate a tone → QR appears in chat → also appears in history sidebar automatically
-- **History tap** — tap a history item → QrModal opens with correct preset
-- **Device injection** — change default device mid-chat → ask AI to make a new tone → verify it uses the new device, not the one from earlier in the conversation
-- **BYOK hint banner** — free tier: hint banner shows above suggestions; dismiss via X; toggle in Settings
+- **Convert button** — open a history QR for a different device → Convert button should appear → tap it → correct device generated
+- **Auto-save + preset name** — ask AI for a tone with a song reference → QR saves to history with descriptive name (not "My Tone")
+- **Device anchoring** — change default device mid-chat → ask for a new tone → verify it uses the new device; device-changed hint should appear then clear on send
+- **Bass tones** — ask for a clean bass tone → verify BassMate amp, TR212Pro cab, compressor on, no noise gate, gain under 30
+- **Bassist chip** — suggestion screen shows pinned bass chip in primary colour; tapping it sends the message
+- **Sidebar search** — type in search box → filters chats/QR codes live; clear button works
+- **Collapse/expand all** — double chevron in QR tab collapses all groups; tap again to expand
+- **About modal** — open About in Settings → "What's new in v1.5" section visible and collapsible
 
 ### Step 2 — PR to main
 Once all tests pass, open a PR from `feature/qr-import-workflow` into `main`.
@@ -92,7 +96,7 @@ Once all tests pass, open a PR from `feature/qr-import-workflow` into `main`.
 
 ### Backlog
 
-- **BUG (ongoing)**: When user imports a QR for device A, changes their default device to B in Settings, then asks to refine in the same chat — AI still generates for device A. Root cause: AI anchors to the device name in conversation history (e.g. "Here's your preset for Mighty Plug Pro"). Three fix attempts failed: (1) stronger system prompt wording, (2) added display name + "ignore conversation history" instruction, (3) injected `[IMPORTANT: Use device="x"]` into the last user message. Needs a different approach — possibly client-side device-change detection that warns the user, or rewriting the assistant message history to strip device references before sending.
+- **BUG (needs testing)**: Device anchoring — when user changes default device mid-chat, AI may still generate for the old device. Four fix attempts: (1) stronger system prompt wording, (2) display name + "ignore history" instruction, (3) `[IMPORTANT: Use device="x"]` injected into last user message, (4) rewrite all stale device display names in assistant history before sending + last-message injection. Attempt 4 is committed and needs real-world testing. Device-changed hint added as UX fallback. If still failing, consider: strip device references from assistant messages more aggressively, or warn user to start a new chat when device changes.
 
 - **TODO**: Make the default free tier work with any configured API provider, not just Anthropic.
 - **TODO**: Unify `runChat` + `runChatOpenAI` — add a thin adapter that converts Anthropic SDK responses to OpenAI-compatible shape, so all providers share one code path. Currently split because Anthropic returns tool input as parsed JSON content blocks while OpenAI returns raw JSON strings.
