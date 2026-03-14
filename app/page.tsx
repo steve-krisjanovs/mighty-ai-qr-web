@@ -217,6 +217,12 @@ const MenuIcon = () => (
   </svg>
 )
 
+const PencilIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </svg>
+)
+
 const TrashIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
@@ -2329,7 +2335,7 @@ function ConvItem({ conv, active, onSelect, onDeleteRequest, onRename }: {
 
   return (
     <div
-      className={`relative flex items-center px-3 py-2.5 cursor-pointer transition-colors ${active ? 'bg-surface-2' : 'hover:bg-surface-2'}`}
+      className={`group relative flex items-center px-3 py-2.5 cursor-pointer transition-colors ${active ? 'bg-surface-2' : 'hover:bg-surface-2'}`}
       onClick={onSelect}
       {...longPress}
     >
@@ -2339,8 +2345,14 @@ function ConvItem({ conv, active, onSelect, onDeleteRequest, onRename }: {
         <p className="text-[10px] text-fg-4">{relativeTime(conv.updatedAt)}</p>
       </div>
       <button
+        onClick={e => { e.stopPropagation(); setName(conv.title); setEditing(true); requestAnimationFrame(() => inputRef.current?.focus()) }}
+        className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+      >
+        <PencilIcon />
+      </button>
+      <button
         onClick={e => { e.stopPropagation(); onDeleteRequest() }}
-        className="ml-2 flex h-7 w-7 shrink-0 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
+        className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
       >
         <TrashIcon />
       </button>
