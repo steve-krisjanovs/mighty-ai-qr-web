@@ -1109,24 +1109,63 @@ function DeviceMismatchModal({ qr, targetDevice, onConvert, onSaveOriginal, onCl
 
 // ─── About Modal ──────────────────────────────────────────────────────────────
 
+const WHATS_NEW: { version: string; items: string[] }[] = [
+  {
+    version: '1.5',
+    items: [
+      'Import any NUX QR code — scan or upload a photo to decode and refine it',
+      'Convert presets between devices with one tap',
+      'Generated QR codes save to your collection automatically',
+      'Bass support — dedicated bass tones with the right amps, cabs, and effects',
+      'Sidebar search — filter your chats and QR codes as you type',
+      'Collapse / expand all QR code groups at once',
+      'Support for 6 additional NUX devices (Mighty Air, Plug v1/v2, Lite BT, 8BT, 20/40BT)',
+      'Web search — AI looks up real gear data for song and artist references',
+    ],
+  },
+]
+
 function AboutModal({ onClose }: { onClose: () => void }) {
+  const [whatsNewOpen, setWhatsNewOpen] = useState(true)
   return (
     <>
       <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up p-6 space-y-5">
+        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up p-6 space-y-5 max-h-[90vh] overflow-y-auto">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <img src="/icons/icon-192.png" alt="Mighty AI QR" className="h-12 w-12 rounded-xl shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-fg">Mighty AI QR <span className="text-[11px] font-normal text-fg-4">v{pkg.version}</span></p>
                 <p className="text-[11px] text-fg-4 mt-1 leading-relaxed">
-                  Describe a guitar tone in plain English — get a scannable QR code for your NUX MightyAmp, instantly.
+                  Describe a tone in plain English — get a scannable QR code for your NUX MightyAmp, instantly.
                 </p>
               </div>
             </div>
             <button onClick={onClose} className="shrink-0 text-fg-4 hover:text-fg transition-colors"><CloseIcon /></button>
           </div>
+
+          {WHATS_NEW.map(({ version, items }) => (
+            <div key={version} className="border-t border-white/10 pt-4">
+              <button
+                onClick={() => setWhatsNewOpen(o => !o)}
+                className="flex w-full items-center justify-between gap-2 text-left"
+              >
+                <p className="text-[11px] font-medium text-fg-3 uppercase tracking-wider">What&apos;s new in v{version}</p>
+                <ChevronIcon open={whatsNewOpen} />
+              </button>
+              {whatsNewOpen && (
+                <ul className="mt-2.5 space-y-1.5">
+                  {items.map(item => (
+                    <li key={item} className="flex items-start gap-2 text-[11px] text-fg-4 leading-relaxed">
+                      <span className="text-primary mt-px shrink-0">•</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
 
           <div className="border-t border-white/10 pt-4 space-y-1">
             <p className="text-[11px] font-medium text-fg-3 uppercase tracking-wider">Author</p>

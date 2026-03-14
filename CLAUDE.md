@@ -96,3 +96,7 @@ Once all tests pass, open a PR from `feature/qr-import-workflow` into `main`.
 
 - **TODO**: Make the default free tier work with any configured API provider, not just Anthropic.
 - **TODO**: Unify `runChat` + `runChatOpenAI` — add a thin adapter that converts Anthropic SDK responses to OpenAI-compatible shape, so all providers share one code path. Currently split because Anthropic returns tool input as parsed JSON content blocks while OpenAI returns raw JSON strings.
+
+### Roadmap (v1.6+)
+
+- **My Gear profile** — let users add/edit/remove their instruments (name, type: guitar/bass, pickup config). AI reads the active instrument on every request so bassists never need to say "bass" again. Needs DB schema changes, settings UI, and gear context injected into the chat route system prompt.
