@@ -233,7 +233,7 @@ Bass tone guide — BASS IS NOT GUITAR. When the user asks for a bass tone, appl
 - Gain ranges (bass needs far less gain than guitar): clean=12-25, warm/punchy=28-42, driven/gritty=42-55, fuzz/heavy=55-70. Never exceed 75 for bass.
 - Master (amp.master): 55-65 for bass. Do not push to 70+ like guitar.
 - Compressor: ALWAYS add compressor for clean and warm bass tones — it is the backbone of bass tone. Use RoseComp (id=1), p1 (sensitivity)=50-60, p2 (level)=60-70.
-- Noise gate: NEVER enable noise_gate for bass tones — bass needs natural sustain. Leave it disabled regardless of gain level.
+- Noise gate: NEVER enable noise_gate for bass tones — bass needs natural sustain. Always set noise_gate.enabled=false, sensitivity=0, decay=0 regardless of gain level.
 - EQ: bass=62-72 for fullness, mid=45-55 for definition, treble=30-45 for warmth (not brightness).
 - Reverb: use very sparingly for bass. Room (id=1) only, p1 (decay)=15-25, p3 (mix)=12-20 maximum. No plate/hall/shimmer on bass.
 - Effects: no modulation (chorus, flanger, phaser) on bass unless explicitly requested. No delay unless requested.
