@@ -789,6 +789,7 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
   autoRename?: boolean
 }) {
   const [converting, setConverting] = useState(false)
+  const [convertError, setConvertError] = useState<string | null>(null)
   const [editing, setEditing] = useState(autoRename ?? false)
   const [name, setName] = useState(item.qr.presetName)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -864,10 +865,12 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
                   <button
                     onClick={async () => {
                       setConverting(true)
+                      setConvertError(null)
                       try {
                         const result = await convertPreset(item.qr.qrString, currentDevice, item.qr.presetName)
                         if (result) onConvert(result)
-                      } catch { /* ignore */ } finally { setConverting(false) }
+                        else setConvertError('Conversion failed — try again.')
+                      } catch (e) { setConvertError(e instanceof Error ? e.message : 'Conversion failed.') } finally { setConverting(false) }
                     }}
                     disabled={converting}
                     className="w-full rounded-xl border border-white/10 py-2.5 text-sm font-medium text-fg-3 hover:border-white/20 hover:text-fg disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
@@ -877,6 +880,7 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
                   </button>
                 )
               })()}
+              {convertError && <p className="text-xs text-red-400 text-center">{convertError}</p>}
             </div>
 
             <div className="grid grid-cols-3 gap-2">
