@@ -1204,32 +1204,32 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
     <>
       <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm" />
       <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-        <div className="w-full max-w-md rounded-3xl border border-white/10 bg-surface shadow-2xl animate-scale-up overflow-hidden">
+        <div className="w-full max-w-md rounded-3xl border border-white/10 bg-surface shadow-2xl animate-scale-up overflow-hidden flex flex-col max-h-[90vh]">
 
           {/* Header */}
-          <div className="relative bg-primary/10 border-b border-primary/20 px-6 pt-8 pb-6 text-center">
-            <img src="/icons/icon-192.png" alt="Mighty AI QR" className="h-16 w-16 rounded-2xl mx-auto mb-4 shadow-lg" />
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-primary mb-1">What&apos;s new</p>
-            <h2 className="text-2xl font-bold text-fg">Mighty AI QR 1.5</h2>
-            <p className="text-sm text-fg-3 mt-1">The biggest update yet.</p>
+          <div className="relative bg-primary/10 border-b border-primary/20 px-6 pt-5 pb-4 text-center shrink-0">
+            <img src="/icons/icon-192.png" alt="Mighty AI QR" className="h-12 w-12 rounded-xl mx-auto mb-3 shadow-lg" />
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-primary mb-0.5">What&apos;s new</p>
+            <h2 className="text-xl font-bold text-fg">Mighty AI QR 1.5</h2>
+            <p className="text-xs text-fg-3 mt-0.5">The biggest update yet.</p>
           </div>
 
           {/* Body */}
-          <div className="px-6 py-5 space-y-4 max-h-[55vh] overflow-y-auto">
+          <div className="px-6 py-4 space-y-3 overflow-y-auto">
 
             {/* Big device announcement */}
-            <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
-              <p className="text-sm font-semibold text-fg mb-1">All 10 NUX devices supported</p>
-              <p className="text-[11px] text-fg-3 mb-3">Every MightyAmp model in the lineup now works — no one left out.</p>
-              <div className="flex flex-wrap gap-1.5">
+            <div className="rounded-2xl border border-primary/30 bg-primary/10 p-3">
+              <p className="text-sm font-semibold text-fg mb-0.5">All 10 NUX devices supported</p>
+              <p className="text-[11px] text-fg-3 mb-2">Every MightyAmp model in the lineup now works — no one left out.</p>
+              <div className="flex flex-wrap gap-1">
                 {WELCOME_DEVICES.map(d => (
-                  <span key={d} className="rounded-full bg-primary/20 border border-primary/30 px-2.5 py-0.5 text-[10px] font-medium text-primary">{d}</span>
+                  <span key={d} className="rounded-full bg-primary/20 border border-primary/30 px-2 py-0.5 text-[10px] font-medium text-primary">{d}</span>
                 ))}
               </div>
             </div>
 
             {/* Feature list */}
-            <ul className="space-y-2.5">
+            <ul className="space-y-2">
               {[
                 { icon: '📥', text: 'Import any NUX QR code — scan or upload a photo to decode and refine it' },
                 { icon: '🔄', text: 'Convert presets between devices with one tap' },
@@ -1238,8 +1238,8 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
                 { icon: '🔍', text: 'Sidebar search — filter your chats and QR codes as you type' },
                 { icon: '🌐', text: 'Web search — AI looks up real gear data for song and artist references' },
               ].map(({ icon, text }) => (
-                <li key={text} className="flex items-start gap-3 text-[11px] text-fg-3 leading-relaxed">
-                  <span className="shrink-0 text-base leading-none mt-px">{icon}</span>
+                <li key={text} className="flex items-start gap-2.5 text-[11px] text-fg-3 leading-relaxed">
+                  <span className="shrink-0 text-sm leading-none mt-px">{icon}</span>
                   {text}
                 </li>
               ))}
@@ -1247,10 +1247,10 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
           </div>
 
           {/* Footer */}
-          <div className="px-6 pb-6 pt-2 space-y-2 border-t border-white/10">
+          <div className="px-6 pb-5 pt-2 space-y-1.5 border-t border-white/10 shrink-0">
             <button
               onClick={onDismiss}
-              className="w-full rounded-2xl bg-primary py-3 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-opacity shadow-lg"
+              className="w-full rounded-2xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-opacity shadow-lg"
             >
               Let&apos;s go →
             </button>
@@ -2364,7 +2364,7 @@ function ByokHintBanner({ onDismiss, onOpenSettings }: { onDismiss: () => void; 
 
 // ─── Suggestion Screen ────────────────────────────────────────────────────────
 
-const BASS_CHIP = "I'm a bassist — show me what you can do"
+const BASS_CHIP = "I'm a bassist — what artist or song should we start with?"
 
 function SuggestionScreen({ onSend }: { onSend: (text: string) => void }) {
   const [current, setCurrent] = useState<string[]>(ALL_SUGGESTIONS.slice(0, 6))
@@ -2858,7 +2858,7 @@ export default function Page() {
 
       persistConversation(convId!, finalMessages, newQr)
     } catch (e) {
-      if (e instanceof Error && e.name === 'AbortError') { /* cancelled by user */ }
+      if (e instanceof Error && e.name === 'AbortError') { setMessages(messages) } // roll back the unanswered user message
       else flushSync(() => setError(friendlyError(e)))
     } finally {
       abortRef.current = null
@@ -3213,8 +3213,11 @@ export default function Page() {
           currentDevice={currentDevice}
           onClose={() => { setPopupQr(null); requestAnimationFrame(() => { scrollToBottom(); textareaRef.current?.focus() }) }}
           onConvert={converted => {
-            setMessages(prev => prev.map(m => m.qr?.qrString === popupQr.qr.qrString ? { ...m, qr: converted } : m))
-            setPopupQr({ qr: converted, description: popupQr.description })
+            const newItem = saveToHistory(converted)
+            setQrHistory(prev => [newItem, ...prev.filter(h => h.qr.qrString !== converted.qrString)].slice(0, 20))
+            const newMsg: ChatMessage = { id: uuidv4(), role: 'assistant', content: `Converted to ${converted.deviceName}.`, qr: converted }
+            setMessages(prev => [...prev, newMsg])
+            setPopupQr({ qr: converted, description: '' })
             setCurrentQr(converted)
           }}
         />
@@ -3242,8 +3245,8 @@ export default function Page() {
           onClose={() => setSelectedHistoryItem(null)}
           onConvert={converted => {
             const newItem = saveToHistory(converted)
-            setQrHistory(prev => [newItem, ...prev].slice(0, 20))
-            setSelectedHistoryItem(null)
+            setQrHistory(prev => [newItem, ...prev.filter(h => h.qr.qrString !== converted.qrString)].slice(0, 20))
+            setSelectedHistoryItem(newItem)
           }}
           onDeleteRequest={() => requestDelete(selectedHistoryItem.presetName, () => handleDeleteHistoryItem(selectedHistoryItem.id))}
           onRename={name => handleRenameHistoryItem(selectedHistoryItem.id, name)}
