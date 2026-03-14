@@ -45,10 +45,20 @@ export async function POST(request: NextRequest) {
   const deviceInstruction = `The user's NUX device is "${defaultDevice}" (${deviceDisplayName}). You MUST call the generateQR tool with device="${defaultDevice}". Do NOT use any other device ID — ignore any device mentioned in the conversation history.\n\n`
   const systemFull = deviceInstruction + SYSTEM_PROMPT_FULL
 
-  // Inject device constraint into the last user message so it appears right before the AI responds
-  // Also instruct to preserve the existing preset name on refinements
-  const messagesWithHint = [...messages]
-  const lastUserIdx = [...messagesWithHint].map(m => m.role).lastIndexOf('user')
+  // Rewrite assistant messages: replace any stale device display name with the current one.
+  // Sorted longest-first to avoid partial matches (e.g. "Mighty Plug Pro" before "Mighty Plug").
+  const allDeviceNames = (Object.values(DEVICES) as { displayName: string }[]).map(d => d.displayName)
+  allDeviceNames.sort((a, b) => b.length - a.length)
+  const staleDeviceNames = allDeviceNames.filter(n => n !== deviceDisplayName)
+  const rewriteDevice = (content: string) =>
+    staleDeviceNames.reduce((s, name) => s.replaceAll(name, deviceDisplayName), content)
+
+  const messagesWithHint: { role: 'user' | 'assistant'; content: string }[] = messages.map((m: { role: 'user' | 'assistant'; content: string }) =>
+    m.role === 'assistant' ? { ...m, content: rewriteDevice(m.content) } : m
+  )
+
+  // Also inject a hard device constraint into the last user message
+  const lastUserIdx = messagesWithHint.map(m => m.role).lastIndexOf('user')
   if (lastUserIdx !== -1) {
     const existingPresetName = [...messagesWithHint].reverse().find((m: {role: string; content: string}) => m.role === 'assistant' && m.content.includes('"'))?.content.match(/"([^"]+)"/)?.[1]
     const nameHint = existingPresetName ? ` Keep the preset_name as "${existingPresetName}".` : ''
