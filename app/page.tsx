@@ -1109,18 +1109,20 @@ function DeviceMismatchModal({ qr, targetDevice, onConvert, onSaveOriginal, onCl
 
 // ─── About Modal ──────────────────────────────────────────────────────────────
 
-const WHATS_NEW: { version: string; items: string[] }[] = [
+const WHATS_NEW: { version: string; items: { text: string; sub?: string }[] }[] = [
   {
     version: '1.5',
     items: [
-      'Import any NUX QR code — scan or upload a photo to decode and refine it',
-      'Convert presets between devices with one tap',
-      'Generated QR codes save to your collection automatically',
-      'Bass support — dedicated bass tones with the right amps, cabs, and effects',
-      'Sidebar search — filter your chats and QR codes as you type',
-      'Collapse / expand all QR code groups at once',
-      'Support for 6 additional NUX devices (Mighty Air, Plug v1/v2, Lite BT, 8BT, 20/40BT)',
-      'Web search — AI looks up real gear data for song and artist references',
+      {
+        text: 'All 10 NUX MightyAmp models supported — every device in the lineup now works',
+        sub: 'Plug Pro · Space · Lite MkII · 8BT MkII · Mighty Air · Plug v1 · Plug v2 · Lite BT · 8BT · 20/40BT',
+      },
+      { text: 'Import any NUX QR code — scan or upload a photo to decode and refine it' },
+      { text: 'Convert presets between devices with one tap' },
+      { text: 'Generated QR codes save to your collection automatically' },
+      { text: 'Bass tones — dedicated bass presets with the right amps, cabs, and effects' },
+      { text: 'Sidebar search — filter your chats and QR codes as you type' },
+      { text: 'Web search — AI looks up real gear data for song and artist tone references' },
     ],
   },
 ]
@@ -1155,11 +1157,14 @@ function AboutModal({ onClose }: { onClose: () => void }) {
                 <ChevronIcon open={whatsNewOpen} />
               </button>
               {whatsNewOpen && (
-                <ul className="mt-2.5 space-y-1.5">
-                  {items.map(item => (
-                    <li key={item} className="flex items-start gap-2 text-[11px] text-fg-4 leading-relaxed">
+                <ul className="mt-2.5 space-y-2">
+                  {items.map((item, i) => (
+                    <li key={i} className="flex items-start gap-2 leading-relaxed">
                       <span className="text-primary mt-px shrink-0">•</span>
-                      {item}
+                      <div>
+                        <span className={i === 0 ? 'text-[11px] font-medium text-fg' : 'text-[11px] text-fg-4'}>{item.text}</span>
+                        {item.sub && <p className="text-[10px] text-fg-4 mt-0.5">{item.sub}</p>}
+                      </div>
                     </li>
                   ))}
                 </ul>
