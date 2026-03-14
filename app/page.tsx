@@ -997,7 +997,10 @@ function ChatQrModal({ qr, description, currentDevice, onClose, onConvert }: {
                   .replace(/`[^`]+`/g, '')
                   .replace(/\[[^\]]*\]\([^)]*\)/g, '')
                   .split('\n').map(l => l.trim()).filter(Boolean)[0] ?? ''
-                const short = excerpt.length > 160 ? excerpt.slice(0, 157) + '…' : excerpt
+                // Strip if it's just the preset name quoted back
+                const stripped = excerpt.replace(/^[""]([^""]+)[""][—–-]?\s*/u, '').trim()
+                const effective = stripped.length > 20 ? stripped : excerpt.startsWith('"') || excerpt.startsWith('\u201c') ? '' : excerpt
+                const short = effective.length > 160 ? effective.slice(0, 157) + '…' : effective
                 return short ? <p className="text-[11px] text-fg-4 leading-relaxed mt-2">{short}</p> : null
               })()}
             </div>
