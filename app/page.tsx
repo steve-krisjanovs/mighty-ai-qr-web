@@ -2382,6 +2382,7 @@ export default function Page() {
   const [deviceMismatchPending, setDeviceMismatchPending] = useState<{ qr: QrResult } | null>(null)
   const [deviceMismatchConverting, setDeviceMismatchConverting] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
+  const [deviceChangedHint, setDeviceChangedHint] = useState(false)
   const [popupQr, setPopupQr] = useState<{ qr: QrResult; description: string } | null>(null)
 
   const requestDelete = useCallback((label: string, onConfirm: () => void) => {
@@ -2433,6 +2434,7 @@ export default function Page() {
 
   useEffect(() => { setCurrentDevice(getDefaultDevice()) }, [settingsVersion])
   useEffect(() => { setCurrentProvider(getApiSettings()?.provider ?? 'builtin') }, [settingsVersion])
+  useEffect(() => { if (messages.length > 0) setDeviceChangedHint(true) }, [currentDevice]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -2470,6 +2472,7 @@ export default function Page() {
     setSuggestions(getRandomSuggestions())
     setError(null)
     setInput('')
+    setDeviceChangedHint(false)
     requestAnimationFrame(() => {
       if (chatRef.current) chatRef.current.scrollTop = 0
       if (textareaRef.current) textareaRef.current.style.height = 'auto'
@@ -2639,6 +2642,7 @@ export default function Page() {
     setInput('')
     setLoading(true)
     setError(null)
+    setDeviceChangedHint(false)
 
     // Reset textarea height
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
@@ -2952,6 +2956,7 @@ export default function Page() {
                     >
                       {NUX_DEVICES.find(d => d.id === currentDevice)?.label ?? currentDevice}
                     </button>
+                    {deviceChangedHint && <span className="text-[10px] text-primary animate-pulse">Device changed — ask for a new tone</span>}
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button
