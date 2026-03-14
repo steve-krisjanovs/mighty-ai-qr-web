@@ -851,7 +851,7 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
               <button onClick={onOpen} className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 active:opacity-80 transition-colors shadow-sm">
                 Open in chat
               </button>
-              {item.qr.deviceId && item.qr.deviceId !== currentDevice && (() => {
+              {(item.qr.deviceId ? item.qr.deviceId !== currentDevice : item.qr.deviceName !== (NUX_DEVICES.find(d => d.id === currentDevice)?.label ?? currentDevice)) && (() => {
                 const label = NUX_DEVICES.find(d => d.id === currentDevice)?.label ?? currentDevice
                 return (
                   <button
@@ -1003,7 +1003,7 @@ function ChatQrModal({ qr, description, currentDevice, onClose, onConvert }: {
             </div>
 
             <div className="space-y-2">
-              {qr.deviceId && qr.deviceId !== currentDevice && onConvert && (() => {
+              {(qr.deviceId ? qr.deviceId !== currentDevice : qr.deviceName !== (NUX_DEVICES.find(d => d.id === currentDevice)?.label ?? currentDevice)) && onConvert && (() => {
                 const label = NUX_DEVICES.find(d => d.id === currentDevice)?.label ?? currentDevice
                 return (
                   <button
