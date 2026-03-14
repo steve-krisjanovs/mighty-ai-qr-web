@@ -57,19 +57,31 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 ### Branch state
 - Active work branch: `feature/qr-import-workflow` (branched off `feature/standard-devices`, contains all of it)
 - Merge order: `feature/qr-import-workflow` → `main` directly (no intermediate step needed)
+- Last session: 2026-03-12 — major UI/UX overhaul (see below)
 
-### Step 1 — Compose and test everything
+### What changed in the last session (2026-03-12)
+- **Desktop QR panel removed** — device selection consolidated to bottom bar Settings chip
+- **Device dropdown replaced with Settings chip** in the bottom bar
+- **Convert button added** to QR popups — lets user convert an existing QR to their current device
+- **Auto-save all AI-generated QRs** — no more "Save to collection" button in chat; every generated QR saves automatically
+- **Import flow simplified** — no more ImportToast; import opens a new chat directly with preset context
+- **Refine tone button removed** from ChatQrModal (chat-generated QR popups)
+- **Guitar suggest feature** — added then removed entirely in the same session
+- **Device injection hints** — on every chat request, the last user message gets `[Device: X | Preset: Y]` injected before sending to the AI (3rd attempt at fixing device anchoring bug — needs real-world testing)
+
+### Step 1 — Build and test
 ```bash
 docker compose --env-file .env.local up -d --build
 ```
 
-### Test checklist (all committed, none yet deployed)
-- **#3 sidebar icon alignment** — group header download icon `w-full` + `h-7 w-7`; check on mobile + desktop
-- **#6 song preset name on confirm** — import a QR with a recognisable song, confirm the song guess, verify preset is named after the song
-- **cabinet TypeError fix** — ask AI for a tone on a pro device; should no longer crash randomly
-- **BYOK hint banner** — on free tier (builtin), suggestion screen should show the slim hint banner; dismiss via X; check toggle in Settings
-- **QR import redesign** — import a QR photo → popup opens with "Refine tone" only (no save button, no auto-save to history) → tap Refine tone → new chat opens with preset context → AI generates QR → tap View QR code → popup shows Save to collection button → tap it → QR appears in history with clean image
-- **History tap** — unchanged: tap a history item → QrModal opens → Refine tone still works
+### Test checklist
+- **Import flow** — import a QR photo → new chat opens with preset context → AI generates QR for the correct device → QR auto-saves to history (no save button needed)
+- **Convert button** — open a QR from history on device A → tap Convert → it generates a new QR for the current default device
+- **Settings chip** — bottom bar chip opens Settings; device shown correctly; changing device updates bottom bar label
+- **Auto-save** — ask AI to generate a tone → QR appears in chat → also appears in history sidebar automatically
+- **History tap** — tap a history item → QrModal opens with correct preset
+- **Device injection** — change default device mid-chat → ask AI to make a new tone → verify it uses the new device, not the one from earlier in the conversation
+- **BYOK hint banner** — free tier: hint banner shows above suggestions; dismiss via X; toggle in Settings
 
 ### Step 2 — PR to main
 Once all tests pass, open a PR from `feature/qr-import-workflow` into `main`.
@@ -78,18 +90,9 @@ Once all tests pass, open a PR from `feature/qr-import-workflow` into `main`.
 
 ## TODO / Bugs
 
-### Priority (next session)
-
-- ~~**BUG**: "Refine tone" button in QR popup does nothing useful~~ — **FIXED**: now calls `send('Please refine this tone')` automatically.
-- ~~**BUG**: Friendly error messages not working~~ — **FIXED**: 400/bad-request case added to `friendlyError`.
-- ~~**BUG**: QR import hanging~~ — **FIXED**: moved QR scan server-side (sharp + jsQR, auto-rotates EXIF).
-- ~~**BUG**: New chat scroll~~ — **FIXED**: reset chatRef.scrollTop to 0, dropped textarea autofocus.
-- ~~**TODO**: Redesign QR import + save workflow~~ — **DONE** (on `feature/qr-import-workflow`, not yet tested): import opens `ChatQrModal` with Refine tone only (no save, no photo persisted); chat QRs get Save to collection inside the popup; history tap unchanged.
-
 ### Backlog
 
-- ~~**TODO**: Add UI nudges prompting the user to set up their own BYOK and Tavily API key~~ — **DONE**: `ByokHintBanner` shows above suggestions when on free tier; dismissible via X or settings toggle. Tavily env-var note in Settings (self-hosted only).
+- **BUG (ongoing)**: When user imports a QR for device A, changes their default device to B in Settings, then asks to refine in the same chat — AI still generates for device A. Root cause: AI anchors to the device name in conversation history (e.g. "Here's your preset for Mighty Plug Pro"). Three fix attempts failed: (1) stronger system prompt wording, (2) added display name + "ignore conversation history" instruction, (3) injected `[IMPORTANT: Use device="x"]` into the last user message. Needs a different approach — possibly client-side device-change detection that warns the user, or rewriting the assistant message history to strip device references before sending.
+
 - **TODO**: Make the default free tier work with any configured API provider, not just Anthropic.
 - **TODO**: Unify `runChat` + `runChatOpenAI` — add a thin adapter that converts Anthropic SDK responses to OpenAI-compatible shape, so all providers share one code path. Currently split because Anthropic returns tool input as parsed JSON content blocks while OpenAI returns raw JSON strings.
-- ~~**BUG**: `Cannot read properties of undefined (reading 'id')` appears randomly in chat responses~~ — **FIXED**: `qr-encoder.ts` line 36 `p.cabinet!.id` crashed when Anthropic model omitted `cabinet` (not required in schema). Anthropic `runChat` path now uses `coerceParams()` same as OpenAI path. Also fixed `coerceParams` effect guard (`n(e.id,0)===0` incorrectly dropped effects with id=0 on 0-indexed devices).
-- ~~**BUG**: Fix icon alignment in the sidebar~~ — **FIXED**: scrollbar-gutter:stable + tab bar margin adjustment.
