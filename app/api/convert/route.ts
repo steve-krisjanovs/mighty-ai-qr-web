@@ -41,7 +41,10 @@ export async function POST(request: NextRequest) {
   const targetConfig = DEVICES[targetDevice as keyof typeof DEVICES]
   if (!targetConfig) return NextResponse.json({ error: 'Unknown target device' }, { status: 400 })
 
-  const displayName = (typeof nameOverride === 'string' && nameOverride.trim()) ? nameOverride.trim() : decoded.presetName
+  const rawName = (typeof nameOverride === 'string' && nameOverride.trim()) ? nameOverride.trim() : decoded.presetName
+  const GENERIC_NAMES = ['my tone', 'custom tone', 'new preset', 'untitled']
+  const isGeneric = GENERIC_NAMES.includes(rawName.toLowerCase())
+  const displayName = isGeneric ? null : rawName
 
   const settingsText = decoded.settings.map(s =>
     `- ${s.slot}: ${s.selection}${s.enabled ? '' : ' (off)'}${
@@ -53,11 +56,11 @@ export async function POST(request: NextRequest) {
 
   const conversionMessage = `Convert this preset to my ${targetConfig.displayName}. Recreate it as faithfully as possible, adapting the effects to what's available on the ${targetConfig.displayName}.
 
-Source preset: "${displayName}" (from ${decoded.deviceName})
+Source preset: "${displayName ?? decoded.presetName}" (from ${decoded.deviceName})
 Settings:
 ${settingsText}
 
-Generate a QR code for the ${targetConfig.displayName} using the closest available settings. Use preset name "${displayName}". IMPORTANT: you MUST call the tool with device="${targetDevice}" — this is required.`
+Generate a QR code for the ${targetConfig.displayName} using the closest available settings.${displayName ? ` Use preset name "${displayName}".` : ' Generate a descriptive preset name based on the tone (artist, song, or style).'} IMPORTANT: you MUST call the tool with device="${targetDevice}" — this is required.`
 
   const userApiKey   = (request.headers.get('x-user-api-key') ?? '').trim()
   const userProvider = (request.headers.get('x-provider') ?? '').trim()
