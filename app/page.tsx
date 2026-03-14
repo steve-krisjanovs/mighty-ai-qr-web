@@ -1890,23 +1890,23 @@ function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onCl
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-function QrDeviceGroup({ deviceName, items, onQrSelect, onClose, onDeleteRequest, onRenameQr, onQrDelete }: {
+function QrDeviceGroup({ deviceName, items, collapsed, onToggle, onQrSelect, onClose, onDeleteRequest, onRenameQr, onQrDelete }: {
   deviceName: string
   items: HistoryItem[]
+  collapsed: boolean
+  onToggle: () => void
   onQrSelect: (item: HistoryItem) => void
   onClose: () => void
   onDeleteRequest: (label: string, onConfirm: () => void) => void
   onRenameQr: (id: string, name: string) => void
   onQrDelete: (id: string) => void
 }) {
-  const [collapsed, setCollapsed] = useState(false)
-
   const downloadZip = () => downloadQrZip(items, `${deviceName.replace(/[^a-z0-9_\-. ]/gi, '_')}-qr-codes.zip`)
 
   return (
     <div>
       <div className="flex w-full items-center px-3 pt-3 pb-1 sticky top-0 z-10 bg-surface gap-1">
-        <button onClick={() => setCollapsed(c => !c)} className="flex flex-1 items-center gap-1 min-w-0 text-left">
+        <button onClick={onToggle} className="flex flex-1 items-center gap-1 min-w-0 text-left">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 text-fg-4 transition-transform ${collapsed ? '-rotate-90' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-fg-4 truncate">{deviceName}</span>
         </button>
@@ -2003,8 +2003,39 @@ function Sidebar({
   onDeleteAllQr: () => void
 }) {
   const [tab, setTab] = useState<'chats' | 'qr'>('qr')
+  const [query, setQuery] = useState('')
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const scanInputRef = useRef<HTMLInputElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  const q = query.toLowerCase()
+  const filteredConvs = q ? conversations.filter(c => c.title.toLowerCase().includes(q)) : conversations
+  const filteredQr = q ? qrHistory.filter(i => i.presetName.toLowerCase().includes(q) || (i.deviceName || '').toLowerCase().includes(q)) : qrHistory
+
+  const toggleGroup = (name: string) => setCollapsedGroups(prev => {
+    const next = new Set(prev)
+    next.has(name) ? next.delete(name) : next.add(name)
+    return next
+  })
+
+  const buildGroups = (items: HistoryItem[]) => {
+    const groups = new Map<string, HistoryItem[]>()
+    for (const item of items) {
+      const key = item.deviceName || item.qr.deviceName || 'Unknown Device'
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key)!.push(item)
+    }
+    for (const g of groups.values()) g.sort((a, b) => b.timestamp - a.timestamp)
+    return [...groups.entries()].sort((a, b) => b[1][0].timestamp - a[1][0].timestamp)
+  }
+
+  const groups = buildGroups(filteredQr)
+  const allCollapsed = groups.length > 0 && groups.every(([name]) => collapsedGroups.has(name))
+  const toggleAll = () => {
+    if (allCollapsed) setCollapsedGroups(new Set())
+    else setCollapsedGroups(new Set(groups.map(([name]) => name)))
+  }
 
   return (
     <>
@@ -2053,6 +2084,18 @@ function Sidebar({
           {tab === 'qr' && qrHistory.length > 0 && (
             <>
               <button
+                onClick={toggleAll}
+                title={allCollapsed ? 'Expand all' : 'Collapse all'}
+                className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {allCollapsed
+                    ? <><polyline points="6 9 12 15 18 9"/><polyline points="6 15 12 21 18 15"/></>
+                    : <><polyline points="18 15 12 9 6 15"/><polyline points="18 9 12 3 6 9"/></>
+                  }
+                </svg>
+              </button>
+              <button
                 onClick={() => downloadQrZip(qrHistory, 'all-qr-codes.zip')}
                 title="Download all QR codes as ZIP"
                 className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
@@ -2066,11 +2109,29 @@ function Sidebar({
           )}
         </div>
 
+        <div className="px-3 pt-2 pb-1 shrink-0 min-w-[260px]">
+          <div className="relative">
+            <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-4 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input
+              ref={searchRef}
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder={tab === 'chats' ? 'Search chats…' : 'Search presets…'}
+              className="w-full rounded-lg bg-surface-2 py-1.5 pl-7 pr-7 text-xs text-fg placeholder:text-fg-4 outline-none focus:ring-1 focus:ring-primary/40"
+            />
+            {query && (
+              <button onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-4 hover:text-fg-2 transition-colors">
+                <CloseIcon />
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="flex-1 overflow-y-auto py-2 [scrollbar-gutter:stable]">
           {tab === 'chats' ? (
-            conversations.length === 0
-              ? <p className="px-4 py-6 text-center text-xs text-fg-4">No conversations yet</p>
-              : conversations.map(conv => (
+            filteredConvs.length === 0
+              ? <p className="px-4 py-6 text-center text-xs text-fg-4">{query ? 'No matches' : 'No conversations yet'}</p>
+              : filteredConvs.map(conv => (
                 <ConvItem
                   key={conv.id}
                   conv={conv}
@@ -2094,30 +2155,22 @@ function Sidebar({
                   <UploadIcon /> Import
                 </button>
               </div>
-              {qrHistory.length === 0
-                ? <p className="px-4 py-4 text-center text-xs text-fg-4">No QR codes yet</p>
-                : (() => {
-                    const groups = new Map<string, HistoryItem[]>()
-                    for (const item of qrHistory) {
-                      const key = item.deviceName || item.qr.deviceName || 'Unknown Device'
-                      if (!groups.has(key)) groups.set(key, [])
-                      groups.get(key)!.push(item)
-                    }
-                    for (const g of groups.values()) g.sort((a, b) => b.timestamp - a.timestamp)
-                    const sorted = [...groups.entries()].sort((a, b) => b[1][0].timestamp - a[1][0].timestamp)
-                    return sorted.map(([deviceName, items]) => (
-                      <QrDeviceGroup
-                        key={deviceName}
-                        deviceName={deviceName}
-                        items={items}
-                        onQrSelect={onQrSelect}
-                        onClose={onClose}
-                        onDeleteRequest={onDeleteRequest}
-                        onRenameQr={onRenameQr}
-                        onQrDelete={onQrDelete}
-                      />
-                    ))
-                  })()
+              {filteredQr.length === 0
+                ? <p className="px-4 py-4 text-center text-xs text-fg-4">{query ? 'No matches' : 'No QR codes yet'}</p>
+                : groups.map(([deviceName, items]) => (
+                    <QrDeviceGroup
+                      key={deviceName}
+                      deviceName={deviceName}
+                      items={items}
+                      collapsed={collapsedGroups.has(deviceName)}
+                      onToggle={() => toggleGroup(deviceName)}
+                      onQrSelect={onQrSelect}
+                      onClose={onClose}
+                      onDeleteRequest={onDeleteRequest}
+                      onRenameQr={onRenameQr}
+                      onQrDelete={onQrDelete}
+                    />
+                  ))
               }
             </>
           )}
