@@ -236,7 +236,7 @@ Bass tone guide — BASS IS NOT GUITAR. When the user asks for a bass tone, appl
 - Noise gate: NEVER enable noise_gate for bass tones — bass needs natural sustain. Always set noise_gate.enabled=false, sensitivity=0, decay=0 regardless of gain level.
 - EQ: bass=62-72 for fullness, mid=45-55 for definition, treble=30-45 for warmth (not brightness).
 - Reverb: use very sparingly for bass. Room (id=1) only, p1 (decay)=15-25, p3 (mix)=12-20 maximum. No plate/hall/shimmer on bass.
-- Effects: no modulation (chorus, flanger, phaser) on bass unless explicitly requested. No delay unless requested.
+- Effects: no modulation (chorus, flanger, phaser) on bass unless explicitly requested. No delay unless requested. For clean or warm bass tones (gain under 42), do NOT add any drive, overdrive, or distortion EFX — leave the EFX slot empty.
 - Driven/gritty bass: gain 42-55 + Blues Drive (id=6, p1=30-45) or T Screamer (id=5, p1=25-40) for gentle grit
 - Heavy fuzz bass (Beastie Boys, Muse, Jack White): gain 55-70 + Muff Fuzz (id=11) or Eat Dist (id=8), p1=70-90
 - Punk/aggressive bass: gain 55-70 + Dist One (id=4) or Crunch (id=10)
