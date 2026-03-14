@@ -161,6 +161,19 @@ export function saveDefaultDevice(device: NuxDevice) {
   localStorage.setItem(DEVICE_KEY, device)
 }
 
+// ─── Welcome splash (shown once per version) ──────────────────────────────────
+
+const WELCOME_KEY = 'maq_welcome_seen'
+
+export function getWelcomeSeen(version: string): boolean {
+  if (typeof window === 'undefined') return true
+  return localStorage.getItem(WELCOME_KEY) === version
+}
+
+export function saveWelcomeSeen(version: string) {
+  localStorage.setItem(WELCOME_KEY, version)
+}
+
 // ─── Hint dismissed ───────────────────────────────────────────────────────────
 
 const HINT_KEY = 'maq_hint_dismissed'
