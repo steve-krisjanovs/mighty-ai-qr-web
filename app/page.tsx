@@ -2397,12 +2397,6 @@ function SuggestionScreen({ onSend }: { onSend: (text: string) => void }) {
         What tone are you after? Describe an artist, song, genre, or mood and I&apos;ll dial it in.
       </div>
       <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => onSend(BASS_CHIP)}
-          className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs text-primary hover:bg-primary/20 transition-colors"
-        >
-          {BASS_CHIP}
-        </button>
         {current.map(s => (
           <button key={s} onClick={() => onSend(s)} className="rounded-full border border-white/10 bg-surface-2 px-3 py-1.5 text-xs text-fg-3 hover:border-white/20 hover:text-fg transition-colors">{s}</button>
         ))}
@@ -2411,7 +2405,15 @@ function SuggestionScreen({ onSend }: { onSend: (text: string) => void }) {
         <button onClick={next} className="text-[11px] text-fg-4 hover:text-fg-3 transition-colors">
           More suggestions →
         </button>
-        <p className="text-[11px] text-fg-4 italic">Guitar is the default — playing bass? Just mention it.</p>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <p className="text-[11px] text-fg-4">Playing bass? Get started here:</p>
+        <button
+          onClick={() => onSend(BASS_CHIP)}
+          className="self-start rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+        >
+          {BASS_CHIP}
+        </button>
       </div>
     </div>
   )
