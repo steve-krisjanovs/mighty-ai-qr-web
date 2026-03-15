@@ -22,3 +22,13 @@ public/sw.js
 public/sw.js.map
 public/workbox-*.js
 public/workbox-*.js.map
+
+# Build artifacts
+tsconfig.tsbuildinfo
+
+# Data
+data/
+
+# IDE / Dart tooling (from research)
+.idea/
+.dart_tool/

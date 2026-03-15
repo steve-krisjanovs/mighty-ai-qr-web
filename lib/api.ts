@@ -65,7 +65,7 @@ export async function fetchModels(
   }
 }
 
-export async function sendChat(messages: Message[], signal?: AbortSignal): Promise<ChatResponse> {
+export async function sendChat(messages: Message[], signal?: AbortSignal, device?: string): Promise<ChatResponse> {
   let token = getToken()
   if (!token) {
     await authenticate()
@@ -74,7 +74,7 @@ export async function sendChat(messages: Message[], signal?: AbortSignal): Promi
 
   const active = getActiveConfig()
   const extraHeaders: Record<string, string> = {}
-  extraHeaders['x-default-device'] = getDefaultDevice()
+  extraHeaders['x-default-device'] = device ?? getDefaultDevice()
   if (active) {
     if (active.apiKey) extraHeaders['x-user-api-key'] = active.apiKey
     extraHeaders['x-provider'] = active.provider
@@ -96,7 +96,7 @@ export async function sendChat(messages: Message[], signal?: AbortSignal): Promi
   if (res.status === 401) {
     localStorage.removeItem('auth_token')
     await authenticate()
-    return sendChat(messages)
+    return sendChat(messages, undefined, device)
   }
 
   if (!res.ok) {
@@ -116,9 +116,26 @@ export async function sendChat(messages: Message[], signal?: AbortSignal): Promi
   }
 }
 
+export async function scanQrFromFile(file: File): Promise<{ qrString: string; imageBase64: string } | null> {
+  let token = getToken()
+  if (!token) { await authenticate(); token = getToken()! }
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await fetch(`${BASE}/scan-qr`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  })
+  if (!res.ok) return null
+  const data = await res.json()
+  if (!data.found) return null
+  return { qrString: data.qrString, imageBase64: data.imageBase64 }
+}
+
 export interface DecodeResult {
   presetName: string
   deviceName: string
+  deviceId?: string
   settings: import('./types').QrResult['settings']
 }
 
@@ -132,4 +149,49 @@ export async function decodeQr(qrString: string): Promise<DecodeResult | null> {
   })
   if (!res.ok) return null
   return res.json()
+}
+
+
+export async function identifyQr(importNote: string): Promise<{ artist: string | null; song: string | null }> {
+  let token = getToken()
+  if (!token) { await authenticate(); token = getToken()! }
+  try {
+    const res = await fetch(`${BASE}/identify-qr`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ importNote }),
+    })
+    if (!res.ok) return { artist: null, song: null }
+    return res.json()
+  } catch {
+    return { artist: null, song: null }
+  }
+}
+
+export async function convertPreset(qrString: string, targetDevice: string, presetName?: string): Promise<import('./types').QrResult | null> {
+  let token = getToken()
+  if (!token) { await authenticate(); token = getToken()! }
+
+  const active = getActiveConfig()
+  const extraHeaders: Record<string, string> = {}
+  extraHeaders['x-default-device'] = targetDevice
+  if (active) {
+    if (active.apiKey) extraHeaders['x-user-api-key'] = active.apiKey
+    extraHeaders['x-provider'] = active.provider
+    if (active.baseUrl) extraHeaders['x-base-url'] = active.baseUrl
+    if (active.model)   extraHeaders['x-model'] = active.model
+  }
+
+  const res = await fetch(`${BASE}/convert`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...extraHeaders },
+    body: JSON.stringify({ qrString, targetDevice, presetName }),
+  })
+  if (!res.ok) {
+    let message = `Conversion failed (${res.status})`
+    try { const b = await res.json(); if (b?.error) message = b.error } catch { /* ignore */ }
+    throw new Error(message)
+  }
+  const data = await res.json()
+  return data.qr ?? null
 }

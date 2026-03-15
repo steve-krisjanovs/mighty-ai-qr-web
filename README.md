@@ -1,10 +1,10 @@
 # Mighty AI QR — Web Client
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.4.2-informational)](package.json)
+[![Version](https://img.shields.io/badge/version-1.5.0-informational)](package.json)
 [![Live](https://img.shields.io/badge/Live-mighty--ai--qr--web.onrender.com-blue)](https://mighty-ai-qr-web.onrender.com)
 
-Describe a guitar tone in natural language and get a scannable NUX MightyAmp QR code back. Chat with an AI, tap a suggestion, or refine an existing tone — all in the browser.
+Describe a guitar or bass tone in natural language and get a scannable NUX MightyAmp QR code back. Chat with an AI, tap a suggestion, import an existing QR to decode and refine it, or convert a preset between devices — all in the browser. All 10 NUX MightyAmp models supported.
 
 Installable as a PWA on mobile and desktop.
 
@@ -34,9 +34,12 @@ Installable as a PWA on mobile and desktop.
 
 - Chat UI with markdown rendering, voice input (Web Speech API), TTS
 - Inline QR code cards with tone settings, guitar recommendations, download, share
-- QR import — scan an existing QR image to decode and save its settings
-- Conversation history with rename and delete
-- QR history sidebar with rename, delete, and import
+- **QR import** — scan an existing QR image to decode and save its settings
+- **Convert presets between devices** — one tap to adapt any saved tone to your current device
+- **Bass tones** — dedicated bass presets with the right amps, cabs, compressor, and effects; bassist on-ramp on suggestion screen
+- Conversation history with rename (click pencil icon) and delete
+- QR history sidebar with device grouping, collapse/expand all, rename, delete, and import
+- **Unified sidebar search** — filter chats and QR codes as you type
 - Suggestion chips on home screen (100+ randomised prompts)
 - **Default NUX Device** setting — select your device once in Settings; the AI uses it as the default for all generated QR codes
 - Device name baked into the QR code image (preset name + device + optional guitar setup)
@@ -49,6 +52,28 @@ Installable as a PWA on mobile and desktop.
 - **PWA update banner** — detects new version in the background and prompts to refresh with one tap
 - **Check for updates** — Settings button (PWA only) that manually triggers a service worker update check; if a new version is found the update banner appears and the app reloads automatically
 - **Version stamped QR images** — every generated QR image includes the app version in the header
+
+## Supported NUX Devices
+
+### Pro format (113-byte payload) — full feature set
+| Device | ID |
+|---|---|
+| Mighty Plug Pro | `plugpro` |
+| Mighty Space | `space` |
+| Mighty Lite MkII | `litemk2` |
+| Mighty 8BT MkII | `8btmk2` |
+
+29 amp models, 25 cabinets, compressor, EFX, modulation, delay, reverb, 5-band EQ.
+
+### Standard format (40-byte payload)
+| Device | ID | Notes |
+|---|---|---|
+| Mighty Air | `mightyair` | 13 amps, 19 cabs, EFX slot (same format as Plug v1) |
+| Mighty Plug (v1) | `plugair_v1` | 13 amps, 19 cabs, EFX slot |
+| Mighty Plug (v2) | `plugair_v2` | Updated amp/mod/reverb set, 19 cabs |
+| Mighty Lite BT | `lite` | 1 amp, single ambience slot (delay OR reverb) |
+| Mighty 8BT | `8bt` | 1 amp, separate delay + reverb |
+| Mighty 20/40BT | `2040bt` | 1 amp with full EQ, wah pedal |
 
 ## Requirements
 

@@ -1,6 +1,6 @@
 {
   "name": "mighty-ai-qr-web",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "private": true,
   "scripts": {
     "dev": "NODE_OPTIONS='--experimental-sqlite' next dev --turbopack",
@@ -12,6 +12,7 @@
     "@anthropic-ai/sdk": "^0.78.0",
     "jsonwebtoken": "^9.0.3",
     "jsqr": "^1.4.0",
+    "jszip": "^3.10.1",
     "next": "^15.1.0",
     "next-pwa": "^5.6.0",
     "openai": "^6.27.0",
@@ -20,6 +21,7 @@
     "react-dom": "^19.0.0",
     "react-markdown": "^9.0.1",
     "remark-gfm": "^4.0.0",
+    "sharp": "^0.34.5",
     "uuid": "^11.0.0"
   },
   "devDependencies": {
