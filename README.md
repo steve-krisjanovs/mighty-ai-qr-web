@@ -1,10 +1,10 @@
 # Mighty AI QR — Web Client
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.4.2-informational)](package.json)
+[![Version](https://img.shields.io/badge/version-1.5.0-informational)](package.json)
 [![Live](https://img.shields.io/badge/Live-mighty--ai--qr--web.onrender.com-blue)](https://mighty-ai-qr-web.onrender.com)
 
-Describe a guitar tone in natural language and get a scannable NUX MightyAmp QR code back. Chat with an AI, tap a suggestion, or refine an existing tone — all in the browser.
+Describe a guitar or bass tone in natural language and get a scannable NUX MightyAmp QR code back. Chat with an AI, tap a suggestion, import an existing QR to decode and refine it, or convert a preset between devices — all in the browser. All 10 NUX MightyAmp models supported.
 
 Installable as a PWA on mobile and desktop.
 
@@ -34,9 +34,12 @@ Installable as a PWA on mobile and desktop.
 
 - Chat UI with markdown rendering, voice input (Web Speech API), TTS
 - Inline QR code cards with tone settings, guitar recommendations, download, share
-- QR import — scan an existing QR image to decode and save its settings
-- Conversation history with rename and delete
-- QR history sidebar with rename, delete, and import
+- **QR import** — scan an existing QR image to decode and save its settings
+- **Convert presets between devices** — one tap to adapt any saved tone to your current device
+- **Bass tones** — dedicated bass presets with the right amps, cabs, compressor, and effects; bassist on-ramp on suggestion screen
+- Conversation history with rename (click pencil icon) and delete
+- QR history sidebar with device grouping, collapse/expand all, rename, delete, and import
+- **Unified sidebar search** — filter chats and QR codes as you type
 - Suggestion chips on home screen (100+ randomised prompts)
 - **Default NUX Device** setting — select your device once in Settings; the AI uses it as the default for all generated QR codes
 - Device name baked into the QR code image (preset name + device + optional guitar setup)

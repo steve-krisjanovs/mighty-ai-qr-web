@@ -55,40 +55,26 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 ## Resume — Next Session
 
 ### Branch state
-- Active work branch: `feature/qr-import-workflow` (branched off `feature/standard-devices`, contains all of it)
-- Merge order: `feature/qr-import-workflow` → `main` directly (no intermediate step needed)
-- Last session: 2026-03-14
+- `feature/qr-import-workflow` fully tested and merged into `main` (2026-03-14)
+- Active branch: `main`
+- Render auto-deploys from `main` — v1.5.0 live at `https://mighty-ai-qr-web.onrender.com`
 
-### What changed in the last session (2026-03-14)
-- **Device anchoring fix (4th attempt)** — rewrite stale device display names in assistant history before sending to AI; combined with last-message injection hint
-- **Device-changed hint** — bottom bar shows "Device changed — ask for a new tone" pulse when device changes mid-chat; clears on send or new chat
-- **Convert button fix** — falls back to deviceName comparison when deviceId missing on older history items
-- **Preset naming** — system prompt now requires descriptive name from song/artist; no more "My Tone" fallback
-- **Tavily narration removed** — AI no longer says "no results came back"; silently falls back to training knowledge
-- **Bass tone overhaul** — correct cabs (TR212Pro), lower gain ranges, compressor always on, no noise gate; standard device bass amps (AGL/MLD) and cabs (BS410/AGLDB810) documented
-- **Bassist on-ramp** — pinned bass chip + "Guitar is the default — playing bass? Just mention it." hint on suggestion screen
-- **Sidebar search** — unified search filters chats by title, QR codes by preset/device name
-- **Collapse/expand all** — double chevron button in QR tab collapses/expands all device groups
-- **About modal** — "What's new in v1.5" collapsible section with user-facing feature list
-- **QR popup description** — strips leading quoted preset name (was redundant with title)
-
-### Step 1 — Build and test
-```bash
-docker compose --env-file .env.local up -d --build
-```
-
-### Test checklist
-- **Convert button** — open a history QR for a different device → Convert button should appear → tap it → correct device generated
-- **Auto-save + preset name** — ask AI for a tone with a song reference → QR saves to history with descriptive name (not "My Tone")
-- **Device anchoring** — change default device mid-chat → ask for a new tone → verify it uses the new device; device-changed hint should appear then clear on send
-- **Bass tones** — ask for a clean bass tone → verify BassMate amp, TR212Pro cab, compressor on, no noise gate, gain under 30
-- **Bassist chip** — suggestion screen shows pinned bass chip in primary colour; tapping it sends the message
-- **Sidebar search** — type in search box → filters chats/QR codes live; clear button works
-- **Collapse/expand all** — double chevron in QR tab collapses all groups; tap again to expand
-- **About modal** — open About in Settings → "What's new in v1.5" section visible and collapsible
-
-### Step 2 — PR to main
-Once all tests pass, open a PR from `feature/qr-import-workflow` into `main`.
+### What shipped in v1.5.0 (2026-03-14)
+- All 10 NUX MightyAmp devices supported (Pro + Standard format)
+- QR import — scan or upload a photo to decode any NUX QR
+- Convert presets between devices with one tap
+- Auto-save all AI-generated QR codes to history
+- Bass tone overhaul — BassMate amp, TR212Pro cab, correct gain ranges, compressor always on, no noise gate, no drive EFX on clean/warm tones
+- Bassist on-ramp — chip on its own row below suggestions with "Playing bass?" label; AI asks for artist/song before generating; system prompt rule prevents premature QR on bassist intro
+- Sidebar search — unified filter for chats and QR codes; auto-clears and switches to QR tab when new tone is saved
+- Collapse/expand all QR device groups (double chevron)
+- Chat rename — pencil icon on hover in sidebar (long-press still works on mobile)
+- Device-changed hint in bottom bar
+- Cancel-then-send 400 error fixed — rolls back unanswered user message on abort
+- Welcome splash modal (v1.5, shown once, dismissed permanently)
+- "What's new in v1.5" section in About modal
+- Convert button errors surfaced in modal instead of swallowed silently
+- Sidebar search auto-clears and switches to QR tab when a new tone is saved
 
 ---
 
@@ -96,7 +82,7 @@ Once all tests pass, open a PR from `feature/qr-import-workflow` into `main`.
 
 ### Backlog
 
-- **BUG (needs testing)**: Device anchoring — when user changes default device mid-chat, AI may still generate for the old device. Four fix attempts: (1) stronger system prompt wording, (2) display name + "ignore history" instruction, (3) `[IMPORTANT: Use device="x"]` injected into last user message, (4) rewrite all stale device display names in assistant history before sending + last-message injection. Attempt 4 is committed and needs real-world testing. Device-changed hint added as UX fallback. If still failing, consider: strip device references from assistant messages more aggressively, or warn user to start a new chat when device changes.
+- **BUG (monitor)**: Device anchoring — attempt 4 (history rewrite + last-message injection) passed real-world testing in v1.5. Monitor for regressions. If it resurfaces: strip device references from assistant messages more aggressively, or warn user to start a new chat when device changes.
 
 - **TODO**: Make the default free tier work with any configured API provider, not just Anthropic.
 - **TODO**: Unify `runChat` + `runChatOpenAI` — add a thin adapter that converts Anthropic SDK responses to OpenAI-compatible shape, so all providers share one code path. Currently split because Anthropic returns tool input as parsed JSON content blocks while OpenAI returns raw JSON strings.
@@ -104,3 +90,4 @@ Once all tests pass, open a PR from `feature/qr-import-workflow` into `main`.
 ### Roadmap (v1.6+)
 
 - **My Gear profile** — let users add/edit/remove their instruments (name, type: guitar/bass, pickup config). AI reads the active instrument on every request so bassists never need to say "bass" again. Needs DB schema changes, settings UI, and gear context injected into the chat route system prompt.
+- **Help system** — ? icon in the header (alongside new chat/settings) that opens a scrollable help modal with sections covering Import, Convert, Bass tones, Sidebar search, and BYOK settings.
