@@ -2318,8 +2318,6 @@ function ConvItem({ conv, active, onSelect, onDeleteRequest, onRename }: {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(conv.title)
   const inputRef = useRef<HTMLInputElement>(null)
-  const longPress = useLongPress(() => { setName(conv.title); setEditing(true); requestAnimationFrame(() => inputRef.current?.focus()) })
-
   const commit = () => {
     const trimmed = name.trim()
     if (trimmed && trimmed !== conv.title) onRename(trimmed)
@@ -2346,7 +2344,6 @@ function ConvItem({ conv, active, onSelect, onDeleteRequest, onRename }: {
     <div
       className={`group relative flex items-center px-3 py-2.5 cursor-pointer transition-colors ${active ? 'bg-surface-2' : 'hover:bg-surface-2'}`}
       onClick={onSelect}
-      {...longPress}
     >
       {active && <div className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r bg-primary" />}
       <div className="min-w-0 flex-1">
@@ -2355,13 +2352,13 @@ function ConvItem({ conv, active, onSelect, onDeleteRequest, onRename }: {
       </div>
       <button
         onClick={e => { e.stopPropagation(); setName(conv.title); setEditing(true); requestAnimationFrame(() => inputRef.current?.focus()) }}
-        className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+        className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
       >
         <PencilIcon />
       </button>
       <button
         onClick={e => { e.stopPropagation(); onDeleteRequest() }}
-        className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+        className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
       >
         <TrashIcon />
       </button>
