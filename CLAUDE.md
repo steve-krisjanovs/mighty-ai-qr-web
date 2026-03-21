@@ -116,7 +116,7 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 - **Help system** — ? icon in the header (alongside new chat/settings) that opens a scrollable help modal with sections covering Import, Convert, Bass tones, Sidebar search, and BYOK settings.
 
-- **Shareable preset URLs** — public `/preset/{id}` route that renders the QR card without requiring an account. Users paste a link in forums/social instead of uploading an image. No auth required, works pre-v2.0. Needs a public=true flag on saved QR records.
+- **Shareable preset URLs** — public `/preset/{id}` route that renders the QR card without requiring an account. Users paste a link in forums/social instead of uploading an image. No auth required, works pre-v2.0. Needs a public=true flag on saved QR records. Dependency: only works for QRs saved to the server-side DB — AI-generated QRs are auto-saved so this covers the main case. QRs that exist only in localStorage (imported/older) would not be shareable without a manual "save to server" step. Render persistent volume already configured; self-hosters must mount a named Docker volume or URLs break on container restart.
 
 - **Native share sheet** — Web Share API on mobile so users can share a QR directly to WhatsApp, Instagram, etc. instead of downloading first. Falls back gracefully to the existing download button on desktop.
 
