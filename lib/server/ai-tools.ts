@@ -274,11 +274,13 @@ Compressor usage (enable for these styles):
 - Sustain on clean leads: id=1, p1=40, p2=70
 - Skip compressor for high-gain tones (noise gate handles dynamics there)
 
-EQ usage (add when amp EQ alone isn't enough):
+EQ usage (Pro devices only — plugpro, space, litemk2, 8btmk2):
+If you mention EQ in your response, you MUST include the eq field in the tool call. Never describe EQ changes in text without encoding them.
 - Metal/djent scooped: cut mids (bands 3-4 at -5 to -8), slight bass/treble boost — bands array e.g. [2, 0, -6, -6, 3]
 - Blues/rock lead mid-boost: bands 3-4 at +3 to +5 — e.g. [0, 0, 4, 4, 0]
 - Acoustic warmth: gentle treble roll-off — e.g. [0, 0, 0, -2, -4]
 - Only enable EQ when it meaningfully changes the character; leave disabled for tones where the amp EQ suffices
+- eq.id should always be 1
 
 Modulation guide (add when it defines the style):
 - CE-1 / CE-2 (id=1,2): 80s clean chorus, new wave, soft rock — p1=rate 30-50, p2=depth 40-60

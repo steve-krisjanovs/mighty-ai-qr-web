@@ -354,6 +354,10 @@ function buildSettings(p: ProPresetParams): SettingRow[] {
     slot: 'Compressor', selection: COMP_NAMES[p.compressor.id] ?? `Comp #${p.compressor.id}`, enabled: p.compressor.enabled,
     params: { P1: p.compressor.p1, P2: p.compressor.p2 },
   })
+  if (p.eq) rows.push({
+    slot: 'EQ', selection: '5-Band EQ', enabled: p.eq.enabled,
+    params: Object.fromEntries(p.eq.bands.map((db, i) => [`B${i + 1}`, db])),
+  })
   if (p.modulation) rows.push({
     slot: 'Modulation', selection: MOD_NAMES[p.modulation.id] ?? `Mod #${p.modulation.id}`, enabled: p.modulation.enabled,
     params: { Rate: p.modulation.p1, Depth: p.modulation.p2 },
@@ -475,6 +479,7 @@ export async function generateQR(p: ProPresetParams): Promise<QRResult> {
 }
 
 function decodeDbPro(b: number): number { return Math.round((b / 100) * 24 - 12) }
+function decodeDbEQ(b: number): number  { return Math.round((b / 100) * 30 - 15) }
 function decodeHead(b: number): { id: number; enabled: boolean } {
   return { id: b & 0x3F, enabled: (b & 0x40) === 0 }
 }
@@ -606,6 +611,10 @@ export function decodeQRString(qrString: string): { presetName: string; deviceNa
 
     if (efx.id > 0)   settings.push({ slot: 'EFX', enabled: efx.enabled, selection: EFX_NAMES[efx.id] ?? `EFX #${efx.id}`, params: { P1: d[20], P2: d[21], P3: d[22] } })
     if (comp.id > 0)  settings.push({ slot: 'Compressor', enabled: comp.enabled, selection: COMP_NAMES[comp.id] ?? `Comp #${comp.id}`, params: { P1: d[15], P2: d[16] } })
+    const eq = decodeHead(d[4])
+    if (eq.enabled || d.slice(36, 41).some(b => b !== 0))
+      settings.push({ slot: 'EQ', selection: '5-Band EQ', enabled: eq.enabled,
+        params: { B1: decodeDbEQ(d[36]), B2: decodeDbEQ(d[37]), B3: decodeDbEQ(d[38]), B4: decodeDbEQ(d[39]), B5: decodeDbEQ(d[40]) } })
     if (mod.id > 0)   settings.push({ slot: 'Modulation', enabled: mod.enabled, selection: MOD_NAMES[mod.id] ?? `Mod #${mod.id}`, params: { Rate: d[54], Depth: d[55], P3: d[56] } })
     if (delay.id > 0) settings.push({ slot: 'Delay', enabled: delay.enabled, selection: DELAY_NAMES[delay.id] ?? `Delay #${delay.id}`, params: { Time: d[61], Feedback: d[62], Mix: d[63] } })
     if (reverb.id > 0) settings.push({ slot: 'Reverb', enabled: reverb.enabled, selection: REVERB_NAMES[reverb.id] ?? `Reverb #${reverb.id}`, params: { Decay: d[70], Level: d[71] } })
