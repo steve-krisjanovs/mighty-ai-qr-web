@@ -56,9 +56,16 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 ## Resume — Next Session
 
 ### Branch state
-- `feature/qr-import-workflow` fully tested and merged into `main` (2026-03-14)
 - Active branch: `main`
-- Render auto-deploys from `main` — v1.5.0 live at `https://mighty-ai-qr-web.onrender.com`
+- Render auto-deploys from `main` — v1.5.2 live at `https://mighty-ai-qr-web.onrender.com`
+
+### What shipped in v1.5.2 (2026-03-21)
+- Mighty Air QR fix — was using wrong device QR ID (6); corrected to ID 11 matching real mightier_amp reference codes
+- Mighty Air split into `mightyair_v1` and `mightyair_v2` to match firmware variants (v1=version byte 0, v2=version byte 2)
+- EQ fix — 5-band EQ was encoded in Pro device QR bytes but never shown in the settings card; fixed in both generation and import paths
+
+### What shipped in v1.5.1
+- Chat sidebar always shows pencil and trash buttons (removed long-press rename)
 
 ### What shipped in v1.5.0 (2026-03-14)
 - All 10 NUX MightyAmp devices supported (Pro + Standard format)
