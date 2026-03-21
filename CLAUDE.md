@@ -112,6 +112,6 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 - **Pro device preset name in QR payload** — `buildProPayload` leaves bytes 98–113 (16-char ASCII name field) as zeros. Write the preset name there so imported Pro QRs show their name in mightier_amp and the NUX app instead of being unnamed.
 
-- **Hide custom providers** — add `HIDE_CUSTOM_PROVIDERS` env var (boolean). When `true`, the BYOK provider section is hidden entirely in Settings — keeps the hosted UI clean and focused for non-technical guitarists. Set `true` on Render, leave unset or `false` for self-hosted. Users who want custom providers can clone and self-host.
+- **Hide custom providers** — add `HIDE_CUSTOM_PROVIDERS` env var (boolean). When `true`, the BYOK provider section is hidden entirely in Settings — keeps the hosted UI clean and focused for non-technical guitarists who don't know what an API key is. Set `true` on Render, leave unset or `false` for self-hosted. Users who want full provider control can clone and self-host. Rationale: a wall of API dropdowns and model selectors erodes confidence before a guitarist has even generated their first tone.
 
 - **Help system** — ? icon in the header (alongside new chat/settings) that opens a scrollable help modal with sections covering Import, Convert, Bass tones, Sidebar search, and BYOK settings.
