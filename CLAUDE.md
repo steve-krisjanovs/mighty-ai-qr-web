@@ -116,6 +116,16 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 - **Help system** — ? icon in the header (alongside new chat/settings) that opens a scrollable help modal with sections covering Import, Convert, Bass tones, Sidebar search, and BYOK settings.
 
+- **Shareable preset URLs** — public `/preset/{id}` route that renders the QR card without requiring an account. Users paste a link in forums/social instead of uploading an image. No auth required, works pre-v2.0. Needs a public=true flag on saved QR records.
+
+- **Native share sheet** — Web Share API on mobile so users can share a QR directly to WhatsApp, Instagram, etc. instead of downloading first. Falls back gracefully to the existing download button on desktop.
+
+- **Tone explanation mode** — optional toggle (per-chat or global setting) where the AI explains what each setting does and why, not just what it chose. Helps beginners understand their amp and learn from generated presets.
+
+- **Preset tags** — let users tag saved QRs (Blues, Metal, Clean, etc.) for better sidebar organisation. Small DB change — tags column on QR history table. AI auto-suggests a tag when saving a generated tone. Sidebar gets a tag filter.
+
+- **Thumbs up/down on generated tones** — basic feedback on QR cards stored in the DB. Reveals over time which tones/devices/styles get good ratings, feeds system prompt improvements. Pairs with DataMatrix provenance — you know a rated preset came from the AI.
+
 ### Roadmap (v2.0)
 
 - **User accounts + cross-device sync** — replace the current device-scoped JWT with real user identity so chat history and QR codes follow the user across devices and browsers. Full DB migration required (conversations and QR history currently keyed by device token → migrate to user ID).
