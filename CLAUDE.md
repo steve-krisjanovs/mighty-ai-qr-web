@@ -115,3 +115,13 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 - **Hide custom providers** — add `HIDE_CUSTOM_PROVIDERS` env var (boolean). When `true`, the BYOK provider section is hidden entirely in Settings — keeps the hosted UI clean and focused for non-technical guitarists who don't know what an API key is. Set `true` on Render, leave unset or `false` for self-hosted. Users who want full provider control can clone and self-host. Rationale: a wall of API dropdowns and model selectors erodes confidence before a guitarist has even generated their first tone.
 
 - **Help system** — ? icon in the header (alongside new chat/settings) that opens a scrollable help modal with sections covering Import, Convert, Bass tones, Sidebar search, and BYOK settings.
+
+### Roadmap (v2.0)
+
+- **User accounts + cross-device sync** — replace the current device-scoped JWT with real user identity so chat history and QR codes follow the user across devices and browsers. Full DB migration required (conversations and QR history currently keyed by device token → migrate to user ID).
+  - **Auth providers (hosted site):** Google, Facebook, Apple, Microsoft OAuth + email/password
+  - **Auth providers (self-hosted):** email/password by default; OAuth optional if the operator configures provider keys (requires registering OAuth apps and setting callback URLs — too much friction to mandate)
+  - Passwords bcrypt-hashed server-side. SMTP required for email verification and password reset on email/password path.
+  - `OAUTH_GOOGLE_CLIENT_ID`, `OAUTH_FACEBOOK_APP_ID`, `OAUTH_APPLE_CLIENT_ID`, `OAUTH_MICROSOFT_CLIENT_ID` env vars control which providers are enabled — unset = disabled.
+  - Session management: login, logout, token refresh, password reset flow.
+  - Privacy/GDPR surface increases once PII (email) is stored — needs a privacy policy.
