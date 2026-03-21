@@ -97,5 +97,17 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 ### Roadmap (v1.6+)
 
-- **My Gear profile** — let users add/edit/remove their instruments (name, type: guitar/bass, pickup config). AI reads the active instrument on every request so bassists never need to say "bass" again. Needs DB schema changes, settings UI, and gear context injected into the chat route system prompt.
+- **My Gear profile** — let users add/edit/remove their instruments (name, type: guitar/bass, make, model, pickup layout, active selection, per-pickup vol+tone). AI reads the active instrument on every request so bassists never need to say "bass" again, and tone suggestions are grounded in the actual guitar. Needs DB schema changes, settings UI, and gear context injected into the chat route system prompt.
+
+- **DataMatrix secondary barcode** — embed a compact DataMatrix in the bottom-right corner of every generated QR card image. Encodes provenance (`src=mai`), app version, and the active My Gear profile (make, model, instrument type, pickup layout, active selection, per-pickup vol+tone). Pipe-delimited format for compactness (e.g. `mai|1.6.0|gbs|lp59|g|hh|bn|hb:8:6|hb:7:5`). Survives camera/photo import paths unlike PNG metadata. On import, the scan-qr route detects and decodes both QR and DataMatrix (requires `bwip-js` already installed as devDep for the sample script + a server-side DataMatrix decoder, e.g. `zxing-wasm`). Enables AI training signal on AI-generated presets as they circulate in the wild. My Gear must ship first — nothing to embed without it. See `scripts/generate-sample-dual-qr.ts` for proof-of-concept image generator.
+  - Payload spec: `mai|{version}|{make}|{model}|{inst-type}|{pu-layout}|{pu-sel}|{bridge:vol:tone}|{neck:vol:tone}`
+  - Instrument type codes: `g`=guitar, `b`=bass
+  - Make codes: `gbs`=Gibson, `fdr`=Fender, `grt`=Gretsch, `dnl`=Danelectro, `ric`=Rickenbacker, `prs`=PRS, `ibz`=Ibanez, `esp`=ESP, `msc`=Music Man, `mrt`=Martin, `tyl`=Taylor
+  - Model codes: `lp59`, `lp`, `sg`, `335`, `330`, `strat`, `tele`, `jag`, `jm`, `duo`, `pb`, `jb`, `6120`, `wf` (White Falcon), `djet` (Duo Jet), `59` (Danelectro 59), etc.
+  - Pickup type codes: `sc`, `hb`, `p90`, `ft` (Filter'Tron), `dyn` (DynaSonic), `mh` (mini HB), `ls` (lipstick), `jm`, `ahb` (active HB), `pb` (P-Bass), `jb` (Jazz), `mm` (Music Man), `sb` (soapbar)
+  - Pickup layout codes: `ss`, `hh`, `hs`, `sh`, `sss`, `hsh`, `ssh`, `hss`, `pj`, `jj`, `p`
+  - Active selection codes: `b`=bridge, `n`=neck, `bn`=both, `m`=mid, `bm`=bridge+mid, `mn`=mid+neck, `bmn`=all
+
+- **Pro device preset name in QR payload** — `buildProPayload` leaves bytes 98–113 (16-char ASCII name field) as zeros. Write the preset name there so imported Pro QRs show their name in mightier_amp and the NUX app instead of being unnamed.
+
 - **Help system** — ? icon in the header (alongside new chat/settings) that opens a scrollable help modal with sections covering Import, Convert, Bass tones, Sidebar search, and BYOK settings.
