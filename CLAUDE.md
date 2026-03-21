@@ -16,7 +16,8 @@ Implemented in `lib/server/qr-encoder.ts`. Each has its own encoder:
 |---|---|---|---|---|
 | `plugair_v1` | `buildPlugAirPayload` | 13 (0-indexed) | 19 cabs (0-indexed) | EFX slot (13 types) |
 | `plugair_v2` | `buildPlugAirPayload` | 13 (0-indexed, different) | same 19 cabs | EFX slot (13 types) |
-| `mightyair` | `buildPlugAirPayload` | same as plugair_v1 | same 19 cabs | Same as plugair_v1 — only QR ID differs (6 vs 11) |
+| `mightyair_v1` | `buildPlugAirPayload` | same as plugair_v1 | same 19 cabs | Same format as plugair_v1 (QR ID 11, version 0) |
+| `mightyair_v2` | `buildPlugAirPayload` | same as plugair_v2 | same 19 cabs | Same format as plugair_v2 (QR ID 11, version 2) |
 | `lite` | `buildLitePayload` | 1 (AmpClean, id=0) | none | Single ambience slot (reverb OR delay) |
 | `8bt` | `build8BTPayload` | 1 (AmpClean, id=0) | none | Separate delay + reverb slots |
 | `2040bt` | `build2040BTPayload` | 1 (id=0) | none | Wah pedal, has bass/mid/treble EQ |

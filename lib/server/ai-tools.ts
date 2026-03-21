@@ -29,7 +29,7 @@ Use the device specified in the system prompt unless the user requests a differe
     type: 'object' as const,
     required: ['device', 'preset_name', 'amp', 'noise_gate', 'master_db'],
     properties: {
-      device: { type: 'string', enum: ['plugpro', 'space', 'litemk2', '8btmk2', 'plugair_v1', 'plugair_v2', 'mightyair', 'lite', '8bt', '2040bt'], description: 'Target NUX device. Use the default from the system prompt unless the user specifies otherwise. Standard devices (plugair_v1/v2, lite, 8bt, 2040bt) have different amp/effect IDs — see device-specific sections in the system prompt.' },
+      device: { type: 'string', enum: ['plugpro', 'space', 'litemk2', '8btmk2', 'plugair_v1', 'plugair_v2', 'mightyair_v1', 'mightyair_v2', 'lite', '8bt', '2040bt'], description: 'Target NUX device. Use the default from the system prompt unless the user specifies otherwise. Standard devices (plugair_v1/v2, mightyair_v1/v2, lite, 8bt, 2040bt) have different amp/effect IDs — see device-specific sections in the system prompt.' },
       preset_name: { type: 'string', description: 'Short descriptive name for the preset' },
       amp: {
         type: 'object', required: ['id', 'gain', 'master', 'bass', 'mid', 'treble'],
@@ -75,9 +75,11 @@ const STANDARD_DEVICE_REFERENCE = `
 IMPORTANT — STANDARD DEVICES: plugair_v1, plugair_v2, lite, 8bt, 2040bt
 These devices use DIFFERENT amp/effect IDs from the Pro devices above. Always use the correct IDs for the active device.
 
-── Mighty Air (mightyair) ────────────────────────────────────────────────────
-Identical to plugair_v1 in every way — same amps, cabs, EFX, effects, and byte layout.
-Only difference is the QR device ID (6 vs 11). Use mightyair for Mighty Air devices.
+── Mighty Air v1 (mightyair_v1) ─────────────────────────────────────────────
+Identical to plugair_v1 — same amps, cabs, EFX, effects, and byte layout. Use mightyair_v1 for Mighty Air devices on v1 firmware.
+
+── Mighty Air v2 (mightyair_v2) ─────────────────────────────────────────────
+Identical to plugair_v2 — same amps, cabs, EFX, effects, and byte layout. Use mightyair_v2 for Mighty Air devices on v2 firmware.
 
 ── Mighty Plug Air v1 (plugair_v1) ──────────────────────────────────────────
 Amps (amp.id, 0-indexed): 0=TwinVerb(Clean), 1=JZ120(Clean), 2=TweedDlx(Tweed crunch),
@@ -154,8 +156,8 @@ Standard device tone guide:
 - PlugAir v2 high gain: amp.id=7(DualRect) or 8(DIEVH4v2), gain 70-85
 - 20/40BT: amp.id always 0, use bass/mid/treble to shape tone; add wah for funk/wah styles
 
-Standard device BASS guide (plugair_v1, plugair_v2, mightyair):
-- Bass amps: plugair_v1/mightyair use AGL(id=12, Aguilar) or MLD(id=11, Ampeg). plugair_v2 uses AGLv2(id=9) or MLDv2(id=11).
+Standard device BASS guide (plugair_v1, plugair_v2, mightyair_v1, mightyair_v2):
+- Bass amps: plugair_v1/mightyair_v1 use AGL(id=12, Aguilar) or MLD(id=11, Ampeg). plugair_v2/mightyair_v2 use AGLv2(id=9) or MLDv2(id=11).
 - Bass cabs: BS410(id=2) or AGLDB810(id=8) — these are dedicated bass cabs. Always prefer these over guitar cabs for bass.
 - Bass EFX: BassTS(id=6) is a bass-specific T Screamer — use this instead of the regular T Screamer (id=5) for bass overdrive.
 - Gain for standard device bass: clean=12-25, driven=35-50. Never exceed 60 for bass on standard devices.
@@ -351,7 +353,7 @@ export async function runChat(client: Anthropic, messages: ChatMessage[], model 
   }
 }
 
-const VALID_DEVICES = new Set(['plugpro','space','litemk2','8btmk2','plugair_v1','plugair_v2','mightyair','lite','8bt','2040bt'])
+const VALID_DEVICES = new Set(['plugpro','space','litemk2','8btmk2','plugair_v1','plugair_v2','mightyair_v1','mightyair_v2','lite','8bt','2040bt'])
 
 function n(v: unknown, fallback: number): number {
   const x = Number(v)
@@ -366,7 +368,7 @@ function b(v: unknown, fallback: boolean): boolean {
 }
 
 const STANDARD_DEVICES_NO_CAB = new Set(['lite', '8bt', '2040bt'])
-const PLUG_AIR_DEVICES = new Set(['plugair_v1', 'plugair_v2', 'mightyair'])
+const PLUG_AIR_DEVICES = new Set(['plugair_v1', 'plugair_v2', 'mightyair_v1', 'mightyair_v2'])
 
 // Normalises raw LLM tool-call arguments into a valid ProPresetParams.
 // Local models often ignore the JSON schema and use different field names.

@@ -3,7 +3,8 @@ export type DeviceType =
   | 'space'
   | 'plugair_v1'
   | 'plugair_v2'
-  | 'mightyair'
+  | 'mightyair_v1'
+  | 'mightyair_v2'
   | 'litemk2'
   | '8btmk2'
   | 'lite'
@@ -23,9 +24,10 @@ export const DEVICES: Record<DeviceType, DeviceConfig> = {
   space:      { deviceQRId: 15, deviceQRVersion: 1, payloadBytes: 113, format: 'pro',      displayName: 'Mighty Space' },
   litemk2:    { deviceQRId: 19, deviceQRVersion: 1, payloadBytes: 113, format: 'pro',      displayName: 'Mighty Lite MkII' },
   '8btmk2':   { deviceQRId: 20, deviceQRVersion: 1, payloadBytes: 113, format: 'pro',      displayName: 'Mighty 8BT MkII' },
-  plugair_v1: { deviceQRId: 11, deviceQRVersion: 0, payloadBytes: 40,  format: 'standard', displayName: 'Mighty Plug (v1)' },
-  plugair_v2: { deviceQRId: 11, deviceQRVersion: 2, payloadBytes: 40,  format: 'standard', displayName: 'Mighty Plug (v2)' },
-  mightyair:  { deviceQRId: 6,  deviceQRVersion: 0, payloadBytes: 40,  format: 'standard', displayName: 'Mighty Air' },
+  plugair_v1:   { deviceQRId: 11, deviceQRVersion: 0, payloadBytes: 40,  format: 'standard', displayName: 'Mighty Plug (v1)' },
+  plugair_v2:   { deviceQRId: 11, deviceQRVersion: 2, payloadBytes: 40,  format: 'standard', displayName: 'Mighty Plug (v2)' },
+  mightyair_v1: { deviceQRId: 11, deviceQRVersion: 0, payloadBytes: 40,  format: 'standard', displayName: 'Mighty Air (v1)' },
+  mightyair_v2: { deviceQRId: 11, deviceQRVersion: 2, payloadBytes: 40,  format: 'standard', displayName: 'Mighty Air (v2)' },
   lite:       { deviceQRId: 9,  deviceQRVersion: 1, payloadBytes: 40,  format: 'standard', displayName: 'Mighty Lite BT' },
   '8bt':      { deviceQRId: 12, deviceQRVersion: 1, payloadBytes: 40,  format: 'standard', displayName: 'Mighty 8BT' },
   '2040bt':   { deviceQRId: 7,  deviceQRVersion: 1, payloadBytes: 40,  format: 'standard', displayName: 'Mighty 20/40BT' },

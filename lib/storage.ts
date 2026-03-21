@@ -135,16 +135,17 @@ export function clearApiSettings() {
 
 // ─── Default NUX Device ───────────────────────────────────────────────────────
 
-export type NuxDevice = 'plugpro' | 'space' | 'litemk2' | '8btmk2' | 'mightyair' | 'plugair_v1' | 'plugair_v2' | 'lite' | '8bt' | '2040bt'
+export type NuxDevice = 'plugpro' | 'space' | 'litemk2' | '8btmk2' | 'mightyair_v1' | 'mightyair_v2' | 'plugair_v1' | 'plugair_v2' | 'lite' | '8bt' | '2040bt'
 
 export const NUX_DEVICES: { id: NuxDevice; label: string }[] = [
-  { id: 'plugpro',    label: 'Mighty Plug Pro' },
-  { id: 'space',      label: 'Mighty Space' },
-  { id: 'litemk2',   label: 'Mighty Lite MkII' },
-  { id: '8btmk2',    label: 'Mighty 8BT MkII' },
-  { id: 'mightyair',  label: 'Mighty Air' },
-  { id: 'plugair_v1', label: 'Mighty Plug (v1)' },
-  { id: 'plugair_v2', label: 'Mighty Plug (v2)' },
+  { id: 'plugpro',      label: 'Mighty Plug Pro' },
+  { id: 'space',        label: 'Mighty Space' },
+  { id: 'litemk2',     label: 'Mighty Lite MkII' },
+  { id: '8btmk2',      label: 'Mighty 8BT MkII' },
+  { id: 'mightyair_v1', label: 'Mighty Air (v1)' },
+  { id: 'mightyair_v2', label: 'Mighty Air (v2)' },
+  { id: 'plugair_v1',  label: 'Mighty Plug (v1)' },
+  { id: 'plugair_v2',  label: 'Mighty Plug (v2)' },
   { id: 'lite',       label: 'Mighty Lite BT' },
   { id: '8bt',        label: 'Mighty 8BT' },
   { id: '2040bt',     label: 'Mighty 20/40BT' },
