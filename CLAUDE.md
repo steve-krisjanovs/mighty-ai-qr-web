@@ -115,7 +115,24 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 - **TODO**: Make the default free tier work with any configured API provider, not just Anthropic.
 - **TODO**: Unify `runChat` + `runChatOpenAI` — add a thin adapter that converts Anthropic SDK responses to OpenAI-compatible shape, so all providers share one code path. Currently split because Anthropic returns tool input as parsed JSON content blocks while OpenAI returns raw JSON strings.
 
-### Roadmap (v1.6+)
+### Roadmap (v1.6–v1.x — fixes only)
+
+All versions between 1.5 and 2.0 are **strictly bug fixes**. No new features. This keeps the codebase lean for the v2.0 auth/storage rewrite and minimises refactor surface for v2.1 features.
+
+### Roadmap (v2.0)
+
+- **User accounts + cross-device sync** — replace the current device-scoped JWT with real user identity so chat history and QR codes follow the user across devices and browsers. Full DB migration required (conversations and QR history currently keyed by device token → migrate to user ID).
+  - **Auth providers (hosted site):** Google, Facebook, Apple, Microsoft OAuth + email/password
+  - **Auth providers (self-hosted):** email/password by default; OAuth optional if the operator configures provider keys (requires registering OAuth apps and setting callback URLs — too much friction to mandate)
+  - Passwords bcrypt-hashed server-side. SMTP required for email verification and password reset on email/password path.
+  - `OAUTH_GOOGLE_CLIENT_ID`, `OAUTH_FACEBOOK_APP_ID`, `OAUTH_APPLE_CLIENT_ID`, `OAUTH_MICROSOFT_CLIENT_ID` env vars control which providers are enabled — unset = disabled.
+  - Session management: login, logout, token refresh, password reset flow.
+  - Privacy/GDPR surface increases once PII (email) is stored — needs a privacy policy.
+  - localStorage removed entirely — all state (conversations, QR history, settings) moves to server-side DB, keyed by user ID.
+
+### Roadmap (v2.1+)
+
+Features deferred from v1.x — build on the v2.0 auth/storage foundation.
 
 - **My Gear profile** — let users add/edit/remove their instruments (name, type: guitar/bass, make, model, pickup layout, active selection, per-pickup vol+tone). AI reads the active instrument on every request so bassists never need to say "bass" again, and tone suggestions are grounded in the actual guitar. Needs DB schema changes, settings UI, and gear context injected into the chat route system prompt.
 
@@ -134,7 +151,7 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 - **Help system** — ? icon in the header (alongside new chat/settings) that opens a scrollable help modal with sections covering Import, Convert, Bass tones, Sidebar search, and BYOK settings.
 
-- **Shareable preset URLs** — public `/preset/{id}` route that renders the QR card without requiring an account. Users paste a link in forums/social instead of uploading an image. No auth required, works pre-v2.0. Needs a public=true flag on saved QR records. Dependency: only works for QRs saved to the server-side DB — AI-generated QRs are auto-saved so this covers the main case. QRs that exist only in localStorage (imported/older) would not be shareable without a manual "save to server" step. Render persistent volume already configured; self-hosters must mount a named Docker volume or URLs break on container restart.
+- **Shareable preset URLs** — public `/preset/{id}` route that renders the QR card without requiring an account. Users paste a link in forums/social instead of uploading an image. No auth required. Needs a public=true flag on saved QR records. AI-generated QRs are auto-saved so covers the main case.
 
 - **Native share sheet** — Web Share API on mobile so users can share a QR directly to WhatsApp, Instagram, etc. instead of downloading first. Falls back gracefully to the existing download button on desktop.
 
@@ -144,12 +161,3 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 - **Thumbs up/down on generated tones** — basic feedback on QR cards stored in the DB. Reveals over time which tones/devices/styles get good ratings, feeds system prompt improvements. Pairs with DataMatrix provenance — you know a rated preset came from the AI.
 
-### Roadmap (v2.0)
-
-- **User accounts + cross-device sync** — replace the current device-scoped JWT with real user identity so chat history and QR codes follow the user across devices and browsers. Full DB migration required (conversations and QR history currently keyed by device token → migrate to user ID).
-  - **Auth providers (hosted site):** Google, Facebook, Apple, Microsoft OAuth + email/password
-  - **Auth providers (self-hosted):** email/password by default; OAuth optional if the operator configures provider keys (requires registering OAuth apps and setting callback URLs — too much friction to mandate)
-  - Passwords bcrypt-hashed server-side. SMTP required for email verification and password reset on email/password path.
-  - `OAUTH_GOOGLE_CLIENT_ID`, `OAUTH_FACEBOOK_APP_ID`, `OAUTH_APPLE_CLIENT_ID`, `OAUTH_MICROSOFT_CLIENT_ID` env vars control which providers are enabled — unset = disabled.
-  - Session management: login, logout, token refresh, password reset flow.
-  - Privacy/GDPR surface increases once PII (email) is stored — needs a privacy policy.
