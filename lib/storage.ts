@@ -155,7 +155,9 @@ const DEVICE_KEY = 'maq_default_device'
 
 export function getDefaultDevice(): NuxDevice {
   if (typeof window === 'undefined') return 'plugpro'
-  return (localStorage.getItem(DEVICE_KEY) as NuxDevice) ?? 'plugpro'
+  const stored = localStorage.getItem(DEVICE_KEY)
+  const valid = NUX_DEVICES.find(d => d.id === stored)
+  return valid ? (stored as NuxDevice) : 'plugpro'
 }
 
 export function saveDefaultDevice(device: NuxDevice) {

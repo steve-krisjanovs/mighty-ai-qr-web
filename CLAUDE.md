@@ -41,6 +41,20 @@ Reverse-engineered from [mightier_amp](https://github.com/tuntorius/mightier_amp
 
 ---
 
+## DB Schema Changes
+
+Any change to the SQLite schema (new table, new column, dropped column, index) **must** be accompanied by a new migration tag in `lib/server/db.ts`. Pattern:
+
+1. Add the DDL change inside the `db.exec(...)` block using `ALTER TABLE` or `CREATE TABLE IF NOT EXISTS`
+2. Insert a new tag: `INSERT OR IGNORE INTO schema_migrations (tag) VALUES ('1.x.y_description');`
+3. Tags are permanent — never remove or rename an existing tag
+4. Tag format: `{version}_{short_description}` e.g. `1.6.0_add_gear_table`
+
+Existing tags:
+- `1.5.2_baseline` — initial schema (devices, daily_quota, web_search_cache, schema_migrations)
+
+---
+
 ## Docker
 
 Always build and run with the `.env.local` file explicitly:
@@ -57,7 +71,11 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 ### Branch state
 - Active branch: `main`
-- Render auto-deploys from `main` — v1.5.2 live at `https://mighty-ai-qr-web.onrender.com`
+- Render auto-deploys from `main` — v1.5.3 live at `https://mighty-ai-qr-web.onrender.com`
+
+### What shipped in v1.5.3 (2026-03-22)
+- Settings page crash fix — `getDefaultDevice()` now validates localStorage value against known device list; invalid/stale values (e.g. old `mightyair`) fall back to `plugpro` instead of crashing
+- Schema migration tracking — `schema_migrations` table added to SQLite (BC upgrade tag pattern); baseline tag `1.5.2_baseline` stamped on first run; future migrations insert a new tag after completing
 
 ### What shipped in v1.5.2 (2026-03-21)
 - Mighty Air QR fix — was using wrong device QR ID (6); corrected to ID 11 matching real mightier_amp reference codes

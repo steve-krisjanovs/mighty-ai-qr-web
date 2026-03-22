@@ -30,6 +30,17 @@ if (process.env.NEXT_PHASE !== 'phase-production-build') {
       result     TEXT NOT NULL,
       cached_at  TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- Schema migration tracking (BC upgrade tag pattern).
+    -- Each row is a completed migration step — idempotent, persistent.
+    -- Future migrations INSERT OR IGNORE a new tag after running.
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      tag        TEXT PRIMARY KEY,
+      applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Baseline: schema as shipped in v1.5.2
+    INSERT OR IGNORE INTO schema_migrations (tag) VALUES ('1.5.2_baseline');
   `)
 }
 
