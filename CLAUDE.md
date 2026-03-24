@@ -123,8 +123,7 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 - **BUG (TBD)**: Incoming user-reported bugs being gathered — details pending.
 
-- **TODO**: Make the default free tier work with any configured API provider, not just Anthropic.
-- **TODO**: Unify `runChat` + `runChatOpenAI` — add a thin adapter that converts Anthropic SDK responses to OpenAI-compatible shape, so all providers share one code path. Currently split because Anthropic returns tool input as parsed JSON content blocks while OpenAI returns raw JSON strings.
+- **TODO**: Remove all non-Anthropic provider support. Keep free tier (server key) and Anthropic BYOK — that's it. Removes: `runChatOpenAI`, `generateQRToolOpenAI`/`webSearchToolOpenAI`/`openAITools`, `textContent`, `extractEmbeddedToolCall`, OpenAI import from `ai-tools.ts`; `DEFAULT_MODELS`/`normalizeBaseUrl` and the OpenAI `else` branch from `chat/route.ts`; `app/api/models/route.ts` simplified to hardcoded Anthropic models only; `AiProvider` type narrowed to `'builtin' | 'anthropic'`; `PROVIDERS`/`PROVIDER_GROUPS`/`LocalLlmInfoModal`/Base URL input/provider error messages removed from `page.tsx`; `openai` npm dep removed.
 
 ### Roadmap (v1.6–v1.x — fixes only)
 
@@ -156,11 +155,7 @@ Features deferred from v1.x — build on the v2.0 auth/storage foundation.
   - Pickup layout codes: `ss`, `hh`, `hs`, `sh`, `sss`, `hsh`, `ssh`, `hss`, `pj`, `jj`, `p`
   - Active selection codes: `b`=bridge, `n`=neck, `bn`=both, `m`=mid, `bm`=bridge+mid, `mn`=mid+neck, `bmn`=all
 
-- **Pro device preset name in QR payload** — `buildProPayload` leaves bytes 98–113 (16-char ASCII name field) as zeros. Write the preset name there so imported Pro QRs show their name in mightier_amp and the NUX app instead of being unnamed.
-
-- **Hide custom providers** — add `HIDE_CUSTOM_PROVIDERS` env var (boolean). When `true`, the BYOK provider section is hidden entirely in Settings — keeps the hosted UI clean and focused for non-technical guitarists who don't know what an API key is. Set `true` on Render, leave unset or `false` for self-hosted. Users who want full provider control can clone and self-host. Rationale: a wall of API dropdowns and model selectors erodes confidence before a guitarist has even generated their first tone.
-
-- **Help system** — ? icon in the header (alongside new chat/settings) that opens a scrollable help modal with sections covering Import, Convert, Bass tones, Sidebar search, and BYOK settings.
+-**Help system** — ? icon in the header (alongside new chat/settings) that opens a scrollable help modal with sections covering Import, Convert, Bass tones, Sidebar search, and BYOK settings.
 
 - **Shareable preset URLs** — public `/preset/{id}` route that renders the QR card without requiring an account. Users paste a link in forums/social instead of uploading an image. No auth required. Needs a public=true flag on saved QR records. AI-generated QRs are auto-saved so covers the main case.
 
