@@ -71,7 +71,18 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 ### Branch state
 - Active branch: `main`
-- Render auto-deploys from `main` — v1.5.3 live at `https://mighty-ai-qr-web.onrender.com`
+- Render auto-deploys from `main` — v1.5.4 live at `https://mighty-ai-qr-web.onrender.com`
+
+### What shipped in v1.5.4 (2026-03-23)
+- EQ fix — `coerceParams` never handled the `eq` field; EQ was silently dropped from every QR
+- 6-Band vs 10-Band EQ: encoder/decoder hardcoded 5-band; now branches on `eq.id` (1=6-Band, 3=10-Band) with correct frequency labels
+- Preset name in Pro QR payload: `buildProPayload` never wrote bytes 98–112; now writes `preset_name_short` (max 15 chars)
+- Preset name sanitisation: generic names (My Tone, Custom Tone, etc.) replaced with "Unnamed Tone"
+- `preset_name_short` field added to AI tool schema — AI provides abbreviated QR name separately from full display name
+- Device stale closure fix: `send` useCallback was missing `currentDevice` in deps; changing device mid-chat sent request with old device
+- Anthropic 400 fix: model sometimes calls `web_search` + `generateQR` in parallel; now provides `tool_result` for every `tool_use` in the response
+- Web search limit fix: hitting the 2-search cap caused the third `web_search` call's args to be coerced as `generateQR` params; now returns a proper `tool_result` instructing AI to generate
+- System prompt EQ section rewritten: `plugpro`/`space` get 6/10-Band EQ; `litemk2`/`8btmk2` have no EQ slot; PlugAir uses EFX slot (`efx.id=7`)
 
 ### What shipped in v1.5.3 (2026-03-22)
 - Settings page crash fix — `getDefaultDevice()` now validates localStorage value against known device list; invalid/stale values (e.g. old `mightyair`) fall back to `plugpro` instead of crashing
