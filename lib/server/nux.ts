@@ -81,6 +81,7 @@ export interface WahParams {
 export interface ProPresetParams {
   device: DeviceType
   preset_name: string
+  preset_name_short?: string
   amp: AmpParams
   cabinet?: CabinetParams
   noise_gate: NoiseGateParams

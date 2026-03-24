@@ -94,6 +94,11 @@ function buildProPayload(p: ProPresetParams): Buffer {
   const defaultChain = [5, 1, 6, 2, 3, 9, 4, 8, 7]
   defaultChain.forEach((fxid, i) => { data[89 + i] = fxid })
 
+  // Preset name — 15-byte ASCII field (payload bytes 98-112), zero-padded
+  const qrName = (p.preset_name_short || p.preset_name).slice(0, 15)
+  const nameBytes = Buffer.from(qrName, 'ascii')
+  nameBytes.copy(data, 98)
+
   return data
 }
 
@@ -354,10 +359,16 @@ function buildSettings(p: ProPresetParams): SettingRow[] {
     slot: 'Compressor', selection: COMP_NAMES[p.compressor.id] ?? `Comp #${p.compressor.id}`, enabled: p.compressor.enabled,
     params: { P1: p.compressor.p1, P2: p.compressor.p2 },
   })
-  if (p.eq) rows.push({
-    slot: 'EQ', selection: '5-Band EQ', enabled: p.eq.enabled,
-    params: Object.fromEntries(p.eq.bands.map((db, i) => [`B${i + 1}`, db])),
-  })
+  if (p.eq) {
+    const EQ_6_LABELS = ['100Hz', '220Hz', '500Hz', '1.2kHz', '2.6kHz', '6.4kHz']
+    const EQ_10_LABELS = ['Vol', '31Hz', '62Hz', '125Hz', '250Hz', '500Hz', '1kHz', '2kHz', '4kHz', '8kHz', '16kHz']
+    const is10Band = p.eq.id === 3
+    const labels = is10Band ? EQ_10_LABELS : EQ_6_LABELS
+    rows.push({
+      slot: 'EQ', selection: is10Band ? '10-Band EQ' : '6-Band EQ', enabled: p.eq.enabled,
+      params: Object.fromEntries(p.eq.bands.map((db, i) => [labels[i] ?? `B${i + 1}`, db])),
+    })
+  }
   if (p.modulation) rows.push({
     slot: 'Modulation', selection: MOD_NAMES[p.modulation.id] ?? `Mod #${p.modulation.id}`, enabled: p.modulation.enabled,
     params: { Rate: p.modulation.p1, Depth: p.modulation.p2 },
@@ -612,9 +623,23 @@ export function decodeQRString(qrString: string): { presetName: string; deviceNa
     if (efx.id > 0)   settings.push({ slot: 'EFX', enabled: efx.enabled, selection: EFX_NAMES[efx.id] ?? `EFX #${efx.id}`, params: { P1: d[20], P2: d[21], P3: d[22] } })
     if (comp.id > 0)  settings.push({ slot: 'Compressor', enabled: comp.enabled, selection: COMP_NAMES[comp.id] ?? `Comp #${comp.id}`, params: { P1: d[15], P2: d[16] } })
     const eq = decodeHead(d[4])
-    if (eq.enabled || d.slice(36, 41).some(b => b !== 0))
-      settings.push({ slot: 'EQ', selection: '5-Band EQ', enabled: eq.enabled,
-        params: { B1: decodeDbEQ(d[36]), B2: decodeDbEQ(d[37]), B3: decodeDbEQ(d[38]), B4: decodeDbEQ(d[39]), B5: decodeDbEQ(d[40]) } })
+    if (eq.enabled || d.slice(36, 47).some(b => b !== 0)) {
+      if (eq.id === 3) {
+        // 10-Band EQ: Para1=Vol, Para2-11=bands (bytes 36-46)
+        settings.push({ slot: 'EQ', selection: '10-Band EQ', enabled: eq.enabled, params: {
+          Vol: decodeDbEQ(d[36]),
+          '31Hz': decodeDbEQ(d[37]), '62Hz': decodeDbEQ(d[38]), '125Hz': decodeDbEQ(d[39]),
+          '250Hz': decodeDbEQ(d[40]), '500Hz': decodeDbEQ(d[41]), '1kHz': decodeDbEQ(d[42]),
+          '2kHz': decodeDbEQ(d[43]), '4kHz': decodeDbEQ(d[44]), '8kHz': decodeDbEQ(d[45]), '16kHz': decodeDbEQ(d[46]),
+        } })
+      } else {
+        // 6-Band EQ (id=1): bytes 36-41
+        settings.push({ slot: 'EQ', selection: '6-Band EQ', enabled: eq.enabled, params: {
+          '100Hz': decodeDbEQ(d[36]), '220Hz': decodeDbEQ(d[37]), '500Hz': decodeDbEQ(d[38]),
+          '1.2kHz': decodeDbEQ(d[39]), '2.6kHz': decodeDbEQ(d[40]), '6.4kHz': decodeDbEQ(d[41]),
+        } })
+      }
+    }
     if (mod.id > 0)   settings.push({ slot: 'Modulation', enabled: mod.enabled, selection: MOD_NAMES[mod.id] ?? `Mod #${mod.id}`, params: { Rate: d[54], Depth: d[55], P3: d[56] } })
     if (delay.id > 0) settings.push({ slot: 'Delay', enabled: delay.enabled, selection: DELAY_NAMES[delay.id] ?? `Delay #${delay.id}`, params: { Time: d[61], Feedback: d[62], Mix: d[63] } })
     if (reverb.id > 0) settings.push({ slot: 'Reverb', enabled: reverb.enabled, selection: REVERB_NAMES[reverb.id] ?? `Reverb #${reverb.id}`, params: { Decay: d[70], Level: d[71] } })

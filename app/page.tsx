@@ -2885,7 +2885,7 @@ export default function Page() {
       flushSync(() => setLoading(false))
       scrollToBottom()
     }
-  }, [loading, messages, activeConvId, currentQr, scrollToBottom, persistConversation])
+  }, [loading, messages, activeConvId, currentQr, currentDevice, scrollToBottom, persistConversation])
 
   sendRef.current = send
 

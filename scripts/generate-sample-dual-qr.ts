@@ -9,11 +9,12 @@ import type { ProPresetParams } from '../lib/server/nux'
 
 const VERSION = '1.5.2'
 const OUT = '/mnt/nas-data/temp/kashmir-dual-qr-sample.png'
+const PRESET_NAME = 'Jimmy Page - Kashmir'
 
-// Kashmir — Jimmy Page, Les Paul 59, Hiwatt DR-103
+// Kashmir — Jimmy Page, Danelectro 59, Hiwatt DR-103
 const params: ProPresetParams = {
   device: 'plugpro',
-  preset_name: 'Kashmir',
+  preset_name: PRESET_NAME,
   amp: { id: 6, gain: 52, master: 70, bass: 62, mid: 58, treble: 50, param6: 55 },
   cabinet: { id: 4, level_db: 0, low_cut_hz: 80, high_cut: 75 },
   noise_gate: { enabled: true, sensitivity: 28, decay: 35 },
@@ -23,8 +24,9 @@ const params: ProPresetParams = {
 }
 
 // DataMatrix metadata — compact pipe-delimited format
-// mai|version|make|model|inst-type|pu-layout|pu-sel|bridge:vol:tone|neck:vol:tone
-const metadata = `mai|${VERSION}|gbs|lp59|g|hh|bn|hb:8:6|hb:7:5`
+// mai|version|make|model|inst-type|pu-layout|pu-sel|bridge:vol:tone|neck:vol:tone|preset-name
+// Danelectro 59 has one master tone knob, both lipstick pickups active
+const metadata = `mai|${VERSION}|dnl|59|g|ss|bn|ls:9:7|ls:8:7|${PRESET_NAME}`
 
 async function generate() {
   // 1. NUX QR string → PNG buffer
@@ -75,7 +77,7 @@ async function generate() {
       <text x="${textMaxW / 2}" y="32"
         font-family="system-ui,Arial,sans-serif" font-size="24" font-weight="600"
         fill="rgba(0,0,0,0.42)" text-anchor="middle">
-        Kashmir
+        ${PRESET_NAME}
       </text>
       <text x="${textMaxW / 2}" y="56"
         font-family="system-ui,Arial,sans-serif" font-size="18" font-weight="500"

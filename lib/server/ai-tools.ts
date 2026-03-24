@@ -30,7 +30,8 @@ Use the device specified in the system prompt unless the user requests a differe
     required: ['device', 'preset_name', 'amp', 'noise_gate', 'master_db'],
     properties: {
       device: { type: 'string', enum: ['plugpro', 'space', 'litemk2', '8btmk2', 'plugair_v1', 'plugair_v2', 'mightyair_v1', 'mightyair_v2', 'lite', '8bt', '2040bt'], description: 'Target NUX device. Use the default from the system prompt unless the user specifies otherwise. Standard devices (plugair_v1/v2, mightyair_v1/v2, lite, 8bt, 2040bt) have different amp/effect IDs — see device-specific sections in the system prompt.' },
-      preset_name: { type: 'string', description: 'Short descriptive name for the preset' },
+      preset_name: { type: 'string', description: 'Full human-readable name for display (e.g. "Angel of Death — Kerry King")' },
+      preset_name_short: { type: 'string', description: 'Abbreviated name for embedding in the QR payload — max 15 characters, e.g. "Angel Death KK". Truncate intelligently, do not just cut mid-word.' },
       amp: {
         type: 'object', required: ['id', 'gain', 'master', 'bass', 'mid', 'treble'],
         properties: {
@@ -64,7 +65,7 @@ Use the device specified in the system prompt unless the user requests a differe
       modulation: { type: 'object', required: ['id', 'enabled', 'p1', 'p2'], properties: { id: { type: 'number' }, enabled: { type: 'boolean' }, p1: { type: 'number' }, p2: { type: 'number' }, p3: { type: 'number' }, p4: { type: 'number' } } },
       delay:      { type: 'object', required: ['id', 'enabled', 'p1', 'p2', 'p3'], properties: { id: { type: 'number' }, enabled: { type: 'boolean' }, p1: { type: 'number' }, p2: { type: 'number' }, p3: { type: 'number' }, p4: { type: 'number' } } },
       reverb:     { type: 'object', required: ['id', 'enabled', 'p1', 'p2'], properties: { id: { type: 'number' }, enabled: { type: 'boolean' }, p1: { type: 'number' }, p2: { type: 'number' }, p3: { type: 'number' }, p4: { type: 'number' } } },
-      eq:         { type: 'object', required: ['id', 'enabled', 'bands'], properties: { id: { type: 'number' }, enabled: { type: 'boolean' }, bands: { type: 'array', items: { type: 'number', minimum: -15, maximum: 15 } } } },
+      eq:         { type: 'object', required: ['id', 'enabled', 'bands'], properties: { id: { type: 'number', description: '1=6-Band (6 values: 100,220,500,1.2k,2.6k,6.4k Hz), 3=10-Band (11 values: Vol + 31,62,125,250,500,1k,2k,4k,8k,16k Hz)' }, enabled: { type: 'boolean' }, bands: { type: 'array', items: { type: 'number', minimum: -15, maximum: 15 } } } },
       master_db:  { type: 'number', minimum: -12, maximum: 12 },
     },
   },
@@ -274,13 +275,30 @@ Compressor usage (enable for these styles):
 - Sustain on clean leads: id=1, p1=40, p2=70
 - Skip compressor for high-gain tones (noise gate handles dynamics there)
 
-EQ usage (Pro devices only — plugpro, space, litemk2, 8btmk2):
-If you mention EQ in your response, you MUST include the eq field in the tool call. Never describe EQ changes in text without encoding them.
-- Metal/djent scooped: cut mids (bands 3-4 at -5 to -8), slight bass/treble boost — bands array e.g. [2, 0, -6, -6, 3]
+EQ — mapping to available hardware:
+Whenever EQ is part of a tone — whether the user asks for it, web search returns an artist's EQ pedal, or your training knowledge includes EQ settings for an artist — you MUST map it to the best available option on the device and include it in the tool call. Never drop EQ just because the requested type has more bands than the device supports.
+
+Device EQ availability:
+- plugpro, space only: two EQ options in the dedicated EQ slot:
+  - eq.id=1 → 6-Band EQ: bands[0..5] = 100, 220, 500, 1.2k, 2.6k, 6.4k Hz
+  - eq.id=3 → 10-Band EQ: bands[0]=Vol (overall level), bands[1..10] = 31, 62, 125, 250, 500, 1k, 2k, 4k, 8k, 16k Hz
+  - Use 10-Band (id=3) when the user asks for a 10-band EQ or an artist tone uses one. Use 6-Band (id=1) otherwise.
+  - All band values: -15 to +15 dB.
+- litemk2, 8btmk2: NO dedicated EQ slot — do not include the eq field. Approximate using amp bass/mid/treble only.
+- PlugAir/MightyAir (plugair_v1/v2, mightyair_v1/v2): no dedicated EQ slot — the EFX slot is the only option. Use 3-Band EQ (efx.id=7, p1=bass, p2=mid, p3=treble, all 0-100, 50=flat) ONLY if the EFX slot is not already needed for a defining effect (overdrive, distortion, fuzz, wah, boost). If a drive effect is more important to the tone than EQ, use the drive and approximate EQ through amp bass/mid/treble instead.
+- Standard devices (lite, 8bt, 2040bt): no EQ at all — approximate using amp bass/mid/treble only.
+
+Mapping rules:
+- 10-band EQ, graphic EQ, any EQ pedal (Boss GE-7/GE-10, MXR 10-band, etc.) on a Pro device: use eq.id=3 (10-Band) and map the frequency curve directly to the 11 bands. Never omit the eq field.
+- 3-band EQ on a Pro device: use the 5-band EQ slot, set B1/B5 to match bass/treble, B3 for mid, leave B2/B4 at 0.
+- Parametric EQ: identify the boosted/cut frequency and map to the nearest band.
+- If you mention EQ in your response, you MUST include it in the tool call. No exceptions.
+
+Style presets (Pro 5-band):
+- Metal/djent scooped: cut mids (bands 3-4 at -5 to -8), slight bass/treble boost — e.g. [2, 0, -6, -6, 3]
 - Blues/rock lead mid-boost: bands 3-4 at +3 to +5 — e.g. [0, 0, 4, 4, 0]
 - Acoustic warmth: gentle treble roll-off — e.g. [0, 0, 0, -2, -4]
 - Only enable EQ when it meaningfully changes the character; leave disabled for tones where the amp EQ suffices
-- eq.id should always be 1
 
 Modulation guide (add when it defines the style):
 - CE-1 / CE-2 (id=1,2): 80s clean chorus, new wave, soft rock — p1=rate 30-50, p2=depth 40-60
@@ -322,23 +340,48 @@ export async function runChat(client: Anthropic, messages: ChatMessage[], model 
     const toolUse = response.content.find(b => b.type === 'tool_use')
     if (!toolUse || toolUse.type !== 'tool_use') throw new Error('Expected tool_use block')
 
-    if (toolUse.name === 'web_search' && searchCount < 2) {
-      searchCount++
-      const { query } = toolUse.input as { query: string }
-      console.log(`[web_search] query: "${query}"`)
-      const searchResult = await webSearch(query)
-      console.log(`[web_search] result length: ${searchResult.text.length} chars`)
-      sources.push(...searchResult.sources)
-      currentMessages = [
-        ...currentMessages,
-        { role: 'assistant', content: response.content },
-        { role: 'user', content: [{ type: 'tool_result', tool_use_id: toolUse.id, content: searchResult.text }] },
-      ]
+    if (toolUse.name === 'web_search') {
+      const allToolUses = response.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
+      if (searchCount < 2) {
+        searchCount++
+        const { query } = toolUse.input as { query: string }
+        console.log(`[web_search] query: "${query}"`)
+        const searchResult = await webSearch(query)
+        console.log(`[web_search] result length: ${searchResult.text.length} chars`)
+        sources.push(...searchResult.sources)
+        // Provide tool_results for ALL tool_uses in this response — model may call multiple tools at once.
+        // Any non-web_search tool_use (e.g. generateQR called in parallel) gets a "wait" response.
+        const toolResults = allToolUses.map(tu => ({
+          type: 'tool_result' as const,
+          tool_use_id: tu.id,
+          content: tu.id === toolUse.id ? searchResult.text : 'Please wait for web search results before calling other tools.',
+        }))
+        currentMessages = [
+          ...currentMessages,
+          { role: 'assistant', content: response.content },
+          { role: 'user', content: toolResults },
+        ]
+      } else {
+        // Search limit hit — tell AI to stop searching and generate the QR now.
+        console.log(`[web_search] limit reached, instructing AI to generateQR`)
+        const toolResults = allToolUses.map(tu => ({
+          type: 'tool_result' as const,
+          tool_use_id: tu.id,
+          content: 'Web search limit reached. Generate the QR code now using the information already retrieved.',
+        }))
+        currentMessages = [
+          ...currentMessages,
+          { role: 'assistant', content: response.content },
+          { role: 'user', content: toolResults },
+        ]
+      }
       continue
     }
 
-    // generateQR (or web_search limit hit — treat next tool use as generateQR)
+    // generateQR
+    console.log(`[generateQR] raw input: ${JSON.stringify(toolUse.input)}`)
     const params = coerceParams(toolUse.input as Record<string, unknown>)
+    console.log(`[generateQR] coerced eq: ${JSON.stringify(params.eq)}`)
     const qrResult = await generateQR(params)
 
     const followUp = await client.messages.create({
@@ -351,7 +394,8 @@ export async function runChat(client: Anthropic, messages: ChatMessage[], model 
     })
 
     const textBlock = followUp.content.find(b => b.type === 'text')
-    return { message: textBlock?.type === 'text' ? textBlock.text : '', qr: qrResult, sources: sources.length > 0 ? sources : undefined }
+    console.log(`[followUp] stop_reason=${followUp.stop_reason} has_text=${!!textBlock}`)
+    return { message: textBlock?.type === 'text' ? textBlock.text : 'QR code generated.', qr: qrResult, sources: sources.length > 0 ? sources : undefined }
   }
 }
 
@@ -387,7 +431,15 @@ function coerceParams(raw: Record<string, unknown>): ProPresetParams {
 
   const coerced: ProPresetParams = {
     device,
-    preset_name: (raw.preset_name as string) || 'My Tone',
+    preset_name: (() => {
+      const name = ((raw.preset_name as string) || '').trim()
+      const GENERIC = new Set(['my tone', 'custom tone', 'preset', 'guitar tone', 'bass tone', 'my preset', 'tone', 'custom preset', 'unnamed tone'])
+      return name && !GENERIC.has(name.toLowerCase()) ? name : 'Unnamed Tone'
+    })(),
+    preset_name_short: (() => {
+      const short = ((raw.preset_name_short as string) || '').trim().slice(0, 15)
+      return short || undefined
+    })(),
     amp: {
       id:     n(amp.id ?? amp.nuxIndex, defaultAmpId),
       gain:   n(amp.gain, 50),
@@ -431,6 +483,15 @@ function coerceParams(raw: Record<string, unknown>): ProPresetParams {
       ...(e.p4 !== undefined ? { p4: n(e.p4, 50) } : {}),
       ...(e.p5 !== undefined ? { p5: n(e.p5, 50) } : {}),
     }
+  }
+
+  // EQ — separate handling because it uses a bands array, not p1-p5
+  if (raw.eq && typeof raw.eq === 'object') {
+    const e = raw.eq as Record<string, unknown>
+    const eqId = n(e.id, 1)
+    const defaultBands = eqId === 3 ? new Array(11).fill(0) : new Array(6).fill(0)
+    const bands = Array.isArray(e.bands) ? (e.bands as unknown[]).map(v => n(v, 0)) : defaultBands
+    coerced.eq = { id: eqId, enabled: b(e.enabled ?? e.active, true), bands }
   }
 
   return coerced
