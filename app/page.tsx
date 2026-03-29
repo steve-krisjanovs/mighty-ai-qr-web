@@ -536,12 +536,12 @@ function QrCard({ qr, description, className = '', nameOverride, onRename }: { q
             <p className="text-[11px] text-fg-4 leading-relaxed mt-1.5">{description}</p>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
-            <DownloadIcon /> Download
+            <DownloadIcon /> Save
           </button>
           <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
-            <YoutubeIcon /> Reference
+            <YoutubeIcon /> YT
           </a>
           <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
             <FacebookIcon /> {shareLabel}
@@ -551,7 +551,7 @@ function QrCard({ qr, description, className = '', nameOverride, onRename }: { q
             disabled={!qr.qrString}
             className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors disabled:opacity-40"
           >
-            <CopyIcon /> {copied ? 'Copied!' : 'Copy code'}
+            <CopyIcon /> {copied ? '✓' : 'Copy'}
           </button>
         </div>
         <div className="border-t border-white/10 pt-3">
@@ -898,12 +898,12 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
               {convertError && <p className="text-xs text-red-400 text-center">{convertError}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
-                <DownloadIcon /> Download
+                <DownloadIcon /> Save
               </button>
               <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
-                <YoutubeIcon /> Reference
+                <YoutubeIcon /> YT
               </a>
               <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <FacebookIcon /> {shareLabel}
@@ -913,7 +913,7 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
                 disabled={!item.qr.qrString}
                 className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors disabled:opacity-40"
               >
-                <CopyIcon /> {copied ? 'Copied!' : 'Copy code'}
+                <CopyIcon /> {copied ? '✓' : 'Copy'}
               </button>
             </div>
 
@@ -1061,12 +1061,12 @@ function ChatQrModal({ qr, description, currentDevice, onClose, onConvert }: {
               })()}
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
-                <DownloadIcon /> Download
+                <DownloadIcon /> Save
               </button>
               <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
-                <YoutubeIcon /> Reference
+                <YoutubeIcon /> YT
               </a>
               <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <FacebookIcon /> {shareLabel}
@@ -1076,7 +1076,7 @@ function ChatQrModal({ qr, description, currentDevice, onClose, onConvert }: {
                 disabled={!qr.qrString}
                 className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors disabled:opacity-40"
               >
-                <CopyIcon /> {copied ? 'Copied!' : 'Copy code'}
+                <CopyIcon /> {copied ? '✓' : 'Copy'}
               </button>
             </div>
 
