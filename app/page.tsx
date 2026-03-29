@@ -1152,6 +1152,15 @@ function DeviceMismatchModal({ qr, targetDevice, onConvert, onSaveOriginal, onCl
 
 const WHATS_NEW: { version: string; items: { text: string; sub?: string }[] }[] = [
   {
+    version: '1.6',
+    items: [
+      { text: 'Free tier only — no API keys needed, just open and play' },
+      { text: 'Anthropic native web search — faster, no third-party dependency' },
+      { text: 'Copy button on all QR popups — grab the raw preset code with one tap' },
+      { text: 'Simpler: one AI provider, one search engine, one less thing to configure' },
+    ],
+  },
+  {
     version: '1.5',
     items: [
       {
@@ -1169,7 +1178,8 @@ const WHATS_NEW: { version: string; items: { text: string; sub?: string }[] }[] 
 ]
 
 function AboutModal({ onClose }: { onClose: () => void }) {
-  const [whatsNewOpen, setWhatsNewOpen] = useState(true)
+  const [openVersions, setOpenVersions] = useState<Record<string, boolean>>({ [WHATS_NEW[0].version]: true })
+  const toggle = (v: string) => setOpenVersions(prev => ({ ...prev, [v]: !prev[v] }))
   return (
     <>
       <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm" onClick={onClose} />
@@ -1188,30 +1198,33 @@ function AboutModal({ onClose }: { onClose: () => void }) {
             <button onClick={onClose} className="shrink-0 text-fg-4 hover:text-fg transition-colors"><CloseIcon /></button>
           </div>
 
-          {WHATS_NEW.map(({ version, items }) => (
-            <div key={version} className="border-t border-white/10 pt-4">
-              <button
-                onClick={() => setWhatsNewOpen(o => !o)}
-                className="flex w-full items-center justify-between gap-2 text-left"
-              >
-                <p className="text-[11px] font-medium text-fg-3 uppercase tracking-wider">What&apos;s new in v{version}</p>
-                <ChevronIcon open={whatsNewOpen} />
-              </button>
-              {whatsNewOpen && (
-                <ul className="mt-2.5 space-y-2">
-                  {items.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2 leading-relaxed">
-                      <span className="text-primary mt-px shrink-0">•</span>
-                      <div>
-                        <span className={i === 0 ? 'text-[11px] font-medium text-fg' : 'text-[11px] text-fg-4'}>{item.text}</span>
-                        {item.sub && <p className="text-[10px] text-fg-4 mt-0.5">{item.sub}</p>}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
+          {WHATS_NEW.map(({ version, items }) => {
+            const open = !!openVersions[version]
+            return (
+              <div key={version} className="border-t border-white/10 pt-4">
+                <button
+                  onClick={() => toggle(version)}
+                  className="flex w-full items-center justify-between gap-2 text-left"
+                >
+                  <p className="text-[11px] font-medium text-fg-3 uppercase tracking-wider">What&apos;s new in v{version}</p>
+                  <ChevronIcon open={open} />
+                </button>
+                {open && (
+                  <ul className="mt-2.5 space-y-2">
+                    {items.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 leading-relaxed">
+                        <span className="text-primary mt-px shrink-0">•</span>
+                        <div>
+                          <span className={i === 0 ? 'text-[11px] font-medium text-fg' : 'text-[11px] text-fg-4'}>{item.text}</span>
+                          {item.sub && <p className="text-[10px] text-fg-4 mt-0.5">{item.sub}</p>}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )
+          })}
 
           <div className="border-t border-white/10 pt-4 space-y-1">
             <p className="text-[11px] font-medium text-fg-3 uppercase tracking-wider">Author</p>
