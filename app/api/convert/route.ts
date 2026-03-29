@@ -46,33 +46,20 @@ ${settingsText}
 
 Generate a QR code for the ${targetConfig.displayName} using the closest available settings.${displayName ? ` Use preset name "${displayName}".` : ' Generate a descriptive preset name based on the tone (artist, song, or style).'} IMPORTANT: you MUST call the tool with device="${targetDevice}" — this is required.`
 
-  const userApiKey   = (request.headers.get('x-user-api-key') ?? '').trim()
-  const userProvider = (request.headers.get('x-provider') ?? '').trim()
-  const userModel    = (request.headers.get('x-model') ?? '').trim()
-
   const deviceInstruction = `The user's NUX device for this conversion is "${targetDevice}" (${targetConfig.displayName}). You MUST call the QR generation tool with device="${targetDevice}". Do NOT use any other device ID.\n\n`
   const systemFull = deviceInstruction + SYSTEM_PROMPT_FULL
 
   const messages = [{ role: 'user' as const, content: conversionMessage }]
-  const isByok = !!userApiKey
 
-  console.log(`[convert] targetDevice=${targetDevice} provider=${userProvider || 'builtin'} byok=${isByok}`)
+  console.log(`[convert] targetDevice=${targetDevice}`)
 
   try {
-    let result
-
-    if (!isByok) {
-      const serverKey = process.env.ANTHROPIC_API_KEY
-      if (!serverKey) return NextResponse.json({ error: 'No API key configured. Add your key in Settings.' }, { status: 400 })
-      const freeModel = process.env.FREE_MODEL || 'claude-sonnet-4-6'
-      console.log(`[convert] using server key, model=${freeModel}`)
-      const serverClient = new Anthropic({ apiKey: serverKey })
-      result = await runChat(serverClient, messages, freeModel, systemFull)
-    } else {
-      console.log(`[convert] byok anthropic model=${userModel || 'auto'}`)
-      const byokClient = new Anthropic({ apiKey: userApiKey })
-      result = await runChat(byokClient, messages, userModel || undefined, systemFull)
-    }
+    const serverKey = process.env.ANTHROPIC_API_KEY
+    if (!serverKey) return NextResponse.json({ error: 'Service unavailable.' }, { status: 503 })
+    const freeModel = process.env.FREE_MODEL || 'claude-sonnet-4-6'
+    console.log(`[convert] model=${freeModel}`)
+    const client = new Anthropic({ apiKey: serverKey })
+    const result = await runChat(client, messages, freeModel, systemFull)
 
     if (!result.qr) {
       console.log('[convert] no QR generated')

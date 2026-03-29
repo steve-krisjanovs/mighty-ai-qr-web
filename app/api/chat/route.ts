@@ -19,10 +19,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid messages' }, { status: 400 })
   }
 
-  const userApiKey    = (request.headers.get('x-user-api-key') ?? '').trim()
-  const userProvider  = (request.headers.get('x-provider') ?? '').trim()
-  const userModel     = (request.headers.get('x-model') ?? '').trim()
-  const defaultDevice   = (request.headers.get('x-default-device') ?? 'plugpro').trim()
+  const defaultDevice = (request.headers.get('x-default-device') ?? 'plugpro').trim()
 
   const deviceDisplayName = DEVICES[defaultDevice as keyof typeof DEVICES]?.displayName ?? defaultDevice
   const deviceInstruction = `The user's NUX device is "${defaultDevice}" (${deviceDisplayName}). You MUST call the generateQR tool with device="${defaultDevice}". Do NOT use any other device ID — ignore any device mentioned in the conversation history.\n\n`
@@ -51,33 +48,23 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const isByok = !!userApiKey
-
-  console.log(`[chat] provider=${userProvider || 'builtin'} byok=${isByok} msgs=${messages.length}`)
+  console.log(`[chat] msgs=${messages.length}`)
 
   try {
-    let result
-
-    if (!isByok) {
-      const serverKey = process.env.ANTHROPIC_API_KEY
-      if (!serverKey) {
-        return NextResponse.json({ error: 'No API key configured. Add your key in Settings.' }, { status: 400 })
-      }
-      const quota = checkAndIncrementQuota()
-      if (!quota.allowed) {
-        return NextResponse.json({
-          error: "Today's free request limit has been reached. Add your own API key in Settings to keep going — Anthropic gives free credits on signup.",
-        }, { status: 429 })
-      }
-      const freeModel = process.env.FREE_MODEL || 'claude-sonnet-4-6'
-      console.log(`[chat] using server key, model=${freeModel}`)
-      const serverClient = new Anthropic({ apiKey: serverKey })
-      result = await runChat(serverClient, messagesWithHint, freeModel, systemFull)
-    } else {
-      console.log(`[chat] byok anthropic model=${userModel || 'auto'}`)
-      const byokClient = new Anthropic({ apiKey: userApiKey })
-      result = await runChat(byokClient, messagesWithHint, userModel || undefined, systemFull)
+    const serverKey = process.env.ANTHROPIC_API_KEY
+    if (!serverKey) {
+      return NextResponse.json({ error: 'Service unavailable.' }, { status: 503 })
     }
+    const quota = checkAndIncrementQuota()
+    if (!quota.allowed) {
+      return NextResponse.json({
+        error: "Today's free request limit has been reached. Come back tomorrow!",
+      }, { status: 429 })
+    }
+    const freeModel = process.env.FREE_MODEL || 'claude-sonnet-4-6'
+    console.log(`[chat] model=${freeModel}`)
+    const client = new Anthropic({ apiKey: serverKey })
+    const result = await runChat(client, messagesWithHint, freeModel, systemFull)
 
     console.log(`[chat] done`)
     return NextResponse.json(result)

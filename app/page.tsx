@@ -5,17 +5,16 @@ import { flushSync } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { v4 as uuidv4 } from 'uuid'
-import { sendChat, initAuth, fetchModels, decodeQr, convertPreset, identifyQr, scanQrFromFile } from '@/lib/api'
+import { sendChat, initAuth, decodeQr, convertPreset, identifyQr, scanQrFromFile } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteHistoryItem, renameHistoryItem, clearAllHistory,
   loadConversations, upsertConversation,
   deleteConversation, clearAllConversations, autoTitle, relativeTime,
-  getApiSettings, saveApiSettings, getActiveConfig,
   getTheme, saveTheme,
   getDefaultDevice, saveDefaultDevice,
   getHintDismissed, saveHintDismissed,
   getWelcomeSeen, saveWelcomeSeen,
-  type AiProvider, type ProviderConfig, type Theme, type NuxDevice,
+  type Theme, type NuxDevice,
   NUX_DEVICES,
 } from '@/lib/storage'
 import type { ChatMessage, QrResult, HistoryItem, Conversation } from '@/lib/types'
@@ -1279,336 +1278,45 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
 
 // ─── Settings Panel ───────────────────────────────────────────────────────────
 
-const PROVIDERS: { id: AiProvider; label: string; keyPlaceholder: string; apiKeyUrl?: string; note?: string; builtin?: boolean }[] = [
-  { id: 'builtin',   label: 'Free (Built-in)', keyPlaceholder: '', builtin: true, note: 'Powered by Claude Sonnet. No key needed. Shared daily limit applies.' },
-  { id: 'anthropic', label: 'Anthropic', keyPlaceholder: 'sk-ant-...', apiKeyUrl: 'https://console.anthropic.com/settings/keys', note: 'Free credits included on signup.' },
-]
-
 const THEME_GROUPS: { label: string; ids: Theme[] }[] = [
   { label: 'Standard', ids: ['dark', 'oled', 'light'] },
   { label: 'Dark Vintage', ids: ['tweed', 'amber', 'british', 'oxblood', 'silver', 'pedalboard', 'blackface', 'plexi'] },
   { label: 'Light Vintage', ids: ['tweed-lt', 'amber-lt', 'british-lt', 'oxblood-lt', 'silver-lt', 'pedalboard-lt', 'blackface-lt', 'plexi-lt'] },
 ]
 
-function ProviderDropdown({ value, onChange }: { value: AiProvider; onChange: (p: AiProvider) => void }) {
-  const [open, setOpen] = useState(false)
-  const current = PROVIDERS.find(p => p.id === value)!
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-surface-2 px-3 py-2.5 text-sm text-fg hover:bg-surface-3 transition-colors"
-      >
-        <span>{current.label}</span>
-        <ChevronIcon open={open} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-white/10 bg-surface-2 shadow-xl overflow-hidden">
-            {PROVIDERS.map(p => (
-              <button
-                key={p.id}
-                onClick={() => { onChange(p.id); setOpen(false) }}
-                className={`flex w-full items-center px-3 py-2 text-sm transition-colors ${
-                  value === p.id ? 'text-primary bg-primary/10' : 'text-fg-2 hover:bg-surface-3 hover:text-fg'
-                }`}
-              >
-                {p.label}
-                {value === p.id && <span className="ml-auto text-primary">✓</span>}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
 function BuiltinPill({ quotaVersion }: { quotaVersion: number }) {
   const [remaining, setRemaining] = useState<number | null>(null)
-  const [model, setModel] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const fetchQuota = useCallback(() => {
     setRefreshing(true)
-    fetch('/api/quota').then(r => r.json()).then(d => { setRemaining(d.remaining); setModel(d.model ?? null); setRefreshing(false) }).catch(() => setRefreshing(false))
+    fetch('/api/quota').then(r => r.json()).then(d => { setRemaining(d.remaining); setRefreshing(false) }).catch(() => setRefreshing(false))
   }, [])
   useEffect(() => { fetchQuota() }, [fetchQuota, quotaVersion])
   useEffect(() => {
     const id = setInterval(fetchQuota, 30_000)
     return () => clearInterval(id)
   }, [fetchQuota])
-  const modelLabel = model ? (model.split('-')[1] ?? 'Free').charAt(0).toUpperCase() + (model.split('-')[1] ?? 'free').slice(1) : null
   return (
     <button onClick={fetchQuota} className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-4 select-none active:opacity-70 transition-opacity">
-      <span className="font-medium text-orange-400">Anthropic</span>
-      <span className="text-fg-4">·</span>
-      {modelLabel ?? 'Free'} · Free
+      <span className="font-medium text-fg-2">Free</span>
       {remaining !== null && (
-        <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${remaining <= 10 ? 'bg-red-900/40 text-red-400' : 'bg-white/5 text-fg-4'}`}>
-          {refreshing ? '...' : `${remaining} left today`}
-        </span>
+        <>
+          <span className="text-fg-4">·</span>
+          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${remaining <= 10 ? 'bg-red-900/40 text-red-400' : 'bg-white/5 text-fg-4'}`}>
+            {refreshing ? '...' : `${remaining} left today`}
+          </span>
+        </>
       )}
     </button>
   )
 }
 
-// Self-contained desktop header pill — reads/writes localStorage, fetches models
-function HeaderModelPill({ settingsVersion, quotaVersion }: { settingsVersion: number; quotaVersion: number }) {
-  const [config, setConfig] = useState<ReturnType<typeof getActiveConfig>>(null)
-  const [models, setModels] = useState<string[]>([])
-  const [loadingModels, setLoadingModels] = useState(false)
-
-  useEffect(() => { setConfig(getActiveConfig()) }, [settingsVersion])
-  useEffect(() => {
-    if (!config) return
-    let cancelled = false
-    setModels([])
-    setLoadingModels(true)
-    fetchModels(config.provider, config.apiKey, config.baseUrl ?? '').then(m => {
-      if (!cancelled) { setModels(m); setLoadingModels(false) }
-    }).catch(() => { if (!cancelled) setLoadingModels(false) })
-    return () => { cancelled = true }
-  }, [config?.provider, config?.apiKey, config?.baseUrl])
-
-  const isByok = !!config?.apiKey
-  if (!config || config.provider === 'builtin') return <BuiltinPill quotaVersion={quotaVersion} />
-  if (config.provider === 'anthropic' && !isByok) return <BuiltinPill quotaVersion={quotaVersion} />
-
-  const handleChange = (model: string) => {
-    const settings = getApiSettings()
-    if (!settings) return
-    const providerConf: ProviderConfig = { ...(settings.configs[config.provider] ?? { apiKey: '' }), model }
-    saveApiSettings({ ...settings, configs: { ...settings.configs, [config.provider]: providerConf } })
-    setConfig(prev => prev ? { ...prev, model } : prev)
-  }
-
-  const providerLabel = PROVIDERS.find(p => p.id === config.provider)?.label ?? config.provider
-
-  return <ModelPill value={config.model ?? ''} onChange={handleChange} models={models} loading={loadingModels} providerLabel={providerLabel} provider={config.provider} />
-}
-
-const PROVIDER_COLORS: Record<string, string> = {
-  anthropic: 'text-orange-400',
-}
-
-// Compact pill for desktop header — shows current model, click to pick from list
-function ModelPill({ value, onChange, models, loading, providerLabel, provider }: { value: string; onChange: (m: string) => void; models: string[]; loading: boolean; providerLabel?: string; provider?: string }) {
-  const [open, setOpen] = useState(false)
-  const label = value || 'auto'
-  const providerColor = provider ? (PROVIDER_COLORS[provider] ?? 'text-fg-4') : 'text-fg-4'
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-2 hover:border-white/20 hover:text-fg transition-colors"
-      >
-        {providerLabel && <><span className={`shrink-0 font-medium ${providerColor}`}>{providerLabel}</span><span className="text-fg-4">·</span></>}
-        {loading
-          ? <span className="h-2.5 w-2.5 animate-spin rounded-full border border-fg-4 border-t-primary" />
-          : <span className="max-w-[120px] truncate">{label}</span>}
-        <ChevronIcon open={open} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-1/2 top-full z-20 mt-1.5 max-h-60 w-56 -translate-x-1/2 overflow-y-auto rounded-lg border border-white/10 bg-surface-2 shadow-xl">
-            <button onMouseDown={e => { e.preventDefault(); onChange(''); setOpen(false) }} className={`flex w-full items-center px-3 py-2 text-xs transition-colors ${!value ? 'text-primary bg-primary/10' : 'text-fg-4 hover:bg-surface-3 hover:text-fg'}`}>
-              (auto / default){!value && <span className="ml-auto text-primary">✓</span>}
-            </button>
-            {models.map(m => (
-              <button key={m} onMouseDown={e => { e.preventDefault(); onChange(m); setOpen(false) }} className={`flex w-full items-center px-3 py-2 text-xs transition-colors ${value === m ? 'text-primary bg-primary/10' : 'text-fg-2 hover:bg-surface-3 hover:text-fg'}`}>
-                <span className="truncate">{m}</span>
-                {value === m && <span className="ml-auto shrink-0 text-primary">✓</span>}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-function ModelDropdown({
-  value, onChange, models, loading, compact = false,
-}: {
-  value: string
-  onChange: (m: string) => void
-  models: string[]
-  loading: boolean
-  compact?: boolean
-}) {
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState(value)
-
-  // Sync input text when saved value changes (e.g. provider switch)
-  useEffect(() => { setQuery(value) }, [value])
-
-  const allModels = value && !models.includes(value) ? [value, ...models] : models
-  const isFiltering = query !== '' && query !== value
-  const filtered = isFiltering
-    ? allModels.filter(m => m.toLowerCase().includes(query.toLowerCase()))
-    : allModels
-
-  const handleSelect = (m: string) => {
-    onChange(m)
-    setQuery(m)
-    setOpen(false)
-  }
-
-  const handleClear = () => {
-    onChange('')
-    setQuery('')
-    setOpen(false)
-  }
-
-  const handleBlur = () => {
-    // If typed text doesn't match any model, keep it as a custom value
-    setTimeout(() => {
-      setOpen(false)
-      if (query !== value) onChange(query)
-    }, 150)
-  }
-
-  return (
-    <div className="relative">
-      <div className={`flex items-center rounded-lg border border-white/10 bg-surface-2 focus-within:border-primary/50 transition-colors ${compact ? 'px-2.5 py-1' : 'px-3 py-2.5'}`}>
-        <input
-          type="text"
-          value={query}
-          onChange={e => { setQuery(e.target.value); setOpen(true) }}
-          onFocus={() => setOpen(true)}
-          onBlur={handleBlur}
-          placeholder="Select or type model…"
-          className={`flex-1 bg-transparent placeholder-fg-4 outline-none ${compact ? 'text-xs text-fg-2' : 'text-sm text-fg'}`}
-        />
-        {loading
-          ? <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-fg-4 border-t-primary" />
-          : <ChevronIcon open={open} />}
-      </div>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-52 overflow-y-auto rounded-lg border border-white/10 bg-surface-2 shadow-xl">
-            <button
-              onMouseDown={e => { e.preventDefault(); handleClear() }}
-              className={`flex w-full items-center px-3 py-2 text-sm transition-colors ${
-                !value ? 'text-primary bg-primary/10' : 'text-fg-4 hover:bg-surface-3 hover:text-fg'
-              }`}
-            >
-              (auto / default)
-              {!value && <span className="ml-auto text-primary">✓</span>}
-            </button>
-            {loading && filtered.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-fg-4">Loading…</p>
-            ) : filtered.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-fg-4">No models found</p>
-            ) : (
-              filtered.map(m => (
-                <button
-                  key={m}
-                  onMouseDown={e => { e.preventDefault(); handleSelect(m) }}
-                  className={`flex w-full items-center px-3 py-2 text-sm transition-colors ${
-                    value === m ? 'text-primary bg-primary/10' : 'text-fg-2 hover:bg-surface-3 hover:text-fg'
-                  }`}
-                >
-                  <span className="truncate">{m}</span>
-                  {value === m && <span className="ml-auto shrink-0 text-primary">✓</span>}
-                </button>
-              ))
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-const NON_CHAT_KEYWORDS = ['vision', 'embed', 'audio', 'whisper', 'tts', 'ocr', 'rerank', 'clip']
-function isNonChatModel(model: string) {
-  const m = model.toLowerCase()
-  return NON_CHAT_KEYWORDS.some(k => m.includes(k))
-}
-
-function ModelBar({ settingsVersion, compact = false, inline = false, compactDropdown = false }: { settingsVersion: number; compact?: boolean; inline?: boolean; compactDropdown?: boolean }) {
-  const [config, setConfig] = useState<ReturnType<typeof getActiveConfig>>(null)
-  const [models, setModels] = useState<string[]>([])
-  const [loadingModels, setLoadingModels] = useState(false)
-
-  useEffect(() => { setConfig(getActiveConfig()) }, [settingsVersion])
-
-  useEffect(() => {
-    if (!config) return
-    let cancelled = false
-    setModels([])
-    setLoadingModels(true)
-    fetchModels(config.provider, config.apiKey, config.baseUrl ?? '').then(m => {
-      if (!cancelled) { setModels(m); setLoadingModels(false) }
-    }).catch(() => { if (!cancelled) setLoadingModels(false) })
-    return () => { cancelled = true }
-  }, [config?.provider, config?.apiKey, config?.baseUrl])
-
-  if (!config) return null
-
-  const providerLabel = PROVIDERS.find(p => p.id === config.provider)?.label ?? config.provider
-
-  const handleModelChange = (model: string) => {
-    const settings = getApiSettings()
-    if (!settings) return
-    const providerConf: ProviderConfig = { ...(settings.configs[config.provider] ?? { apiKey: '' }), model }
-    saveApiSettings({ ...settings, configs: { ...settings.configs, [config.provider]: providerConf } })
-    setConfig((prev): typeof prev => prev ? { ...prev, model } : prev)
-  }
-
-  const selectedModel = config.model ?? ''
-  const warn = selectedModel && isNonChatModel(selectedModel)
-
-  if (compact) {
-    return (
-      <div className="px-4 pb-1.5 pt-0.5">
-        <ModelDropdown value={selectedModel} onChange={handleModelChange} models={models} loading={loadingModels} compact={compactDropdown} />
-        {warn && <p className="mt-1 text-[11px] text-amber-400">"{selectedModel}" may not support chat — select a text generation model.</p>}
-      </div>
-    )
-  }
-
-  const inner = (
-    <>
-      <div className="flex items-center justify-center gap-2">
-        <span className="shrink-0 text-[11px] text-fg-4">{providerLabel}</span>
-        <div className="flex-1">
-          <ModelDropdown value={selectedModel} onChange={handleModelChange} models={models} loading={loadingModels} compact={compactDropdown} />
-        </div>
-      </div>
-      {warn && <p className="mt-1 text-center text-[11px] text-amber-400">"{selectedModel}" may not support chat — select a text generation model.</p>}
-    </>
-  )
-
-  if (inline) return <>{inner}</>
-
-  return (
-    <div className="border-b border-white/10 bg-surface px-4 py-2">
-      {inner}
-    </div>
-  )
-}
 
 function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onClose: () => void; hintDismissed: boolean; onHintDismissedChange: (v: boolean) => void }) {
-  const saved = getApiSettings()
-  const [provider, setProvider] = useState<AiProvider>(saved?.provider ?? 'builtin')
-  const [configs, setConfigs] = useState<Partial<Record<AiProvider, ProviderConfig>>>(saved?.configs ?? {})
-  const [showKey, setShowKey] = useState(false)
-  const [savedFlash, setSavedFlash] = useState(false)
   const [closing, setClosing] = useState(false)
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isFirstRender = useRef(true)
   const [isPwa] = useState(() => typeof window !== 'undefined' && 'serviceWorker' in navigator && (window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true))
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'done'>('idle')
-  const [showAbout, setShowAbout] = useState(false)
   const [showAboutModal, setShowAboutModal] = useState(false)
-  const [availableModels, setAvailableModels] = useState<string[]>([])
-  const [loadingModels, setLoadingModels] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<Theme>(() => getTheme())
   const [themeOpen, setThemeOpen] = useState(false)
   const [currentDevice, setCurrentDevice] = useState<NuxDevice>(() => getDefaultDevice())
@@ -1625,49 +1333,9 @@ function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onCl
     saveDefaultDevice(d)
   }
 
-  const current = PROVIDERS.find(p => p.id === provider)!
-  const currentConfig = configs[provider] ?? { apiKey: '' }
-  const apiKey = currentConfig.apiKey ?? ''
-  const model = currentConfig.model ?? ''
-
-  // Fetch available models whenever provider/apiKey changes
-  useEffect(() => {
-    let cancelled = false
-    setAvailableModels([])
-    setLoadingModels(true)
-    fetchModels(provider, apiKey, '').then(models => {
-      if (!cancelled) { setAvailableModels(models); setLoadingModels(false) }
-    })
-    return () => { cancelled = true }
-  }, [provider, apiKey])
-
-  // Auto-save whenever provider or configs change (skip first render)
-  useEffect(() => {
-    if (isFirstRender.current) { isFirstRender.current = false; return }
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => {
-      saveApiSettings({ provider, configs })
-      setSavedFlash(true)
-      setTimeout(() => setSavedFlash(false), 1500)
-    }, 600)
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
-  }, [provider, configs])
-
   const handleClose = () => {
     setClosing(true)
     setTimeout(() => onClose(), 240)
-  }
-
-  const handleProviderChange = (p: AiProvider) => {
-    setProvider(p)
-  }
-
-  const setApiKey = (val: string) => {
-    setConfigs(prev => ({ ...prev, [provider]: { ...prev[provider] ?? {}, apiKey: val } }))
-  }
-
-  const setModel = (val: string) => {
-    setConfigs(prev => ({ ...prev, [provider]: { ...prev[provider] ?? { apiKey: '' }, model: val } }))
   }
 
   return (
@@ -1675,15 +1343,7 @@ function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onCl
       <div className="fixed inset-0 z-40 bg-black/50" onClick={handleClose} />
       <aside className={`fixed right-0 top-0 z-50 flex h-full w-80 flex-col bg-surface shadow-2xl ${closing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}>
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-medium text-fg">Settings</h2>
-            {savedFlash && (
-              <span className="flex items-center gap-1 text-xs text-green-400">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                Saved
-              </span>
-            )}
-          </div>
+          <h2 className="text-sm font-medium text-fg">Settings</h2>
           <button onClick={handleClose} className="text-fg-3 hover:text-fg transition-colors">
             <CloseIcon />
           </button>
@@ -1780,78 +1440,20 @@ function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onCl
             </div>
           </div>
 
-          {/* Provider */}
-          <div>
-            <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-3">AI Provider</p>
-            <ProviderDropdown value={provider} onChange={handleProviderChange} />
-            {current.apiKeyUrl && (
-              <a
-                href={current.apiKeyUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
-              >
-                Get your {current.label} API key
-                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              </a>
-            )}
-            {current.note && (
-              <p className="mt-1.5 text-[11px] text-fg-4">{current.note}</p>
-            )}
-          </div>
-
-          {/* Model */}
-          {provider !== 'builtin' && (
-            <div>
-              <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-3">Model</p>
-              <ModelDropdown
-                value={model}
-                onChange={setModel}
-                models={availableModels}
-                loading={loadingModels}
-              />
-            </div>
-          )}
-
-          {/* API Key */}
-          {provider !== 'builtin' && <div>
-            <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-3">API Key</p>
-            <div className="relative">
-              <input
-                type={showKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
-                placeholder={current.keyPlaceholder}
-                className="w-full rounded-lg border border-white/10 bg-surface-2 px-3 py-2.5 pr-9 text-sm text-fg placeholder-fg-4 outline-none focus:border-primary/50 transition-colors"
-              />
-              <button
-                onClick={() => setShowKey(s => !s)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-fg-4 hover:text-fg-3 transition-colors"
-              >
-                <EyeIcon show={showKey} />
-              </button>
-            </div>
-            <p className="mt-1.5 text-[11px] text-fg-4">
-              Stored per provider, locally in your browser. Never sent to our servers.
-            </p>
-          </div>}
-
           {/* Free tier hint + Tavily note */}
-          {provider === 'builtin' && (
-            <div className="space-y-3">
-              <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => { const next = !hintDismissed; saveHintDismissed(next); onHintDismissedChange(next) }}>
-                <span className="text-xs text-fg-3">Show free tier hint in chat</span>
-                <div
-                  role="switch"
-                  aria-checked={!hintDismissed}
-                  className={`relative h-5 w-9 rounded-full transition-colors ${!hintDismissed ? 'bg-primary' : 'bg-surface-3'}`}
-                >
-                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${!hintDismissed ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                </div>
+          <div className="space-y-3">
+            <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => { const next = !hintDismissed; saveHintDismissed(next); onHintDismissedChange(next) }}>
+              <span className="text-xs text-fg-3">Show daily limit hint in chat</span>
+              <div
+                role="switch"
+                aria-checked={!hintDismissed}
+                className={`relative h-5 w-9 rounded-full transition-colors ${!hintDismissed ? 'bg-primary' : 'bg-surface-3'}`}
+              >
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${!hintDismissed ? 'translate-x-4' : 'translate-x-0.5'}`} />
               </div>
-              <p className="text-[11px] text-fg-4">Web search for artist/song tones requires a <span className="font-mono text-fg-3">TAVILY_API_KEY</span> environment variable (self-hosted only).</p>
             </div>
-          )}
+            <p className="text-[11px] text-fg-4">Web search for artist/song tones requires a <span className="font-mono text-fg-3">TAVILY_API_KEY</span> environment variable (self-hosted only).</p>
+          </div>
 
           {/* Check for updates — PWA only */}
           {isPwa && (
@@ -2457,7 +2059,6 @@ export default function Page() {
   const [quotaVersion, setQuotaVersion] = useState(0)
   const [currentDevice, setCurrentDevice] = useState<NuxDevice>(() => getDefaultDevice())
   const [hintDismissed, setHintDismissed] = useState(() => getHintDismissed())
-  const [currentProvider, setCurrentProvider] = useState<AiProvider>(() => getApiSettings()?.provider ?? 'builtin')
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
   const [pendingImport, setPendingImport] = useState<{ qr: QrResult; guess: { artist: string; song: string } } | null>(null)
   const [importNamePending, setImportNamePending] = useState<{ qr: QrResult; suggestedName: string } | null>(null)
@@ -2515,7 +2116,6 @@ export default function Page() {
   }, [])
 
   useEffect(() => { setCurrentDevice(getDefaultDevice()) }, [settingsVersion])
-  useEffect(() => { setCurrentProvider(getApiSettings()?.provider ?? 'builtin') }, [settingsVersion])
   useEffect(() => { if (messages.length > 0) setDeviceChangedHint(true) }, [currentDevice]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const scrollToBottom = useCallback(() => {
@@ -2903,7 +2503,7 @@ export default function Page() {
               <button onClick={startNewChat} className="text-sm font-semibold text-fg hover:text-fg-2 transition-colors">Mighty AI QR</button>
             </div>
             <div className="absolute left-1/2 -translate-x-1/2">
-              <HeaderModelPill settingsVersion={settingsVersion} quotaVersion={quotaVersion} />
+              <BuiltinPill quotaVersion={quotaVersion} />
             </div>
             <div className="ml-auto flex items-center gap-2">
               {activeConvId && (
@@ -2934,7 +2534,7 @@ export default function Page() {
               </div>
             </div>
             <div className="flex justify-center border-t border-white/10 px-4 py-2">
-              <HeaderModelPill settingsVersion={settingsVersion} quotaVersion={quotaVersion} />
+              <BuiltinPill quotaVersion={quotaVersion} />
             </div>
           </div>
 
@@ -2952,7 +2552,7 @@ export default function Page() {
                 </div>
               )}
               <div className="mx-auto w-full max-w-2xl space-y-4">
-              {!hintDismissed && currentProvider === 'builtin' && (
+              {!hintDismissed && (
                 <ByokHintBanner
                   onDismiss={() => { saveHintDismissed(true); setHintDismissed(true) }}
                   onOpenSettings={() => setShowSettings(true)}
