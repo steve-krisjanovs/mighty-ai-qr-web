@@ -78,7 +78,6 @@ export async function sendChat(messages: Message[], signal?: AbortSignal, device
   if (active) {
     if (active.apiKey) extraHeaders['x-user-api-key'] = active.apiKey
     extraHeaders['x-provider'] = active.provider
-    if (active.baseUrl) extraHeaders['x-base-url'] = active.baseUrl
     if (active.model)   extraHeaders['x-model'] = active.model
   }
 
@@ -178,7 +177,6 @@ export async function convertPreset(qrString: string, targetDevice: string, pres
   if (active) {
     if (active.apiKey) extraHeaders['x-user-api-key'] = active.apiKey
     extraHeaders['x-provider'] = active.provider
-    if (active.baseUrl) extraHeaders['x-base-url'] = active.baseUrl
     if (active.model)   extraHeaders['x-model'] = active.model
   }
 

@@ -1279,17 +1279,9 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
 
 // ─── Settings Panel ───────────────────────────────────────────────────────────
 
-const PROVIDERS: { id: AiProvider; label: string; keyPlaceholder: string; defaultBase?: string; defaultModel?: string; local?: boolean; apiKeyUrl?: string; note?: string; builtin?: boolean }[] = [
+const PROVIDERS: { id: AiProvider; label: string; keyPlaceholder: string; apiKeyUrl?: string; note?: string; builtin?: boolean }[] = [
   { id: 'builtin',   label: 'Free (Built-in)', keyPlaceholder: '', builtin: true, note: 'Powered by Claude Sonnet. No key needed. Shared daily limit applies.' },
-  { id: 'anthropic', label: 'Anthropic',  keyPlaceholder: 'sk-ant-...',             apiKeyUrl: 'https://console.anthropic.com/settings/keys', note: 'Free credits included on signup.' },
-  { id: 'openai',    label: 'OpenAI',     keyPlaceholder: 'sk-...',                  defaultModel: 'gpt-4o', apiKeyUrl: 'https://platform.openai.com/api-keys', note: 'Requires a paid billing plan — no free tier.' },
-  { id: 'gemini',    label: 'Gemini',     keyPlaceholder: 'AIza...',                 defaultModel: 'gemini-2.0-flash', defaultBase: 'https://generativelanguage.googleapis.com/v1beta/openai', apiKeyUrl: 'https://aistudio.google.com/app/apikey', note: 'API billing is separate from Gemini Pro. Enable billing in Google Cloud for full access.' },
-  { id: 'grok',      label: 'Grok (xAI)', keyPlaceholder: 'xai-...',                defaultModel: 'grok-3-mini', defaultBase: 'https://api.x.ai/v1', apiKeyUrl: 'https://console.x.ai/', note: 'Free trial credits on signup.' },
-  { id: 'mistral',   label: 'Mistral',    keyPlaceholder: 'your Mistral key',        defaultModel: 'mistral-small-latest', defaultBase: 'https://api.mistral.ai/v1', apiKeyUrl: 'https://console.mistral.ai/api-keys', note: 'Free tier available with rate limits.' },
-  { id: 'groq',      label: 'Groq',       keyPlaceholder: 'gsk_...',                 defaultModel: 'llama-3.3-70b-versatile', defaultBase: 'https://api.groq.com/openai/v1', apiKeyUrl: 'https://console.groq.com/keys', note: 'Generous free tier. Very fast inference.' },
-  { id: 'ollama',    label: 'Ollama',     keyPlaceholder: 'none required',           defaultBase: 'http://localhost:11434/v1',  defaultModel: 'llama3.2', local: true },
-  { id: 'openwebui', label: 'Open WebUI', keyPlaceholder: 'your Open WebUI key',     defaultBase: 'http://localhost:3000/openai/v1', defaultModel: 'llama3.2', local: true },
-  { id: 'lmstudio',  label: 'LM Studio',  keyPlaceholder: 'lm-studio (any value)',   defaultBase: 'http://localhost:1234/v1',   defaultModel: 'local-model', local: true },
+  { id: 'anthropic', label: 'Anthropic', keyPlaceholder: 'sk-ant-...', apiKeyUrl: 'https://console.anthropic.com/settings/keys', note: 'Free credits included on signup.' },
 ]
 
 const THEME_GROUPS: { label: string; ids: Theme[] }[] = [
@@ -1298,38 +1290,8 @@ const THEME_GROUPS: { label: string; ids: Theme[] }[] = [
   { label: 'Light Vintage', ids: ['tweed-lt', 'amber-lt', 'british-lt', 'oxblood-lt', 'silver-lt', 'pedalboard-lt', 'blackface-lt', 'plexi-lt'] },
 ]
 
-const PROVIDER_GROUPS = [
-  { label: 'Free Tier', ids: ['builtin'] as AiProvider[] },
-  { label: 'Cloud', ids: ['anthropic', 'openai', 'gemini', 'grok', 'mistral', 'groq'] as AiProvider[] },
-  { label: 'Local', ids: ['ollama', 'openwebui', 'lmstudio'] as AiProvider[] },
-]
-
-function LocalLlmInfoModal({ onClose }: { onClose: () => void }) {
-  return (
-    <>
-      <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up p-6 space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-sm font-semibold text-fg">Local LLMs — Self-Hosting Required</p>
-            <button onClick={onClose} className="text-fg-4 hover:text-fg-2 transition-colors shrink-0"><CloseIcon /></button>
-          </div>
-          <p className="text-xs text-fg-3">Ollama, LM Studio, and Open WebUI run on your own machine. They are only reachable when you self-host this app via Docker on the same network as your LLM server.</p>
-          <div className="rounded-lg border border-white/10 bg-surface-2 px-3 py-2.5 space-y-1">
-            <p className="text-[11px] font-medium text-fg-2">How to self-host</p>
-            <p className="text-[11px] text-fg-3">Clone the repo, run <code className="font-mono bg-white/5 px-1 rounded">docker compose up -d</code>, and point your browser at the container. Your local LLMs will be reachable at <code className="font-mono bg-white/5 px-1 rounded">localhost</code> URLs.</p>
-          </div>
-          <p className="text-[11px] text-fg-4">On the public hosted version, requests to localhost addresses will fail — the server has no access to your machine.</p>
-        </div>
-      </div>
-    </>
-  )
-}
-
-
 function ProviderDropdown({ value, onChange }: { value: AiProvider; onChange: (p: AiProvider) => void }) {
   const [open, setOpen] = useState(false)
-  const [showLocalInfo, setShowLocalInfo] = useState(false)
   const current = PROVIDERS.find(p => p.id === value)!
 
   return (
@@ -1345,43 +1307,21 @@ function ProviderDropdown({ value, onChange }: { value: AiProvider; onChange: (p
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-white/10 bg-surface-2 shadow-xl overflow-hidden">
-            {PROVIDER_GROUPS.map(group => (
-              <div key={group.label}>
-                <div className="flex items-center justify-between px-3 py-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-fg-4">{group.label}</p>
-                  {group.label === 'Local' && (
-                    <button
-                      onClick={e => { e.stopPropagation(); setOpen(false); setShowLocalInfo(true) }}
-                      className="text-fg-4 hover:text-fg-2 transition-colors"
-                      title="Self-hosting required"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-                {group.ids.map(id => {
-                  const p = PROVIDERS.find(x => x.id === id)!
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => { onChange(id); setOpen(false) }}
-                      className={`flex w-full items-center px-3 py-2 text-sm transition-colors ${
-                        value === id ? 'text-primary bg-primary/10' : 'text-fg-2 hover:bg-surface-3 hover:text-fg'
-                      }`}
-                    >
-                      {p.label}
-                      {value === id && <span className="ml-auto text-primary">✓</span>}
-                    </button>
-                  )
-                })}
-              </div>
+            {PROVIDERS.map(p => (
+              <button
+                key={p.id}
+                onClick={() => { onChange(p.id); setOpen(false) }}
+                className={`flex w-full items-center px-3 py-2 text-sm transition-colors ${
+                  value === p.id ? 'text-primary bg-primary/10' : 'text-fg-2 hover:bg-surface-3 hover:text-fg'
+                }`}
+              >
+                {p.label}
+                {value === p.id && <span className="ml-auto text-primary">✓</span>}
+              </button>
             ))}
           </div>
         </>
       )}
-      {showLocalInfo && <LocalLlmInfoModal onClose={() => setShowLocalInfo(false)} />}
     </div>
   )
 }
@@ -1432,21 +1372,9 @@ function HeaderModelPill({ settingsVersion, quotaVersion }: { settingsVersion: n
     return () => { cancelled = true }
   }, [config?.provider, config?.apiKey, config?.baseUrl])
 
-  const isByok = !!config?.apiKey || !!config?.baseUrl
-  const needsKey = config && config.provider !== 'builtin' && config.provider !== 'anthropic' && !isByok
+  const isByok = !!config?.apiKey
   if (!config || config.provider === 'builtin') return <BuiltinPill quotaVersion={quotaVersion} />
   if (config.provider === 'anthropic' && !isByok) return <BuiltinPill quotaVersion={quotaVersion} />
-
-  if (needsKey) {
-    const providerLabel = PROVIDERS.find(p => p.id === config.provider)?.label ?? config.provider
-    return (
-      <div className="flex items-center gap-1.5 rounded-full border border-red-500/40 bg-surface-2 px-3 py-1 text-xs select-none">
-        <span className="font-medium text-fg-2">{providerLabel}</span>
-        <span className="text-fg-4">·</span>
-        <span className="text-red-400">no API key</span>
-      </div>
-    )
-  }
 
   const handleChange = (model: string) => {
     const settings = getApiSettings()
@@ -1463,14 +1391,6 @@ function HeaderModelPill({ settingsVersion, quotaVersion }: { settingsVersion: n
 
 const PROVIDER_COLORS: Record<string, string> = {
   anthropic: 'text-orange-400',
-  openai:    'text-green-400',
-  gemini:    'text-blue-400',
-  grok:      'text-purple-400',
-  mistral:   'text-rose-400',
-  groq:      'text-emerald-400',
-  ollama:    'text-teal-400',
-  lmstudio:  'text-cyan-400',
-  openwebui: 'text-sky-400',
 }
 
 // Compact pill for desktop header — shows current model, click to pick from list
@@ -1706,22 +1626,20 @@ function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onCl
   }
 
   const current = PROVIDERS.find(p => p.id === provider)!
-  const isLocal = current.local ?? false
   const currentConfig = configs[provider] ?? { apiKey: '' }
   const apiKey = currentConfig.apiKey ?? ''
-  const baseUrl = currentConfig.baseUrl ?? ''
   const model = currentConfig.model ?? ''
 
-  // Fetch available models whenever provider/baseUrl/apiKey changes
+  // Fetch available models whenever provider/apiKey changes
   useEffect(() => {
     let cancelled = false
     setAvailableModels([])
     setLoadingModels(true)
-    fetchModels(provider, apiKey, baseUrl).then(models => {
+    fetchModels(provider, apiKey, '').then(models => {
       if (!cancelled) { setAvailableModels(models); setLoadingModels(false) }
     })
     return () => { cancelled = true }
-  }, [provider, apiKey, baseUrl])
+  }, [provider, apiKey])
 
   // Auto-save whenever provider or configs change (skip first render)
   useEffect(() => {
@@ -1742,26 +1660,10 @@ function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onCl
 
   const handleProviderChange = (p: AiProvider) => {
     setProvider(p)
-    const def = PROVIDERS.find(x => x.id === p)
-    setConfigs(prev => {
-      const existing = prev[p] ?? { apiKey: '' }
-      return {
-        ...prev,
-        [p]: {
-          ...existing,
-          baseUrl: existing.baseUrl || def?.defaultBase || '',
-          model:   existing.model   || def?.defaultModel || '',
-        },
-      }
-    })
   }
 
   const setApiKey = (val: string) => {
     setConfigs(prev => ({ ...prev, [provider]: { ...prev[provider] ?? {}, apiKey: val } }))
-  }
-
-  const setBaseUrl = (val: string) => {
-    setConfigs(prev => ({ ...prev, [provider]: { ...prev[provider] ?? { apiKey: '' }, baseUrl: val } }))
   }
 
   const setModel = (val: string) => {
@@ -1898,26 +1800,6 @@ function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onCl
             )}
           </div>
 
-          {/* Base URL — local providers + Gemini */}
-          {provider !== 'builtin' && (isLocal || provider === 'gemini') && (
-            <div>
-              <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-3">Base URL</p>
-              <input
-                type="text"
-                value={baseUrl}
-                onChange={e => setBaseUrl(e.target.value)}
-                placeholder={current.defaultBase}
-                className="w-full rounded-lg border border-white/10 bg-surface-2 px-3 py-2.5 text-sm text-fg placeholder-fg-4 outline-none focus:border-primary/50 transition-colors"
-              />
-              <p className="mt-1.5 text-[11px] text-fg-4">
-                {isLocal ? `URL of your local ${current.label} instance (include /v1)` : 'OpenAI-compatible endpoint'}
-              </p>
-              {isLocal && (
-                <p className="mt-1 text-[11px] text-fg-4">Running in Docker? Ollama must bind to all interfaces: set <span className="font-mono text-fg-3">OLLAMA_HOST=0.0.0.0</span> in its service environment.</p>
-              )}
-            </div>
-          )}
-
           {/* Model */}
           {provider !== 'builtin' && (
             <div>
@@ -1933,9 +1815,7 @@ function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onCl
 
           {/* API Key */}
           {provider !== 'builtin' && <div>
-            <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-3">
-              API Key {isLocal && <span className="normal-case text-fg-4">(optional for local)</span>}
-            </p>
+            <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-3">API Key</p>
             <div className="relative">
               <input
                 type={showKey ? 'text' : 'password'}
