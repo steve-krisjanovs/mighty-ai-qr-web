@@ -71,11 +71,10 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 ## Resume — Next Session
 
 ### Branch state
-- Active branch: `replace-tavily-with-anthropic-search` (not yet merged to `main`)
-- Render auto-deploys from `main` — v1.5.4 live at `https://mighty-ai-qr-web.onrender.com`
-- v1.6.0 is local only until branch is merged and pushed
+- Active branch: `main`
+- Render auto-deploys from `main` — v1.6.3 live at `https://mighty-ai-qr-web.onrender.com`
 
-### What shipped in v1.6.0 (in progress)
+### What shipped in v1.6.x
 - Removed all non-Anthropic AI provider support — free tier (server key) is the only path
 - Removed BYOK entirely — no API key settings in the UI
 - Replaced Tavily web search with Anthropic native web search (`web_search_20250305`)
