@@ -246,6 +246,13 @@ const FacebookIcon = () => (
   </svg>
 )
 
+const CopyIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+  </svg>
+)
+
 const CloseIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 6L6 18M6 6l12 12" />
@@ -479,6 +486,7 @@ function QrCard({ qr, description, className = '', nameOverride, onRename }: { q
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [editName, setEditName] = useState(displayName)
+  const [copied, setCopied] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, displayName)
@@ -528,7 +536,7 @@ function QrCard({ qr, description, className = '', nameOverride, onRename }: { q
             <p className="text-[11px] text-fg-4 leading-relaxed mt-1.5">{description}</p>
           )}
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
             <DownloadIcon /> Download
           </button>
@@ -537,6 +545,13 @@ function QrCard({ qr, description, className = '', nameOverride, onRename }: { q
           </a>
           <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
             <FacebookIcon /> {shareLabel}
+          </button>
+          <button
+            onClick={() => { if (qr.qrString) { navigator.clipboard.writeText(qr.qrString); setCopied(true); setTimeout(() => setCopied(false), 2000) } }}
+            disabled={!qr.qrString}
+            className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors disabled:opacity-40"
+          >
+            <CopyIcon /> {copied ? 'Copied!' : 'Copy code'}
           </button>
         </div>
         <div className="border-t border-white/10 pt-3">
@@ -792,6 +807,7 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
   const [editing, setEditing] = useState(autoRename ?? false)
   const [name, setName] = useState(item.qr.presetName)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, name)
@@ -882,7 +898,7 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
               {convertError && <p className="text-xs text-red-400 text-center">{convertError}</p>}
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <DownloadIcon /> Download
               </button>
@@ -891,6 +907,13 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
               </a>
               <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <FacebookIcon /> {shareLabel}
+              </button>
+              <button
+                onClick={() => { if (item.qr.qrString) { navigator.clipboard.writeText(item.qr.qrString); setCopied(true); setTimeout(() => setCopied(false), 2000) } }}
+                disabled={!item.qr.qrString}
+                className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors disabled:opacity-40"
+              >
+                <CopyIcon /> {copied ? 'Copied!' : 'Copy code'}
               </button>
             </div>
 
@@ -944,6 +967,7 @@ function ChatQrModal({ qr, description, currentDevice, onClose, onConvert }: {
   const [converting, setConverting] = useState(false)
   const [name, setName] = useState(qr.presetName)
   const [editing, setEditing] = useState(false)
+  const [copied, setCopied] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, name)
@@ -1037,7 +1061,7 @@ function ChatQrModal({ qr, description, currentDevice, onClose, onConvert }: {
               })()}
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <DownloadIcon /> Download
               </button>
@@ -1046,6 +1070,13 @@ function ChatQrModal({ qr, description, currentDevice, onClose, onConvert }: {
               </a>
               <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <FacebookIcon /> {shareLabel}
+              </button>
+              <button
+                onClick={() => { if (qr.qrString) { navigator.clipboard.writeText(qr.qrString); setCopied(true); setTimeout(() => setCopied(false), 2000) } }}
+                disabled={!qr.qrString}
+                className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors disabled:opacity-40"
+              >
+                <CopyIcon /> {copied ? 'Copied!' : 'Copy code'}
               </button>
             </div>
 
@@ -1432,19 +1463,16 @@ function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onCl
             </div>
           </div>
 
-          {/* Free tier hint + Tavily note */}
-          <div className="space-y-3">
-            <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => { const next = !hintDismissed; saveHintDismissed(next); onHintDismissedChange(next) }}>
-              <span className="text-xs text-fg-3">Show daily limit hint in chat</span>
-              <div
-                role="switch"
-                aria-checked={!hintDismissed}
-                className={`relative h-5 w-9 rounded-full transition-colors ${!hintDismissed ? 'bg-primary' : 'bg-surface-3'}`}
-              >
-                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${!hintDismissed ? 'translate-x-4' : 'translate-x-0.5'}`} />
-              </div>
+          {/* Free tier hint */}
+          <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => { const next = !hintDismissed; saveHintDismissed(next); onHintDismissedChange(next) }}>
+            <span className="text-xs text-fg-3">Show daily limit hint in chat</span>
+            <div
+              role="switch"
+              aria-checked={!hintDismissed}
+              className={`relative h-5 w-9 rounded-full transition-colors ${!hintDismissed ? 'bg-primary' : 'bg-surface-3'}`}
+            >
+              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${!hintDismissed ? 'translate-x-4' : 'translate-x-0.5'}`} />
             </div>
-            <p className="text-[11px] text-fg-4">Web search for artist/song tones requires a <span className="font-mono text-fg-3">TAVILY_API_KEY</span> environment variable (self-hosted only).</p>
           </div>
 
           {/* Check for updates — PWA only */}
@@ -2569,7 +2597,7 @@ export default function Page() {
                   <div className="rounded-2xl rounded-bl-sm bg-surface-2 px-4 py-3.5">
                     <div className="flex items-center gap-1.5">
                       {[0, 1, 2].map(i => <div key={i} className="typing-dot h-2 w-2 rounded-full bg-fg-3" />)}
-                      <span className="ml-2 text-xs text-fg-3">Generating tone…</span>
+                      <span className="ml-2 text-xs text-fg-3">Thinking…</span>
                     </div>
                   </div>
                 </div>

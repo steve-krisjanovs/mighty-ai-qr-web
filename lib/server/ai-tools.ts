@@ -1,21 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { generateQR } from './qr-encoder'
 import type { ProPresetParams } from './nux'
-import { webSearch } from './tavily'
 
-export const webSearchTool: Anthropic.Tool = {
-  name: 'web_search',
-  description: `Search the web for guitar tone information about a specific song or artist.
-Use this BEFORE calling generateQR whenever the user references a specific song, recording, or artist tone.
-Search for the distinctive effects, amp settings, or sound characteristics that define that tone.
-Examples: "Beast of Burden Rolling Stones guitar tone", "David Gilmour Comfortably Numb solo effects"`,
-  input_schema: {
-    type: 'object' as const,
-    required: ['query'],
-    properties: {
-      query: { type: 'string', description: 'Search query, e.g. "Beast of Burden Rolling Stones guitar tone effects"' },
-    },
-  },
+// Versioned web search tool type — update WEB_SEARCH_TOOL_VERSION env var to upgrade without a deploy.
+// Default: web_search_20250305 (latest as of SDK 0.78)
+function getNativeWebSearchTool(): { type: string; name: 'web_search' } {
+  return { type: process.env.WEB_SEARCH_TOOL_VERSION ?? 'web_search_20250305', name: 'web_search' }
 }
 
 export const generateQRTool: Anthropic.Tool = {
@@ -322,60 +312,45 @@ export interface ChatResult {
   sources?: { title: string; url: string }[]
 }
 
+function extractSources(content: Anthropic.ContentBlock[]): { title: string; url: string }[] {
+  const sources: { title: string; url: string }[] = []
+  for (const block of content) {
+    if (block.type === 'web_search_tool_result') {
+      const results = block.content
+      if (Array.isArray(results)) {
+        for (const r of results) {
+          if (r.type === 'web_search_result') {
+            sources.push({ title: r.title, url: r.url })
+          }
+        }
+      }
+    }
+  }
+  return sources
+}
+
 export async function runChat(client: Anthropic, messages: ChatMessage[], model = 'claude-sonnet-4-6', systemPrompt = SYSTEM_PROMPT_FULL): Promise<ChatResult> {
-  const tools: Anthropic.Tool[] = [webSearchTool, generateQRTool]
+  // Native web search is handled server-side by Anthropic — no manual search loop needed.
+  // The API executes web_search internally and returns web_search_tool_result blocks alongside the response.
+  // We only need to handle generateQR tool_use calls in the loop.
+  const nativeSearch = getNativeWebSearchTool()
+  const tools = [nativeSearch, generateQRTool] as Anthropic.MessageCreateParams['tools']
   let currentMessages: Anthropic.MessageParam[] = messages.map(m => ({ role: m.role, content: m.content }))
-  let searchCount = 0
   const sources: { title: string; url: string }[] = []
 
   while (true) {
     const response = await client.messages.create({ model, max_tokens: 1024, system: systemPrompt, tools, messages: currentMessages })
 
+    // Collect any sources from native web search result blocks
+    sources.push(...extractSources(response.content as Anthropic.ContentBlock[]))
+
     if (response.stop_reason !== 'tool_use') {
       const textBlock = response.content.find(b => b.type === 'text')
-      return { message: textBlock?.type === 'text' ? textBlock.text : '' }
+      return { message: textBlock?.type === 'text' ? textBlock.text : '', sources: sources.length > 0 ? sources : undefined }
     }
 
     const toolUse = response.content.find(b => b.type === 'tool_use')
     if (!toolUse || toolUse.type !== 'tool_use') throw new Error('Expected tool_use block')
-
-    if (toolUse.name === 'web_search') {
-      const allToolUses = response.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
-      if (searchCount < 2) {
-        searchCount++
-        const { query } = toolUse.input as { query: string }
-        console.log(`[web_search] query: "${query}"`)
-        const searchResult = await webSearch(query)
-        console.log(`[web_search] result length: ${searchResult.text.length} chars`)
-        sources.push(...searchResult.sources)
-        // Provide tool_results for ALL tool_uses in this response — model may call multiple tools at once.
-        // Any non-web_search tool_use (e.g. generateQR called in parallel) gets a "wait" response.
-        const toolResults = allToolUses.map(tu => ({
-          type: 'tool_result' as const,
-          tool_use_id: tu.id,
-          content: tu.id === toolUse.id ? searchResult.text : 'Please wait for web search results before calling other tools.',
-        }))
-        currentMessages = [
-          ...currentMessages,
-          { role: 'assistant', content: response.content },
-          { role: 'user', content: toolResults },
-        ]
-      } else {
-        // Search limit hit — tell AI to stop searching and generate the QR now.
-        console.log(`[web_search] limit reached, instructing AI to generateQR`)
-        const toolResults = allToolUses.map(tu => ({
-          type: 'tool_result' as const,
-          tool_use_id: tu.id,
-          content: 'Web search limit reached. Generate the QR code now using the information already retrieved.',
-        }))
-        currentMessages = [
-          ...currentMessages,
-          { role: 'assistant', content: response.content },
-          { role: 'user', content: toolResults },
-        ]
-      }
-      continue
-    }
 
     // generateQR
     console.log(`[generateQR] raw input: ${JSON.stringify(toolUse.input)}`)
@@ -392,6 +367,7 @@ export async function runChat(client: Anthropic, messages: ChatMessage[], model 
       ],
     })
 
+    sources.push(...extractSources(followUp.content as Anthropic.ContentBlock[]))
     const textBlock = followUp.content.find(b => b.type === 'text')
     console.log(`[followUp] stop_reason=${followUp.stop_reason} has_text=${!!textBlock}`)
     return { message: textBlock?.type === 'text' ? textBlock.text : 'QR code generated.', qr: qrResult, sources: sources.length > 0 ? sources : undefined }
