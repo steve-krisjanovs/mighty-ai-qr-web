@@ -1284,30 +1284,22 @@ const THEME_GROUPS: { label: string; ids: Theme[] }[] = [
   { label: 'Light Vintage', ids: ['tweed-lt', 'amber-lt', 'british-lt', 'oxblood-lt', 'silver-lt', 'pedalboard-lt', 'blackface-lt', 'plexi-lt'] },
 ]
 
-function BuiltinPill({ quotaVersion }: { quotaVersion: number }) {
+function QuotaPill({ quotaVersion }: { quotaVersion: number }) {
   const [remaining, setRemaining] = useState<number | null>(null)
-  const [refreshing, setRefreshing] = useState(false)
   const fetchQuota = useCallback(() => {
-    setRefreshing(true)
-    fetch('/api/quota').then(r => r.json()).then(d => { setRemaining(d.remaining); setRefreshing(false) }).catch(() => setRefreshing(false))
+    fetch('/api/quota').then(r => r.json()).then(d => { setRemaining(d.remaining) }).catch(() => {})
   }, [])
   useEffect(() => { fetchQuota() }, [fetchQuota, quotaVersion])
   useEffect(() => {
     const id = setInterval(fetchQuota, 30_000)
     return () => clearInterval(id)
   }, [fetchQuota])
+  if (remaining === null) return null
+  const low = remaining <= 10
   return (
-    <button onClick={fetchQuota} className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-4 select-none active:opacity-70 transition-opacity">
-      <span className="font-medium text-fg-2">Free</span>
-      {remaining !== null && (
-        <>
-          <span className="text-fg-4">·</span>
-          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${remaining <= 10 ? 'bg-red-900/40 text-red-400' : 'bg-white/5 text-fg-4'}`}>
-            {refreshing ? '...' : `${remaining} left today`}
-          </span>
-        </>
-      )}
-    </button>
+    <div className={`flex items-center rounded-xl border px-2.5 h-8 text-xs font-medium select-none ${low ? 'border-red-500/40 text-red-400' : 'border-white/10 bg-surface-2 text-fg-4'}`}>
+      {remaining} left
+    </div>
   )
 }
 
@@ -1690,37 +1682,39 @@ function Sidebar({
               {t === 'chats' ? 'Chats' : 'QR Codes'}
             </button>
           ))}
-          {tab === 'chats' && conversations.length > 0 && (
-            <button onClick={onDeleteAllChats} title="Delete all chats" className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
-              <TrashIcon />
-            </button>
-          )}
-          {tab === 'qr' && qrHistory.length > 0 && (
-            <>
-              <button
-                onClick={toggleAll}
-                title={allCollapsed ? 'Expand all' : 'Collapse all'}
-                className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  {allCollapsed
-                    ? <><polyline points="6 9 12 15 18 9"/><polyline points="6 15 12 21 18 15"/></>
-                    : <><polyline points="18 15 12 9 6 15"/><polyline points="18 9 12 3 6 9"/></>
-                  }
-                </svg>
-              </button>
-              <button
-                onClick={() => downloadQrZip(qrHistory, 'all-qr-codes.zip')}
-                title="Download all QR codes as ZIP"
-                className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              </button>
-              <button onClick={onDeleteAllQr} title="Delete all QR codes" className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
+          <div className="flex items-center justify-end w-24 shrink-0">
+            {tab === 'chats' && conversations.length > 0 && (
+              <button onClick={onDeleteAllChats} title="Delete all chats" className="flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
                 <TrashIcon />
               </button>
-            </>
-          )}
+            )}
+            {tab === 'qr' && qrHistory.length > 0 && (
+              <>
+                <button
+                  onClick={toggleAll}
+                  title={allCollapsed ? 'Expand all' : 'Collapse all'}
+                  className="flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    {allCollapsed
+                      ? <><polyline points="6 9 12 15 18 9"/><polyline points="6 15 12 21 18 15"/></>
+                      : <><polyline points="18 15 12 9 6 15"/><polyline points="18 9 12 3 6 9"/></>
+                    }
+                  </svg>
+                </button>
+                <button
+                  onClick={() => downloadQrZip(qrHistory, 'all-qr-codes.zip')}
+                  title="Download all QR codes as ZIP"
+                  className="flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
+                <button onClick={onDeleteAllQr} title="Delete all QR codes" className="flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
+                  <TrashIcon />
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="px-3 pt-2 pb-1 shrink-0 min-w-[260px]">
@@ -2496,45 +2490,35 @@ export default function Page() {
         {/* Header */}
         <header className="bg-surface shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
 
-          {/* ── Desktop: flex row, title left · model centre (absolute) · buttons right ── */}
-          <div className="hidden md:flex md:items-center relative px-4 py-2.5">
-            <div className="flex items-center gap-3">
-              <button onClick={() => { sidebarCollapsed ? setSidebarCollapsed(false) : (window.innerWidth >= 1024 ? setSidebarCollapsed(true) : setSidebarOpen(true)) }} className="text-fg-3 hover:text-fg transition-colors"><MenuIcon /></button>
-              <button onClick={startNewChat} className="text-sm font-semibold text-fg hover:text-fg-2 transition-colors">Mighty AI QR</button>
-            </div>
-            <div className="absolute left-1/2 -translate-x-1/2">
-              <BuiltinPill quotaVersion={quotaVersion} />
-            </div>
+          {/* ── Desktop: single flex row ── */}
+          <div className="hidden md:flex md:items-center px-4 py-2.5 gap-3">
+            <button onClick={() => { sidebarCollapsed ? setSidebarCollapsed(false) : (window.innerWidth >= 1024 ? setSidebarCollapsed(true) : setSidebarOpen(true)) }} className="text-fg-3 hover:text-fg transition-colors"><MenuIcon /></button>
+            <button onClick={startNewChat} className="text-sm font-semibold text-fg hover:text-fg-2 transition-colors">Mighty AI QR</button>
             <div className="ml-auto flex items-center gap-2">
+              <QuotaPill quotaVersion={quotaVersion} />
               {activeConvId && (
-                <button onClick={() => { handleDeleteConversation(activeConvId); startNewChat() }} title="Delete conversation" className="flex items-center justify-center h-8 w-8 rounded-xl text-fg-4 hover:text-red-400 transition-colors">
+                <button onClick={() => { handleDeleteConversation(activeConvId); startNewChat() }} title="Delete conversation" className="flex items-center justify-center h-8 w-8 text-fg-3 hover:text-red-400 transition-colors">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                 </button>
               )}
-              <button onClick={startNewChat} title="New chat" className="flex items-center justify-center h-8 w-8 rounded-xl bg-surface-2 border border-white/10 text-fg-2 hover:bg-surface-3 hover:text-fg transition-colors"><NewChatIcon /></button>
+              <button onClick={startNewChat} title="New chat" className="flex items-center justify-center h-8 w-8 text-fg-3 hover:text-fg transition-colors"><NewChatIcon /></button>
               <button onClick={() => setShowSettings(true)} title="Settings" className="flex items-center justify-center h-8 w-8 rounded-lg text-fg-3 hover:text-fg transition-colors"><GearIcon /></button>
             </div>
           </div>
 
-          {/* ── Mobile: row 1 title + buttons, row 2 full-width model ── */}
-          <div className="md:hidden">
-            <div className="flex items-center justify-between px-4 py-2.5">
-              <div className="flex items-center gap-3">
-                <button onClick={() => setSidebarOpen(true)} className="text-fg-3 hover:text-fg transition-colors"><MenuIcon /></button>
-                <button onClick={startNewChat} className="text-sm font-semibold text-fg hover:text-fg-2 transition-colors">Mighty AI QR</button>
-              </div>
-              <div className="flex items-center gap-2">
-                {activeConvId && (
-                  <button onClick={() => { handleDeleteConversation(activeConvId); startNewChat() }} title="Delete conversation" className="flex items-center justify-center h-9 w-9 rounded-xl text-fg-4 hover:text-red-400 transition-colors">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                  </button>
-                )}
-                <button onClick={startNewChat} title="New chat" className="flex items-center justify-center h-9 w-9 rounded-xl bg-surface-2 border border-white/10 text-fg-2 hover:bg-surface-3 hover:text-fg transition-colors"><NewChatIcon /></button>
-                <button onClick={() => setShowSettings(true)} title="Settings" className="flex items-center justify-center h-8 w-8 rounded-lg text-fg-3 hover:text-fg transition-colors"><GearIcon /></button>
-              </div>
-            </div>
-            <div className="flex justify-center border-t border-white/10 px-4 py-2">
-              <BuiltinPill quotaVersion={quotaVersion} />
+          {/* ── Mobile: single row ── */}
+          <div className="md:hidden flex items-center px-4 py-2.5 gap-3">
+            <button onClick={() => setSidebarOpen(true)} className="text-fg-3 hover:text-fg transition-colors"><MenuIcon /></button>
+            <button onClick={startNewChat} className="text-sm font-semibold text-fg hover:text-fg-2 transition-colors">Mighty AI QR</button>
+            <div className="ml-auto flex items-center gap-2">
+              <QuotaPill quotaVersion={quotaVersion} />
+              {activeConvId && (
+                <button onClick={() => { handleDeleteConversation(activeConvId); startNewChat() }} title="Delete conversation" className="flex items-center justify-center h-9 w-9 text-fg-3 hover:text-red-400 transition-colors">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+              )}
+              <button onClick={startNewChat} title="New chat" className="flex items-center justify-center h-9 w-9 text-fg-3 hover:text-fg transition-colors"><NewChatIcon /></button>
+              <button onClick={() => setShowSettings(true)} title="Settings" className="flex items-center justify-center h-8 w-8 rounded-lg text-fg-3 hover:text-fg transition-colors"><GearIcon /></button>
             </div>
           </div>
 
