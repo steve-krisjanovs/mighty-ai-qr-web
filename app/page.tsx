@@ -5,17 +5,16 @@ import { flushSync } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { v4 as uuidv4 } from 'uuid'
-import { sendChat, initAuth, fetchModels, decodeQr, convertPreset, identifyQr, scanQrFromFile } from '@/lib/api'
+import { sendChat, initAuth, decodeQr, convertPreset, identifyQr, scanQrFromFile } from '@/lib/api'
 import {
   loadHistory, saveToHistory, deleteHistoryItem, renameHistoryItem, clearAllHistory,
   loadConversations, upsertConversation,
   deleteConversation, clearAllConversations, autoTitle, relativeTime,
-  getApiSettings, saveApiSettings, getActiveConfig,
   getTheme, saveTheme,
   getDefaultDevice, saveDefaultDevice,
   getHintDismissed, saveHintDismissed,
   getWelcomeSeen, saveWelcomeSeen,
-  type AiProvider, type ProviderConfig, type Theme, type NuxDevice,
+  type Theme, type NuxDevice,
   NUX_DEVICES,
 } from '@/lib/storage'
 import type { ChatMessage, QrResult, HistoryItem, Conversation } from '@/lib/types'
@@ -244,6 +243,13 @@ const YoutubeIcon = () => (
 const FacebookIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
     <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
+  </svg>
+)
+
+const CopyIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
   </svg>
 )
 
@@ -480,6 +486,7 @@ function QrCard({ qr, description, className = '', nameOverride, onRename }: { q
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [editName, setEditName] = useState(displayName)
+  const [copied, setCopied] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, displayName)
@@ -529,7 +536,7 @@ function QrCard({ qr, description, className = '', nameOverride, onRename }: { q
             <p className="text-[11px] text-fg-4 leading-relaxed mt-1.5">{description}</p>
           )}
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
             <DownloadIcon /> Download
           </button>
@@ -538,6 +545,13 @@ function QrCard({ qr, description, className = '', nameOverride, onRename }: { q
           </a>
           <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
             <FacebookIcon /> {shareLabel}
+          </button>
+          <button
+            onClick={() => { if (qr.qrString) { navigator.clipboard.writeText(qr.qrString); setCopied(true); setTimeout(() => setCopied(false), 2000) } }}
+            disabled={!qr.qrString}
+            className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors disabled:opacity-40"
+          >
+            <CopyIcon /> {copied ? 'Copied!' : 'Copy code'}
           </button>
         </div>
         <div className="border-t border-white/10 pt-3">
@@ -793,6 +807,7 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
   const [editing, setEditing] = useState(autoRename ?? false)
   const [name, setName] = useState(item.qr.presetName)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, name)
@@ -883,7 +898,7 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
               {convertError && <p className="text-xs text-red-400 text-center">{convertError}</p>}
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <DownloadIcon /> Download
               </button>
@@ -892,6 +907,13 @@ function QrModal({ item, currentDevice, onClose, onDeleteRequest, onRename, onOp
               </a>
               <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <FacebookIcon /> {shareLabel}
+              </button>
+              <button
+                onClick={() => { if (item.qr.qrString) { navigator.clipboard.writeText(item.qr.qrString); setCopied(true); setTimeout(() => setCopied(false), 2000) } }}
+                disabled={!item.qr.qrString}
+                className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors disabled:opacity-40"
+              >
+                <CopyIcon /> {copied ? 'Copied!' : 'Copy code'}
               </button>
             </div>
 
@@ -945,6 +967,7 @@ function ChatQrModal({ qr, description, currentDevice, onClose, onConvert }: {
   const [converting, setConverting] = useState(false)
   const [name, setName] = useState(qr.presetName)
   const [editing, setEditing] = useState(false)
+  const [copied, setCopied] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const download = useQrDownload(canvasRef, name)
@@ -1038,7 +1061,7 @@ function ChatQrModal({ qr, description, currentDevice, onClose, onConvert }: {
               })()}
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button onClick={download} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <DownloadIcon /> Download
               </button>
@@ -1047,6 +1070,13 @@ function ChatQrModal({ qr, description, currentDevice, onClose, onConvert }: {
               </a>
               <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors">
                 <FacebookIcon /> {shareLabel}
+              </button>
+              <button
+                onClick={() => { if (qr.qrString) { navigator.clipboard.writeText(qr.qrString); setCopied(true); setTimeout(() => setCopied(false), 2000) } }}
+                disabled={!qr.qrString}
+                className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-2.5 text-xs text-fg-3 hover:text-fg hover:border-white/20 transition-colors disabled:opacity-40"
+              >
+                <CopyIcon /> {copied ? 'Copied!' : 'Copy code'}
               </button>
             </div>
 
@@ -1279,416 +1309,37 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
 
 // ─── Settings Panel ───────────────────────────────────────────────────────────
 
-const PROVIDERS: { id: AiProvider; label: string; keyPlaceholder: string; defaultBase?: string; defaultModel?: string; local?: boolean; apiKeyUrl?: string; note?: string; builtin?: boolean }[] = [
-  { id: 'builtin',   label: 'Free (Built-in)', keyPlaceholder: '', builtin: true, note: 'Powered by Claude Sonnet. No key needed. Shared daily limit applies.' },
-  { id: 'anthropic', label: 'Anthropic',  keyPlaceholder: 'sk-ant-...',             apiKeyUrl: 'https://console.anthropic.com/settings/keys', note: 'Free credits included on signup.' },
-  { id: 'openai',    label: 'OpenAI',     keyPlaceholder: 'sk-...',                  defaultModel: 'gpt-4o', apiKeyUrl: 'https://platform.openai.com/api-keys', note: 'Requires a paid billing plan — no free tier.' },
-  { id: 'gemini',    label: 'Gemini',     keyPlaceholder: 'AIza...',                 defaultModel: 'gemini-2.0-flash', defaultBase: 'https://generativelanguage.googleapis.com/v1beta/openai', apiKeyUrl: 'https://aistudio.google.com/app/apikey', note: 'API billing is separate from Gemini Pro. Enable billing in Google Cloud for full access.' },
-  { id: 'grok',      label: 'Grok (xAI)', keyPlaceholder: 'xai-...',                defaultModel: 'grok-3-mini', defaultBase: 'https://api.x.ai/v1', apiKeyUrl: 'https://console.x.ai/', note: 'Free trial credits on signup.' },
-  { id: 'mistral',   label: 'Mistral',    keyPlaceholder: 'your Mistral key',        defaultModel: 'mistral-small-latest', defaultBase: 'https://api.mistral.ai/v1', apiKeyUrl: 'https://console.mistral.ai/api-keys', note: 'Free tier available with rate limits.' },
-  { id: 'groq',      label: 'Groq',       keyPlaceholder: 'gsk_...',                 defaultModel: 'llama-3.3-70b-versatile', defaultBase: 'https://api.groq.com/openai/v1', apiKeyUrl: 'https://console.groq.com/keys', note: 'Generous free tier. Very fast inference.' },
-  { id: 'ollama',    label: 'Ollama',     keyPlaceholder: 'none required',           defaultBase: 'http://localhost:11434/v1',  defaultModel: 'llama3.2', local: true },
-  { id: 'openwebui', label: 'Open WebUI', keyPlaceholder: 'your Open WebUI key',     defaultBase: 'http://localhost:3000/openai/v1', defaultModel: 'llama3.2', local: true },
-  { id: 'lmstudio',  label: 'LM Studio',  keyPlaceholder: 'lm-studio (any value)',   defaultBase: 'http://localhost:1234/v1',   defaultModel: 'local-model', local: true },
-]
-
 const THEME_GROUPS: { label: string; ids: Theme[] }[] = [
   { label: 'Standard', ids: ['dark', 'oled', 'light'] },
   { label: 'Dark Vintage', ids: ['tweed', 'amber', 'british', 'oxblood', 'silver', 'pedalboard', 'blackface', 'plexi'] },
   { label: 'Light Vintage', ids: ['tweed-lt', 'amber-lt', 'british-lt', 'oxblood-lt', 'silver-lt', 'pedalboard-lt', 'blackface-lt', 'plexi-lt'] },
 ]
 
-const PROVIDER_GROUPS = [
-  { label: 'Free Tier', ids: ['builtin'] as AiProvider[] },
-  { label: 'Cloud', ids: ['anthropic', 'openai', 'gemini', 'grok', 'mistral', 'groq'] as AiProvider[] },
-  { label: 'Local', ids: ['ollama', 'openwebui', 'lmstudio'] as AiProvider[] },
-]
-
-function LocalLlmInfoModal({ onClose }: { onClose: () => void }) {
-  return (
-    <>
-      <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/10 bg-surface shadow-2xl animate-scale-up p-6 space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-sm font-semibold text-fg">Local LLMs — Self-Hosting Required</p>
-            <button onClick={onClose} className="text-fg-4 hover:text-fg-2 transition-colors shrink-0"><CloseIcon /></button>
-          </div>
-          <p className="text-xs text-fg-3">Ollama, LM Studio, and Open WebUI run on your own machine. They are only reachable when you self-host this app via Docker on the same network as your LLM server.</p>
-          <div className="rounded-lg border border-white/10 bg-surface-2 px-3 py-2.5 space-y-1">
-            <p className="text-[11px] font-medium text-fg-2">How to self-host</p>
-            <p className="text-[11px] text-fg-3">Clone the repo, run <code className="font-mono bg-white/5 px-1 rounded">docker compose up -d</code>, and point your browser at the container. Your local LLMs will be reachable at <code className="font-mono bg-white/5 px-1 rounded">localhost</code> URLs.</p>
-          </div>
-          <p className="text-[11px] text-fg-4">On the public hosted version, requests to localhost addresses will fail — the server has no access to your machine.</p>
-        </div>
-      </div>
-    </>
-  )
-}
-
-
-function ProviderDropdown({ value, onChange }: { value: AiProvider; onChange: (p: AiProvider) => void }) {
-  const [open, setOpen] = useState(false)
-  const [showLocalInfo, setShowLocalInfo] = useState(false)
-  const current = PROVIDERS.find(p => p.id === value)!
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-surface-2 px-3 py-2.5 text-sm text-fg hover:bg-surface-3 transition-colors"
-      >
-        <span>{current.label}</span>
-        <ChevronIcon open={open} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-white/10 bg-surface-2 shadow-xl overflow-hidden">
-            {PROVIDER_GROUPS.map(group => (
-              <div key={group.label}>
-                <div className="flex items-center justify-between px-3 py-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-fg-4">{group.label}</p>
-                  {group.label === 'Local' && (
-                    <button
-                      onClick={e => { e.stopPropagation(); setOpen(false); setShowLocalInfo(true) }}
-                      className="text-fg-4 hover:text-fg-2 transition-colors"
-                      title="Self-hosting required"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-                {group.ids.map(id => {
-                  const p = PROVIDERS.find(x => x.id === id)!
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => { onChange(id); setOpen(false) }}
-                      className={`flex w-full items-center px-3 py-2 text-sm transition-colors ${
-                        value === id ? 'text-primary bg-primary/10' : 'text-fg-2 hover:bg-surface-3 hover:text-fg'
-                      }`}
-                    >
-                      {p.label}
-                      {value === id && <span className="ml-auto text-primary">✓</span>}
-                    </button>
-                  )
-                })}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-      {showLocalInfo && <LocalLlmInfoModal onClose={() => setShowLocalInfo(false)} />}
-    </div>
-  )
-}
-
-function BuiltinPill({ quotaVersion }: { quotaVersion: number }) {
+function QuotaPill({ quotaVersion }: { quotaVersion: number }) {
   const [remaining, setRemaining] = useState<number | null>(null)
-  const [model, setModel] = useState<string | null>(null)
-  const [refreshing, setRefreshing] = useState(false)
   const fetchQuota = useCallback(() => {
-    setRefreshing(true)
-    fetch('/api/quota').then(r => r.json()).then(d => { setRemaining(d.remaining); setModel(d.model ?? null); setRefreshing(false) }).catch(() => setRefreshing(false))
+    fetch('/api/quota').then(r => r.json()).then(d => { setRemaining(d.remaining) }).catch(() => {})
   }, [])
   useEffect(() => { fetchQuota() }, [fetchQuota, quotaVersion])
   useEffect(() => {
     const id = setInterval(fetchQuota, 30_000)
     return () => clearInterval(id)
   }, [fetchQuota])
-  const modelLabel = model ? (model.split('-')[1] ?? 'Free').charAt(0).toUpperCase() + (model.split('-')[1] ?? 'free').slice(1) : null
+  if (remaining === null) return null
+  const low = remaining <= 10
   return (
-    <button onClick={fetchQuota} className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-4 select-none active:opacity-70 transition-opacity">
-      <span className="font-medium text-orange-400">Anthropic</span>
-      <span className="text-fg-4">·</span>
-      {modelLabel ?? 'Free'} · Free
-      {remaining !== null && (
-        <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${remaining <= 10 ? 'bg-red-900/40 text-red-400' : 'bg-white/5 text-fg-4'}`}>
-          {refreshing ? '...' : `${remaining} left today`}
-        </span>
-      )}
-    </button>
-  )
-}
-
-// Self-contained desktop header pill — reads/writes localStorage, fetches models
-function HeaderModelPill({ settingsVersion, quotaVersion }: { settingsVersion: number; quotaVersion: number }) {
-  const [config, setConfig] = useState<ReturnType<typeof getActiveConfig>>(null)
-  const [models, setModels] = useState<string[]>([])
-  const [loadingModels, setLoadingModels] = useState(false)
-
-  useEffect(() => { setConfig(getActiveConfig()) }, [settingsVersion])
-  useEffect(() => {
-    if (!config) return
-    let cancelled = false
-    setModels([])
-    setLoadingModels(true)
-    fetchModels(config.provider, config.apiKey, config.baseUrl ?? '').then(m => {
-      if (!cancelled) { setModels(m); setLoadingModels(false) }
-    }).catch(() => { if (!cancelled) setLoadingModels(false) })
-    return () => { cancelled = true }
-  }, [config?.provider, config?.apiKey, config?.baseUrl])
-
-  const isByok = !!config?.apiKey || !!config?.baseUrl
-  const needsKey = config && config.provider !== 'builtin' && config.provider !== 'anthropic' && !isByok
-  if (!config || config.provider === 'builtin') return <BuiltinPill quotaVersion={quotaVersion} />
-  if (config.provider === 'anthropic' && !isByok) return <BuiltinPill quotaVersion={quotaVersion} />
-
-  if (needsKey) {
-    const providerLabel = PROVIDERS.find(p => p.id === config.provider)?.label ?? config.provider
-    return (
-      <div className="flex items-center gap-1.5 rounded-full border border-red-500/40 bg-surface-2 px-3 py-1 text-xs select-none">
-        <span className="font-medium text-fg-2">{providerLabel}</span>
-        <span className="text-fg-4">·</span>
-        <span className="text-red-400">no API key</span>
-      </div>
-    )
-  }
-
-  const handleChange = (model: string) => {
-    const settings = getApiSettings()
-    if (!settings) return
-    const providerConf: ProviderConfig = { ...(settings.configs[config.provider] ?? { apiKey: '' }), model }
-    saveApiSettings({ ...settings, configs: { ...settings.configs, [config.provider]: providerConf } })
-    setConfig(prev => prev ? { ...prev, model } : prev)
-  }
-
-  const providerLabel = PROVIDERS.find(p => p.id === config.provider)?.label ?? config.provider
-
-  return <ModelPill value={config.model ?? ''} onChange={handleChange} models={models} loading={loadingModels} providerLabel={providerLabel} provider={config.provider} />
-}
-
-const PROVIDER_COLORS: Record<string, string> = {
-  anthropic: 'text-orange-400',
-  openai:    'text-green-400',
-  gemini:    'text-blue-400',
-  grok:      'text-purple-400',
-  mistral:   'text-rose-400',
-  groq:      'text-emerald-400',
-  ollama:    'text-teal-400',
-  lmstudio:  'text-cyan-400',
-  openwebui: 'text-sky-400',
-}
-
-// Compact pill for desktop header — shows current model, click to pick from list
-function ModelPill({ value, onChange, models, loading, providerLabel, provider }: { value: string; onChange: (m: string) => void; models: string[]; loading: boolean; providerLabel?: string; provider?: string }) {
-  const [open, setOpen] = useState(false)
-  const label = value || 'auto'
-  const providerColor = provider ? (PROVIDER_COLORS[provider] ?? 'text-fg-4') : 'text-fg-4'
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 rounded-full border border-white/10 bg-surface-2 px-3 py-1 text-xs text-fg-2 hover:border-white/20 hover:text-fg transition-colors"
-      >
-        {providerLabel && <><span className={`shrink-0 font-medium ${providerColor}`}>{providerLabel}</span><span className="text-fg-4">·</span></>}
-        {loading
-          ? <span className="h-2.5 w-2.5 animate-spin rounded-full border border-fg-4 border-t-primary" />
-          : <span className="max-w-[120px] truncate">{label}</span>}
-        <ChevronIcon open={open} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-1/2 top-full z-20 mt-1.5 max-h-60 w-56 -translate-x-1/2 overflow-y-auto rounded-lg border border-white/10 bg-surface-2 shadow-xl">
-            <button onMouseDown={e => { e.preventDefault(); onChange(''); setOpen(false) }} className={`flex w-full items-center px-3 py-2 text-xs transition-colors ${!value ? 'text-primary bg-primary/10' : 'text-fg-4 hover:bg-surface-3 hover:text-fg'}`}>
-              (auto / default){!value && <span className="ml-auto text-primary">✓</span>}
-            </button>
-            {models.map(m => (
-              <button key={m} onMouseDown={e => { e.preventDefault(); onChange(m); setOpen(false) }} className={`flex w-full items-center px-3 py-2 text-xs transition-colors ${value === m ? 'text-primary bg-primary/10' : 'text-fg-2 hover:bg-surface-3 hover:text-fg'}`}>
-                <span className="truncate">{m}</span>
-                {value === m && <span className="ml-auto shrink-0 text-primary">✓</span>}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+    <div className={`flex items-center rounded-xl border px-2.5 h-8 text-xs font-medium select-none ${low ? 'border-red-500/40 text-red-400' : 'border-white/10 bg-surface-2 text-fg-4'}`}>
+      {remaining} left
     </div>
   )
 }
 
-function ModelDropdown({
-  value, onChange, models, loading, compact = false,
-}: {
-  value: string
-  onChange: (m: string) => void
-  models: string[]
-  loading: boolean
-  compact?: boolean
-}) {
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState(value)
-
-  // Sync input text when saved value changes (e.g. provider switch)
-  useEffect(() => { setQuery(value) }, [value])
-
-  const allModels = value && !models.includes(value) ? [value, ...models] : models
-  const isFiltering = query !== '' && query !== value
-  const filtered = isFiltering
-    ? allModels.filter(m => m.toLowerCase().includes(query.toLowerCase()))
-    : allModels
-
-  const handleSelect = (m: string) => {
-    onChange(m)
-    setQuery(m)
-    setOpen(false)
-  }
-
-  const handleClear = () => {
-    onChange('')
-    setQuery('')
-    setOpen(false)
-  }
-
-  const handleBlur = () => {
-    // If typed text doesn't match any model, keep it as a custom value
-    setTimeout(() => {
-      setOpen(false)
-      if (query !== value) onChange(query)
-    }, 150)
-  }
-
-  return (
-    <div className="relative">
-      <div className={`flex items-center rounded-lg border border-white/10 bg-surface-2 focus-within:border-primary/50 transition-colors ${compact ? 'px-2.5 py-1' : 'px-3 py-2.5'}`}>
-        <input
-          type="text"
-          value={query}
-          onChange={e => { setQuery(e.target.value); setOpen(true) }}
-          onFocus={() => setOpen(true)}
-          onBlur={handleBlur}
-          placeholder="Select or type model…"
-          className={`flex-1 bg-transparent placeholder-fg-4 outline-none ${compact ? 'text-xs text-fg-2' : 'text-sm text-fg'}`}
-        />
-        {loading
-          ? <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-fg-4 border-t-primary" />
-          : <ChevronIcon open={open} />}
-      </div>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-52 overflow-y-auto rounded-lg border border-white/10 bg-surface-2 shadow-xl">
-            <button
-              onMouseDown={e => { e.preventDefault(); handleClear() }}
-              className={`flex w-full items-center px-3 py-2 text-sm transition-colors ${
-                !value ? 'text-primary bg-primary/10' : 'text-fg-4 hover:bg-surface-3 hover:text-fg'
-              }`}
-            >
-              (auto / default)
-              {!value && <span className="ml-auto text-primary">✓</span>}
-            </button>
-            {loading && filtered.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-fg-4">Loading…</p>
-            ) : filtered.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-fg-4">No models found</p>
-            ) : (
-              filtered.map(m => (
-                <button
-                  key={m}
-                  onMouseDown={e => { e.preventDefault(); handleSelect(m) }}
-                  className={`flex w-full items-center px-3 py-2 text-sm transition-colors ${
-                    value === m ? 'text-primary bg-primary/10' : 'text-fg-2 hover:bg-surface-3 hover:text-fg'
-                  }`}
-                >
-                  <span className="truncate">{m}</span>
-                  {value === m && <span className="ml-auto shrink-0 text-primary">✓</span>}
-                </button>
-              ))
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-const NON_CHAT_KEYWORDS = ['vision', 'embed', 'audio', 'whisper', 'tts', 'ocr', 'rerank', 'clip']
-function isNonChatModel(model: string) {
-  const m = model.toLowerCase()
-  return NON_CHAT_KEYWORDS.some(k => m.includes(k))
-}
-
-function ModelBar({ settingsVersion, compact = false, inline = false, compactDropdown = false }: { settingsVersion: number; compact?: boolean; inline?: boolean; compactDropdown?: boolean }) {
-  const [config, setConfig] = useState<ReturnType<typeof getActiveConfig>>(null)
-  const [models, setModels] = useState<string[]>([])
-  const [loadingModels, setLoadingModels] = useState(false)
-
-  useEffect(() => { setConfig(getActiveConfig()) }, [settingsVersion])
-
-  useEffect(() => {
-    if (!config) return
-    let cancelled = false
-    setModels([])
-    setLoadingModels(true)
-    fetchModels(config.provider, config.apiKey, config.baseUrl ?? '').then(m => {
-      if (!cancelled) { setModels(m); setLoadingModels(false) }
-    }).catch(() => { if (!cancelled) setLoadingModels(false) })
-    return () => { cancelled = true }
-  }, [config?.provider, config?.apiKey, config?.baseUrl])
-
-  if (!config) return null
-
-  const providerLabel = PROVIDERS.find(p => p.id === config.provider)?.label ?? config.provider
-
-  const handleModelChange = (model: string) => {
-    const settings = getApiSettings()
-    if (!settings) return
-    const providerConf: ProviderConfig = { ...(settings.configs[config.provider] ?? { apiKey: '' }), model }
-    saveApiSettings({ ...settings, configs: { ...settings.configs, [config.provider]: providerConf } })
-    setConfig((prev): typeof prev => prev ? { ...prev, model } : prev)
-  }
-
-  const selectedModel = config.model ?? ''
-  const warn = selectedModel && isNonChatModel(selectedModel)
-
-  if (compact) {
-    return (
-      <div className="px-4 pb-1.5 pt-0.5">
-        <ModelDropdown value={selectedModel} onChange={handleModelChange} models={models} loading={loadingModels} compact={compactDropdown} />
-        {warn && <p className="mt-1 text-[11px] text-amber-400">"{selectedModel}" may not support chat — select a text generation model.</p>}
-      </div>
-    )
-  }
-
-  const inner = (
-    <>
-      <div className="flex items-center justify-center gap-2">
-        <span className="shrink-0 text-[11px] text-fg-4">{providerLabel}</span>
-        <div className="flex-1">
-          <ModelDropdown value={selectedModel} onChange={handleModelChange} models={models} loading={loadingModels} compact={compactDropdown} />
-        </div>
-      </div>
-      {warn && <p className="mt-1 text-center text-[11px] text-amber-400">"{selectedModel}" may not support chat — select a text generation model.</p>}
-    </>
-  )
-
-  if (inline) return <>{inner}</>
-
-  return (
-    <div className="border-b border-white/10 bg-surface px-4 py-2">
-      {inner}
-    </div>
-  )
-}
 
 function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onClose: () => void; hintDismissed: boolean; onHintDismissedChange: (v: boolean) => void }) {
-  const saved = getApiSettings()
-  const [provider, setProvider] = useState<AiProvider>(saved?.provider ?? 'builtin')
-  const [configs, setConfigs] = useState<Partial<Record<AiProvider, ProviderConfig>>>(saved?.configs ?? {})
-  const [showKey, setShowKey] = useState(false)
-  const [savedFlash, setSavedFlash] = useState(false)
   const [closing, setClosing] = useState(false)
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isFirstRender = useRef(true)
   const [isPwa] = useState(() => typeof window !== 'undefined' && 'serviceWorker' in navigator && (window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true))
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'done'>('idle')
-  const [showAbout, setShowAbout] = useState(false)
   const [showAboutModal, setShowAboutModal] = useState(false)
-  const [availableModels, setAvailableModels] = useState<string[]>([])
-  const [loadingModels, setLoadingModels] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<Theme>(() => getTheme())
   const [themeOpen, setThemeOpen] = useState(false)
   const [currentDevice, setCurrentDevice] = useState<NuxDevice>(() => getDefaultDevice())
@@ -1705,67 +1356,9 @@ function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onCl
     saveDefaultDevice(d)
   }
 
-  const current = PROVIDERS.find(p => p.id === provider)!
-  const isLocal = current.local ?? false
-  const currentConfig = configs[provider] ?? { apiKey: '' }
-  const apiKey = currentConfig.apiKey ?? ''
-  const baseUrl = currentConfig.baseUrl ?? ''
-  const model = currentConfig.model ?? ''
-
-  // Fetch available models whenever provider/baseUrl/apiKey changes
-  useEffect(() => {
-    let cancelled = false
-    setAvailableModels([])
-    setLoadingModels(true)
-    fetchModels(provider, apiKey, baseUrl).then(models => {
-      if (!cancelled) { setAvailableModels(models); setLoadingModels(false) }
-    })
-    return () => { cancelled = true }
-  }, [provider, apiKey, baseUrl])
-
-  // Auto-save whenever provider or configs change (skip first render)
-  useEffect(() => {
-    if (isFirstRender.current) { isFirstRender.current = false; return }
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => {
-      saveApiSettings({ provider, configs })
-      setSavedFlash(true)
-      setTimeout(() => setSavedFlash(false), 1500)
-    }, 600)
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
-  }, [provider, configs])
-
   const handleClose = () => {
     setClosing(true)
     setTimeout(() => onClose(), 240)
-  }
-
-  const handleProviderChange = (p: AiProvider) => {
-    setProvider(p)
-    const def = PROVIDERS.find(x => x.id === p)
-    setConfigs(prev => {
-      const existing = prev[p] ?? { apiKey: '' }
-      return {
-        ...prev,
-        [p]: {
-          ...existing,
-          baseUrl: existing.baseUrl || def?.defaultBase || '',
-          model:   existing.model   || def?.defaultModel || '',
-        },
-      }
-    })
-  }
-
-  const setApiKey = (val: string) => {
-    setConfigs(prev => ({ ...prev, [provider]: { ...prev[provider] ?? {}, apiKey: val } }))
-  }
-
-  const setBaseUrl = (val: string) => {
-    setConfigs(prev => ({ ...prev, [provider]: { ...prev[provider] ?? { apiKey: '' }, baseUrl: val } }))
-  }
-
-  const setModel = (val: string) => {
-    setConfigs(prev => ({ ...prev, [provider]: { ...prev[provider] ?? { apiKey: '' }, model: val } }))
   }
 
   return (
@@ -1773,15 +1366,7 @@ function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onCl
       <div className="fixed inset-0 z-40 bg-black/50" onClick={handleClose} />
       <aside className={`fixed right-0 top-0 z-50 flex h-full w-80 flex-col bg-surface shadow-2xl ${closing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}>
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-medium text-fg">Settings</h2>
-            {savedFlash && (
-              <span className="flex items-center gap-1 text-xs text-green-400">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                Saved
-              </span>
-            )}
-          </div>
+          <h2 className="text-sm font-medium text-fg">Settings</h2>
           <button onClick={handleClose} className="text-fg-3 hover:text-fg transition-colors">
             <CloseIcon />
           </button>
@@ -1878,100 +1463,17 @@ function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onCl
             </div>
           </div>
 
-          {/* Provider */}
-          <div>
-            <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-3">AI Provider</p>
-            <ProviderDropdown value={provider} onChange={handleProviderChange} />
-            {current.apiKeyUrl && (
-              <a
-                href={current.apiKeyUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
-              >
-                Get your {current.label} API key
-                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              </a>
-            )}
-            {current.note && (
-              <p className="mt-1.5 text-[11px] text-fg-4">{current.note}</p>
-            )}
+          {/* Free tier hint */}
+          <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => { const next = !hintDismissed; saveHintDismissed(next); onHintDismissedChange(next) }}>
+            <span className="text-xs text-fg-3">Show daily limit hint in chat</span>
+            <div
+              role="switch"
+              aria-checked={!hintDismissed}
+              className={`relative h-5 w-9 rounded-full transition-colors ${!hintDismissed ? 'bg-primary' : 'bg-surface-3'}`}
+            >
+              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${!hintDismissed ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </div>
           </div>
-
-          {/* Base URL — local providers + Gemini */}
-          {provider !== 'builtin' && (isLocal || provider === 'gemini') && (
-            <div>
-              <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-3">Base URL</p>
-              <input
-                type="text"
-                value={baseUrl}
-                onChange={e => setBaseUrl(e.target.value)}
-                placeholder={current.defaultBase}
-                className="w-full rounded-lg border border-white/10 bg-surface-2 px-3 py-2.5 text-sm text-fg placeholder-fg-4 outline-none focus:border-primary/50 transition-colors"
-              />
-              <p className="mt-1.5 text-[11px] text-fg-4">
-                {isLocal ? `URL of your local ${current.label} instance (include /v1)` : 'OpenAI-compatible endpoint'}
-              </p>
-              {isLocal && (
-                <p className="mt-1 text-[11px] text-fg-4">Running in Docker? Ollama must bind to all interfaces: set <span className="font-mono text-fg-3">OLLAMA_HOST=0.0.0.0</span> in its service environment.</p>
-              )}
-            </div>
-          )}
-
-          {/* Model */}
-          {provider !== 'builtin' && (
-            <div>
-              <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-3">Model</p>
-              <ModelDropdown
-                value={model}
-                onChange={setModel}
-                models={availableModels}
-                loading={loadingModels}
-              />
-            </div>
-          )}
-
-          {/* API Key */}
-          {provider !== 'builtin' && <div>
-            <p className="text-xs font-medium text-fg-3 uppercase tracking-wider mb-3">
-              API Key {isLocal && <span className="normal-case text-fg-4">(optional for local)</span>}
-            </p>
-            <div className="relative">
-              <input
-                type={showKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
-                placeholder={current.keyPlaceholder}
-                className="w-full rounded-lg border border-white/10 bg-surface-2 px-3 py-2.5 pr-9 text-sm text-fg placeholder-fg-4 outline-none focus:border-primary/50 transition-colors"
-              />
-              <button
-                onClick={() => setShowKey(s => !s)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-fg-4 hover:text-fg-3 transition-colors"
-              >
-                <EyeIcon show={showKey} />
-              </button>
-            </div>
-            <p className="mt-1.5 text-[11px] text-fg-4">
-              Stored per provider, locally in your browser. Never sent to our servers.
-            </p>
-          </div>}
-
-          {/* Free tier hint + Tavily note */}
-          {provider === 'builtin' && (
-            <div className="space-y-3">
-              <div className="flex cursor-pointer items-center justify-between gap-3" onClick={() => { const next = !hintDismissed; saveHintDismissed(next); onHintDismissedChange(next) }}>
-                <span className="text-xs text-fg-3">Show free tier hint in chat</span>
-                <div
-                  role="switch"
-                  aria-checked={!hintDismissed}
-                  className={`relative h-5 w-9 rounded-full transition-colors ${!hintDismissed ? 'bg-primary' : 'bg-surface-3'}`}
-                >
-                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${!hintDismissed ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                </div>
-              </div>
-              <p className="text-[11px] text-fg-4">Web search for artist/song tones requires a <span className="font-mono text-fg-3">TAVILY_API_KEY</span> environment variable (self-hosted only).</p>
-            </div>
-          )}
 
           {/* Check for updates — PWA only */}
           {isPwa && (
@@ -2208,37 +1710,39 @@ function Sidebar({
               {t === 'chats' ? 'Chats' : 'QR Codes'}
             </button>
           ))}
-          {tab === 'chats' && conversations.length > 0 && (
-            <button onClick={onDeleteAllChats} title="Delete all chats" className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
-              <TrashIcon />
-            </button>
-          )}
-          {tab === 'qr' && qrHistory.length > 0 && (
-            <>
-              <button
-                onClick={toggleAll}
-                title={allCollapsed ? 'Expand all' : 'Collapse all'}
-                className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  {allCollapsed
-                    ? <><polyline points="6 9 12 15 18 9"/><polyline points="6 15 12 21 18 15"/></>
-                    : <><polyline points="18 15 12 9 6 15"/><polyline points="18 9 12 3 6 9"/></>
-                  }
-                </svg>
-              </button>
-              <button
-                onClick={() => downloadQrZip(qrHistory, 'all-qr-codes.zip')}
-                title="Download all QR codes as ZIP"
-                className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              </button>
-              <button onClick={onDeleteAllQr} title="Delete all QR codes" className="ml-1 flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
+          <div className="flex items-center justify-end w-24 shrink-0">
+            {tab === 'chats' && conversations.length > 0 && (
+              <button onClick={onDeleteAllChats} title="Delete all chats" className="flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
                 <TrashIcon />
               </button>
-            </>
-          )}
+            )}
+            {tab === 'qr' && qrHistory.length > 0 && (
+              <>
+                <button
+                  onClick={toggleAll}
+                  title={allCollapsed ? 'Expand all' : 'Collapse all'}
+                  className="flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    {allCollapsed
+                      ? <><polyline points="6 9 12 15 18 9"/><polyline points="6 15 12 21 18 15"/></>
+                      : <><polyline points="18 15 12 9 6 15"/><polyline points="18 9 12 3 6 9"/></>
+                    }
+                  </svg>
+                </button>
+                <button
+                  onClick={() => downloadQrZip(qrHistory, 'all-qr-codes.zip')}
+                  title="Download all QR codes as ZIP"
+                  className="flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
+                <button onClick={onDeleteAllQr} title="Delete all QR codes" className="flex h-7 w-7 items-center justify-center text-fg-4 hover:text-fg-2 transition-colors">
+                  <TrashIcon />
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="px-3 pt-2 pb-1 shrink-0 min-w-[260px]">
@@ -2577,7 +2081,6 @@ export default function Page() {
   const [quotaVersion, setQuotaVersion] = useState(0)
   const [currentDevice, setCurrentDevice] = useState<NuxDevice>(() => getDefaultDevice())
   const [hintDismissed, setHintDismissed] = useState(() => getHintDismissed())
-  const [currentProvider, setCurrentProvider] = useState<AiProvider>(() => getApiSettings()?.provider ?? 'builtin')
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null)
   const [pendingImport, setPendingImport] = useState<{ qr: QrResult; guess: { artist: string; song: string } } | null>(null)
   const [importNamePending, setImportNamePending] = useState<{ qr: QrResult; suggestedName: string } | null>(null)
@@ -2635,7 +2138,6 @@ export default function Page() {
   }, [])
 
   useEffect(() => { setCurrentDevice(getDefaultDevice()) }, [settingsVersion])
-  useEffect(() => { setCurrentProvider(getApiSettings()?.provider ?? 'builtin') }, [settingsVersion])
   useEffect(() => { if (messages.length > 0) setDeviceChangedHint(true) }, [currentDevice]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const scrollToBottom = useCallback(() => {
@@ -3016,45 +2518,35 @@ export default function Page() {
         {/* Header */}
         <header className="bg-surface shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
 
-          {/* ── Desktop: flex row, title left · model centre (absolute) · buttons right ── */}
-          <div className="hidden md:flex md:items-center relative px-4 py-2.5">
-            <div className="flex items-center gap-3">
-              <button onClick={() => { sidebarCollapsed ? setSidebarCollapsed(false) : (window.innerWidth >= 1024 ? setSidebarCollapsed(true) : setSidebarOpen(true)) }} className="text-fg-3 hover:text-fg transition-colors"><MenuIcon /></button>
-              <button onClick={startNewChat} className="text-sm font-semibold text-fg hover:text-fg-2 transition-colors">Mighty AI QR</button>
-            </div>
-            <div className="absolute left-1/2 -translate-x-1/2">
-              <HeaderModelPill settingsVersion={settingsVersion} quotaVersion={quotaVersion} />
-            </div>
+          {/* ── Desktop: single flex row ── */}
+          <div className="hidden md:flex md:items-center px-4 py-2.5 gap-3">
+            <button onClick={() => { sidebarCollapsed ? setSidebarCollapsed(false) : (window.innerWidth >= 1024 ? setSidebarCollapsed(true) : setSidebarOpen(true)) }} className="text-fg-3 hover:text-fg transition-colors"><MenuIcon /></button>
+            <button onClick={startNewChat} className="text-sm font-semibold text-fg hover:text-fg-2 transition-colors">Mighty AI QR</button>
             <div className="ml-auto flex items-center gap-2">
+              <QuotaPill quotaVersion={quotaVersion} />
               {activeConvId && (
-                <button onClick={() => { handleDeleteConversation(activeConvId); startNewChat() }} title="Delete conversation" className="flex items-center justify-center h-8 w-8 rounded-xl text-fg-4 hover:text-red-400 transition-colors">
+                <button onClick={() => { handleDeleteConversation(activeConvId); startNewChat() }} title="Delete conversation" className="flex items-center justify-center h-8 w-8 text-fg-3 hover:text-red-400 transition-colors">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                 </button>
               )}
-              <button onClick={startNewChat} title="New chat" className="flex items-center justify-center h-8 w-8 rounded-xl bg-surface-2 border border-white/10 text-fg-2 hover:bg-surface-3 hover:text-fg transition-colors"><NewChatIcon /></button>
+              <button onClick={startNewChat} title="New chat" className="flex items-center justify-center h-8 w-8 text-fg-3 hover:text-fg transition-colors"><NewChatIcon /></button>
               <button onClick={() => setShowSettings(true)} title="Settings" className="flex items-center justify-center h-8 w-8 rounded-lg text-fg-3 hover:text-fg transition-colors"><GearIcon /></button>
             </div>
           </div>
 
-          {/* ── Mobile: row 1 title + buttons, row 2 full-width model ── */}
-          <div className="md:hidden">
-            <div className="flex items-center justify-between px-4 py-2.5">
-              <div className="flex items-center gap-3">
-                <button onClick={() => setSidebarOpen(true)} className="text-fg-3 hover:text-fg transition-colors"><MenuIcon /></button>
-                <button onClick={startNewChat} className="text-sm font-semibold text-fg hover:text-fg-2 transition-colors">Mighty AI QR</button>
-              </div>
-              <div className="flex items-center gap-2">
-                {activeConvId && (
-                  <button onClick={() => { handleDeleteConversation(activeConvId); startNewChat() }} title="Delete conversation" className="flex items-center justify-center h-9 w-9 rounded-xl text-fg-4 hover:text-red-400 transition-colors">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                  </button>
-                )}
-                <button onClick={startNewChat} title="New chat" className="flex items-center justify-center h-9 w-9 rounded-xl bg-surface-2 border border-white/10 text-fg-2 hover:bg-surface-3 hover:text-fg transition-colors"><NewChatIcon /></button>
-                <button onClick={() => setShowSettings(true)} title="Settings" className="flex items-center justify-center h-8 w-8 rounded-lg text-fg-3 hover:text-fg transition-colors"><GearIcon /></button>
-              </div>
-            </div>
-            <div className="flex justify-center border-t border-white/10 px-4 py-2">
-              <HeaderModelPill settingsVersion={settingsVersion} quotaVersion={quotaVersion} />
+          {/* ── Mobile: single row ── */}
+          <div className="md:hidden flex items-center px-4 py-2.5 gap-3">
+            <button onClick={() => setSidebarOpen(true)} className="text-fg-3 hover:text-fg transition-colors"><MenuIcon /></button>
+            <button onClick={startNewChat} className="text-sm font-semibold text-fg hover:text-fg-2 transition-colors">Mighty AI QR</button>
+            <div className="ml-auto flex items-center gap-2">
+              <QuotaPill quotaVersion={quotaVersion} />
+              {activeConvId && (
+                <button onClick={() => { handleDeleteConversation(activeConvId); startNewChat() }} title="Delete conversation" className="flex items-center justify-center h-9 w-9 text-fg-3 hover:text-red-400 transition-colors">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+              )}
+              <button onClick={startNewChat} title="New chat" className="flex items-center justify-center h-9 w-9 text-fg-3 hover:text-fg transition-colors"><NewChatIcon /></button>
+              <button onClick={() => setShowSettings(true)} title="Settings" className="flex items-center justify-center h-8 w-8 rounded-lg text-fg-3 hover:text-fg transition-colors"><GearIcon /></button>
             </div>
           </div>
 
@@ -3072,7 +2564,7 @@ export default function Page() {
                 </div>
               )}
               <div className="mx-auto w-full max-w-2xl space-y-4">
-              {!hintDismissed && currentProvider === 'builtin' && (
+              {!hintDismissed && (
                 <ByokHintBanner
                   onDismiss={() => { saveHintDismissed(true); setHintDismissed(true) }}
                   onOpenSettings={() => setShowSettings(true)}
@@ -3105,7 +2597,7 @@ export default function Page() {
                   <div className="rounded-2xl rounded-bl-sm bg-surface-2 px-4 py-3.5">
                     <div className="flex items-center gap-1.5">
                       {[0, 1, 2].map(i => <div key={i} className="typing-dot h-2 w-2 rounded-full bg-fg-3" />)}
-                      <span className="ml-2 text-xs text-fg-3">Generating tone…</span>
+                      <span className="ml-2 text-xs text-fg-3">Thinking…</span>
                     </div>
                   </div>
                 </div>

@@ -88,51 +88,6 @@ export function relativeTime(ts: number): string {
   return new Date(ts).toLocaleDateString()
 }
 
-// ─── API Settings (BYOK) ──────────────────────────────────────────────────────
-
-const SETTINGS_KEY = 'maq_settings'
-
-export type AiProvider = 'builtin' | 'anthropic' | 'openai' | 'gemini' | 'grok' | 'mistral' | 'groq' | 'ollama' | 'openwebui' | 'lmstudio'
-
-export interface ProviderConfig {
-  apiKey: string
-  baseUrl?: string
-  model?: string
-}
-
-export interface ApiSettings {
-  provider: AiProvider
-  configs: Partial<Record<AiProvider, ProviderConfig>>
-}
-
-export function getApiSettings(): ApiSettings | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null')
-    if (!raw) return null
-    // Migrate old flat format
-    if (raw.provider && 'apiKey' in raw && !raw.configs) {
-      return { provider: raw.provider as AiProvider, configs: { [raw.provider]: { apiKey: raw.apiKey, baseUrl: raw.baseUrl } } } as ApiSettings
-    }
-    return raw as ApiSettings
-  } catch { return null }
-}
-
-export function saveApiSettings(s: ApiSettings) {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s))
-}
-
-export function getActiveConfig(): { provider: AiProvider; apiKey: string; baseUrl?: string; model?: string } | null {
-  const s = getApiSettings()
-  if (!s) return null
-  const config = s.configs[s.provider] ?? { apiKey: '' }
-  return { provider: s.provider, apiKey: config.apiKey ?? '', baseUrl: config.baseUrl, model: config.model }
-}
-
-export function clearApiSettings() {
-  localStorage.removeItem(SETTINGS_KEY)
-}
-
 // ─── Default NUX Device ───────────────────────────────────────────────────────
 
 export type NuxDevice = 'plugpro' | 'space' | 'litemk2' | '8btmk2' | 'mightyair_v1' | 'mightyair_v2' | 'plugair_v1' | 'plugair_v2' | 'lite' | '8bt' | '2040bt'

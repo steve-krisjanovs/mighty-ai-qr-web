@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid'
 import type { Message, QrResult } from './types'
-import { getActiveConfig, getDefaultDevice } from './storage'
+import { getDefaultDevice } from './storage'
 
 export interface ChatResponse {
   message: string
@@ -41,45 +41,11 @@ export async function initAuth(): Promise<void> {
   if (!getToken()) await authenticate()
 }
 
-export async function fetchModels(
-  provider: string,
-  apiKey: string,
-  baseUrl: string,
-): Promise<string[]> {
-  if (!getToken()) await authenticate().catch(() => {})
-  const token = getToken()
-  if (!token) return []
-
-  const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
-  if (apiKey)   headers['x-user-api-key'] = apiKey
-  if (provider) headers['x-provider']     = provider
-  if (baseUrl)  headers['x-base-url']     = baseUrl
-
-  try {
-    const res = await fetch(`${BASE}/models`, { headers })
-    if (!res.ok) return []
-    const data = await res.json()
-    return Array.isArray(data.models) ? data.models : []
-  } catch {
-    return []
-  }
-}
-
 export async function sendChat(messages: Message[], signal?: AbortSignal, device?: string): Promise<ChatResponse> {
   let token = getToken()
   if (!token) {
     await authenticate()
     token = getToken()!
-  }
-
-  const active = getActiveConfig()
-  const extraHeaders: Record<string, string> = {}
-  extraHeaders['x-default-device'] = device ?? getDefaultDevice()
-  if (active) {
-    if (active.apiKey) extraHeaders['x-user-api-key'] = active.apiKey
-    extraHeaders['x-provider'] = active.provider
-    if (active.baseUrl) extraHeaders['x-base-url'] = active.baseUrl
-    if (active.model)   extraHeaders['x-model'] = active.model
   }
 
   const res = await fetch(`${BASE}/chat`, {
@@ -88,7 +54,7 @@ export async function sendChat(messages: Message[], signal?: AbortSignal, device
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
-      ...extraHeaders,
+      'x-default-device': device ?? getDefaultDevice(),
     },
     body: JSON.stringify({ messages }),
   })
@@ -172,19 +138,13 @@ export async function convertPreset(qrString: string, targetDevice: string, pres
   let token = getToken()
   if (!token) { await authenticate(); token = getToken()! }
 
-  const active = getActiveConfig()
-  const extraHeaders: Record<string, string> = {}
-  extraHeaders['x-default-device'] = targetDevice
-  if (active) {
-    if (active.apiKey) extraHeaders['x-user-api-key'] = active.apiKey
-    extraHeaders['x-provider'] = active.provider
-    if (active.baseUrl) extraHeaders['x-base-url'] = active.baseUrl
-    if (active.model)   extraHeaders['x-model'] = active.model
-  }
-
   const res = await fetch(`${BASE}/convert`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...extraHeaders },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'x-default-device': targetDevice,
+    },
     body: JSON.stringify({ qrString, targetDevice, presetName }),
   })
   if (!res.ok) {

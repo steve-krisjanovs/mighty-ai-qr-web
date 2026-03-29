@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getDeviceIdFromRequest } from '@/lib/server/jwt'
-import { webSearch } from '@/lib/server/tavily'
 
 export const maxDuration = 30
 
@@ -18,26 +17,25 @@ export async function POST(request: NextRequest) {
   if (!apiKey) return NextResponse.json({ artist: null, song: null })
 
   try {
-    const searchResult = await webSearch(`${importNote} guitar tone song artist`)
-
+    const webSearchToolVersion = process.env.WEB_SEARCH_TOOL_VERSION ?? 'web_search_20250305'
     const client = new Anthropic({ apiKey })
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 150,
+      max_tokens: 200,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      tools: [{ type: webSearchToolVersion, name: 'web_search' }] as any,
       messages: [{
         role: 'user',
         content: `Text extracted from a guitar preset QR code label: "${importNote}"
 
-Web search context:
-${searchResult.text.slice(0, 2000)}
-
-If this text refers to a specific song and artist, identify them. Respond ONLY with valid JSON:
+Search the web if needed, then identify if this refers to a specific song and artist. Respond ONLY with valid JSON:
 {"artist": "Artist Name", "song": "Song Title"}
 Or if not identifiable: {"artist": null, "song": null}`,
       }],
     })
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
+    const textBlock = response.content.find(b => b.type === 'text')
+    const text = textBlock?.type === 'text' ? textBlock.text : ''
     const match = text.match(/\{[\s\S]*?\}/)
     if (!match) return NextResponse.json({ artist: null, song: null })
     return NextResponse.json(JSON.parse(match[0]))

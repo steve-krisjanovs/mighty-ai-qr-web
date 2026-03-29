@@ -37,7 +37,7 @@ Reverse-engineered from [mightier_amp](https://github.com/tuntorius/mightier_amp
 
 ## UI Conventions
 
-- **Never use native `<select>` elements.** Always use a custom dropdown component (button + absolute list) styled with `rounded-lg border border-white/10 bg-surface-2 hover:bg-surface-3 transition-colors`. See `DeviceDropdown` or `ProviderDropdown` for reference.
+- **Never use native `<select>` elements.** Always use a custom dropdown component (button + absolute list) styled with `rounded-lg border border-white/10 bg-surface-2 hover:bg-surface-3 transition-colors`. See `DeviceDropdown` for reference.
 
 ---
 
@@ -52,6 +52,7 @@ Any change to the SQLite schema (new table, new column, dropped column, index) *
 
 Existing tags:
 - `1.5.2_baseline` — initial schema (devices, daily_quota, web_search_cache, schema_migrations)
+- `1.6.0_drop_web_search_cache` — dropped web_search_cache table (Tavily replaced by Anthropic native search)
 
 ---
 
@@ -70,8 +71,21 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 ## Resume — Next Session
 
 ### Branch state
-- Active branch: `main`
+- Active branch: `replace-tavily-with-anthropic-search` (not yet merged to `main`)
 - Render auto-deploys from `main` — v1.5.4 live at `https://mighty-ai-qr-web.onrender.com`
+- v1.6.0 is local only until branch is merged and pushed
+
+### What shipped in v1.6.0 (in progress)
+- Removed all non-Anthropic AI provider support — free tier (server key) is the only path
+- Removed BYOK entirely — no API key settings in the UI
+- Replaced Tavily web search with Anthropic native web search (`web_search_20250305`)
+  - Deleted `lib/server/tavily.ts`
+  - `runChat()` in `lib/server/ai-tools.ts` rewritten — no manual search loop, sources extracted from `web_search_tool_result` blocks
+  - `identify-qr` route updated to use native search tool
+  - `web_search_cache` SQLite table dropped (migration tag `1.6.0_drop_web_search_cache`)
+  - `WEB_SEARCH_TOOL_VERSION` env var controls tool version (default `web_search_20250305`)
+- UI changes: quota pill in header, loading text "Thinking…", Copy button on all QR popups (Save/YT/Share/Copy in one row)
+- About modal: v1.6 changelog entry, per-version expand/collapse
 
 ### What shipped in v1.5.4 (2026-03-23)
 - EQ fix — `coerceParams` never handled the `eq` field; EQ was silently dropped from every QR
@@ -123,11 +137,9 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 - **BUG (TBD)**: Incoming user-reported bugs being gathered — details pending.
 
-- **TODO**: Remove all non-Anthropic provider support. Keep free tier (server key) and Anthropic BYOK — that's it. Removes: `runChatOpenAI`, `generateQRToolOpenAI`/`webSearchToolOpenAI`/`openAITools`, `textContent`, `extractEmbeddedToolCall`, OpenAI import from `ai-tools.ts`; `DEFAULT_MODELS`/`normalizeBaseUrl` and the OpenAI `else` branch from `chat/route.ts`; `app/api/models/route.ts` simplified to hardcoded Anthropic models only; `AiProvider` type narrowed to `'builtin' | 'anthropic'`; `PROVIDERS`/`PROVIDER_GROUPS`/`LocalLlmInfoModal`/Base URL input/provider error messages removed from `page.tsx`; `openai` npm dep removed.
+### Roadmap (v1.x — fixes only)
 
-### Roadmap (v1.6–v1.x — fixes only)
-
-All versions between 1.5 and 2.0 are **strictly bug fixes**. No new features. This keeps the codebase lean for the v2.0 auth/storage rewrite and minimises refactor surface for v2.1 features.
+Versions between 1.6 and 2.0 are **strictly bug fixes**. No new features. This keeps the codebase lean for the v2.0 auth/storage rewrite and minimises refactor surface for v2.1 features.
 
 ### Roadmap (v2.0)
 
@@ -155,7 +167,7 @@ Features deferred from v1.x — build on the v2.0 auth/storage foundation.
   - Pickup layout codes: `ss`, `hh`, `hs`, `sh`, `sss`, `hsh`, `ssh`, `hss`, `pj`, `jj`, `p`
   - Active selection codes: `b`=bridge, `n`=neck, `bn`=both, `m`=mid, `bm`=bridge+mid, `mn`=mid+neck, `bmn`=all
 
--**Help system** — ? icon in the header (alongside new chat/settings) that opens a scrollable help modal with sections covering Import, Convert, Bass tones, Sidebar search, and BYOK settings.
+- **Help system** — ? icon in the header (alongside new chat/settings) that opens a scrollable help modal with sections covering Import, Convert, Bass tones, and Sidebar search.
 
 - **Shareable preset URLs** — public `/preset/{id}` route that renders the QR card without requiring an account. Users paste a link in forums/social instead of uploading an image. No auth required. Needs a public=true flag on saved QR records. AI-generated QRs are auto-saved so covers the main case.
 

@@ -25,12 +25,6 @@ if (process.env.NEXT_PHASE !== 'phase-production-build') {
       count INTEGER NOT NULL DEFAULT 0
     );
 
-    CREATE TABLE IF NOT EXISTS web_search_cache (
-      query      TEXT PRIMARY KEY,
-      result     TEXT NOT NULL,
-      cached_at  TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
     -- Schema migration tracking (BC upgrade tag pattern).
     -- Each row is a completed migration step — idempotent, persistent.
     -- Future migrations INSERT OR IGNORE a new tag after running.
@@ -41,6 +35,10 @@ if (process.env.NEXT_PHASE !== 'phase-production-build') {
 
     -- Baseline: schema as shipped in v1.5.2
     INSERT OR IGNORE INTO schema_migrations (tag) VALUES ('1.5.2_baseline');
+
+    -- v1.6.0: drop web_search_cache (Tavily replaced by Anthropic native search)
+    DROP TABLE IF EXISTS web_search_cache;
+    INSERT OR IGNORE INTO schema_migrations (tag) VALUES ('1.6.0_drop_web_search_cache');
   `)
 }
 
