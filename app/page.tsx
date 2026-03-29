@@ -1250,33 +1250,25 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
           <div className="relative bg-primary/10 border-b border-primary/20 px-6 pt-5 pb-4 text-center shrink-0">
             <img src="/icons/icon-192.png" alt="Mighty AI QR" className="h-12 w-12 rounded-xl mx-auto mb-3 shadow-lg" />
             <p className="text-[11px] font-semibold uppercase tracking-widest text-primary mb-0.5">What&apos;s new</p>
-            <h2 className="text-xl font-bold text-fg">Mighty AI QR 1.5</h2>
-            <p className="text-xs text-fg-3 mt-0.5">The biggest update yet.</p>
+            <h2 className="text-xl font-bold text-fg">Mighty AI QR 1.6</h2>
+            <p className="text-xs text-fg-3 mt-0.5">Simpler, faster, free.</p>
           </div>
 
           {/* Body */}
           <div className="px-6 py-4 space-y-3 overflow-y-auto">
 
-            {/* Big device announcement */}
+            {/* Highlight */}
             <div className="rounded-2xl border border-primary/30 bg-primary/10 p-3">
-              <p className="text-sm font-semibold text-fg mb-0.5">All 10 NUX devices supported</p>
-              <p className="text-[11px] text-fg-3 mb-2">Every MightyAmp model in the lineup now works — no one left out.</p>
-              <div className="flex flex-wrap gap-1">
-                {WELCOME_DEVICES.map(d => (
-                  <span key={d} className="rounded-full bg-primary/20 border border-primary/30 px-2 py-0.5 text-[10px] font-medium text-primary">{d}</span>
-                ))}
-              </div>
+              <p className="text-sm font-semibold text-fg mb-0.5">No setup required</p>
+              <p className="text-[11px] text-fg-3">Just open the app and start generating tones. No API keys, no accounts, no configuration.</p>
             </div>
 
             {/* Feature list */}
             <ul className="space-y-2">
               {[
-                { icon: '📥', text: 'Import any NUX QR code — scan or upload a photo to decode and refine it' },
-                { icon: '🔄', text: 'Convert presets between devices with one tap' },
-                { icon: '💾', text: 'Generated QR codes save to your collection automatically' },
-                { icon: '🎸', text: 'Bass tones — dedicated presets with the right amps, cabs, and effects' },
-                { icon: '🔍', text: 'Sidebar search — filter your chats and QR codes as you type' },
-                { icon: '🌐', text: 'Web search — AI looks up real gear data for song and artist references' },
+                { icon: '🌐', text: 'Better web search — AI now uses Anthropic\'s own search engine, no third-party dependency' },
+                { icon: '📋', text: 'Copy button on every QR popup — grab the raw preset code with one tap' },
+                { icon: '✨', text: 'Cleaner UI — quota counter in the header, loading indicator says "Thinking…"' },
               ].map(({ icon, text }) => (
                 <li key={text} className="flex items-start gap-2.5 text-[11px] text-fg-3 leading-relaxed">
                   <span className="shrink-0 text-sm leading-none mt-px">{icon}</span>
