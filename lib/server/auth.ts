@@ -14,6 +14,7 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET ?? process.env.JWT_SECRET ?? 'dev-secret-change-in-prod',
+  baseURL: appUrl,
   database: new Database(DB_PATH),
 
   emailAndPassword: {
