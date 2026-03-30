@@ -35,6 +35,7 @@ function LoginContent() {
   const searchParams = useSearchParams()
   const [tab, setTab] = useState<Tab>('signin')
   const [email, setEmail] = useState('')
+  const [emailConfirm, setEmailConfirm] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -65,6 +66,7 @@ function LoginContent() {
         const { error } = await authClient.signIn.email({ email, password })
         if (error) { setError(error.message ?? 'Sign in failed'); return }
       } else {
+        if (email !== emailConfirm) { setError('Email addresses do not match'); return }
         const { error } = await authClient.signUp.email({ email, password, name: name || email.split('@')[0] })
         if (error) { setError(error.message ?? 'Sign up failed'); return }
       }
@@ -84,13 +86,15 @@ function LoginContent() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <div className="w-full max-w-sm">
-        {/* Logo / title */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-fg">Mighty AI</h1>
-          <p className="text-sm text-fg-4 mt-1">Guitar tone assistant</p>
-        </div>
-
         <div className="rounded-2xl border border-white/10 bg-surface p-6 space-y-5">
+
+          {/* Top bar: app label + close */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-fg-4">Mighty AI</span>
+            <a href="/" aria-label="Close" className="text-fg-4 hover:text-fg transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </a>
+          </div>
 
           {forgotMode ? (
             <>
@@ -120,7 +124,7 @@ function LoginContent() {
               {/* Tabs */}
               <div className="flex rounded-xl bg-surface-2 p-1 gap-1">
                 {(['signin', 'signup'] as Tab[]).map(t => (
-                  <button key={t} onClick={() => { setTab(t); setError(null) }}
+                  <button key={t} onClick={() => { setTab(t); setError(null); setEmailConfirm('') }}
                     className={`flex-1 rounded-lg py-1.5 text-sm font-medium transition-colors ${tab === t ? 'bg-surface-3 text-fg' : 'text-fg-4 hover:text-fg-3'}`}>
                     {t === 'signin' ? 'Sign in' : 'Sign up'}
                   </button>
@@ -163,6 +167,13 @@ function LoginContent() {
                   placeholder="Email address" required autoComplete="email"
                   className="w-full rounded-xl border border-white/10 bg-surface-2 px-4 py-2.5 text-sm text-fg placeholder-fg-4 outline-none focus:border-primary"
                 />
+                {tab === 'signup' && (
+                  <input
+                    type="email" value={emailConfirm} onChange={e => setEmailConfirm(e.target.value)}
+                    placeholder="Confirm email address" required autoComplete="off"
+                    className="w-full rounded-xl border border-white/10 bg-surface-2 px-4 py-2.5 text-sm text-fg placeholder-fg-4 outline-none focus:border-primary"
+                  />
+                )}
                 <input
                   type="password" value={password} onChange={e => setPassword(e.target.value)}
                   placeholder="Password" required autoComplete={tab === 'signin' ? 'current-password' : 'new-password'}
@@ -180,14 +191,14 @@ function LoginContent() {
                   Forgot password?
                 </button>
               )}
-
-              <p className="text-center text-xs text-fg-4">
-                Continue without an account?{' '}
-                <a href="/" className="text-fg-3 hover:text-fg transition-colors underline">Use as guest</a>
-              </p>
             </>
           )}
         </div>
+
+        <p className="text-center text-xs text-fg-4 mt-4">
+          Continue without an account?{' '}
+          <a href="/" className="text-fg-3 hover:text-fg transition-colors underline">Use as guest</a>
+        </p>
       </div>
     </div>
   )
