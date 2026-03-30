@@ -3,16 +3,19 @@
   "version": "1.6.3",
   "private": true,
   "scripts": {
-    "dev": "NODE_OPTIONS='--experimental-sqlite' next dev --turbopack",
+    "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "node --experimental-sqlite .next/standalone/server.js",
+    "start": "node .next/standalone/server.js",
     "lint": "next lint"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
+    "better-auth": "^1.5.6",
+    "better-sqlite3": "^12.8.0",
     "jsonwebtoken": "^9.0.3",
     "jsqr": "^1.4.0",
     "jszip": "^3.10.1",
+    "kysely": "^0.28.14",
     "next": "^15.1.0",
     "next-pwa": "^5.6.0",
     "qrcode": "^1.5.4",
@@ -20,10 +23,12 @@
     "react-dom": "^19.0.0",
     "react-markdown": "^9.0.1",
     "remark-gfm": "^4.0.0",
+    "resend": "^6.9.4",
     "sharp": "^0.34.5",
     "uuid": "^11.0.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22",
     "@types/qrcode": "^1.5.6",

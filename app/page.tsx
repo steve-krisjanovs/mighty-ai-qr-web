@@ -5,11 +5,14 @@ import { flushSync } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { v4 as uuidv4 } from 'uuid'
-import { sendChat, initAuth, decodeQr, convertPreset, identifyQr, scanQrFromFile } from '@/lib/api'
 import {
-  loadHistory, saveToHistory, deleteHistoryItem, renameHistoryItem, clearAllHistory,
-  loadConversations, upsertConversation,
-  deleteConversation, clearAllConversations, autoTitle, relativeTime,
+  sendChat, initAuth, decodeQr, convertPreset, identifyQr, scanQrFromFile,
+  apiLoadConversations, apiUpsertConversation, apiDeleteConversation, apiClearAllConversations,
+  apiLoadHistory, apiSaveToHistory, apiDeleteHistoryItem, apiRenameHistoryItem, apiClearAllHistory,
+  apiMigrateLegacy,
+} from '@/lib/api'
+import {
+  autoTitle, relativeTime,
   getTheme, saveTheme,
   getDefaultDevice, saveDefaultDevice,
   getHintDismissed, saveHintDismissed,
@@ -17,6 +20,7 @@ import {
   type Theme, type NuxDevice,
   NUX_DEVICES,
 } from '@/lib/storage'
+import { useSession, signOut } from '@/lib/auth-client'
 import type { ChatMessage, QrResult, HistoryItem, Conversation } from '@/lib/types'
 import pkg from '../package.json'
 import JSZip from 'jszip'
@@ -250,6 +254,13 @@ const CopyIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
     <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+  </svg>
+)
+
+const PersonIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
   </svg>
 )
 
@@ -1889,6 +1900,18 @@ function ByokHintBanner({ onDismiss, onOpenSettings }: { onDismiss: () => void; 
   )
 }
 
+function LegacyMigrationBanner({ onImport, onDismiss }: { onImport: () => void; onDismiss: () => void }) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-fg-3 animate-fade-in">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-primary"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <span className="flex-1">You have saved chats and tones from a previous version. <button onClick={onImport} className="text-primary hover:underline">Import them now</button> to keep your history.</span>
+      <button onClick={onDismiss} className="shrink-0 text-fg-4 hover:text-fg-2 transition-colors" aria-label="Dismiss">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  )
+}
+
 // ─── Suggestion Screen ────────────────────────────────────────────────────────
 
 const BASS_CHIP = "I'm a bassist — what artist or song should we start with?"
@@ -2093,6 +2116,9 @@ export default function Page() {
   const [deviceMismatchConverting, setDeviceMismatchConverting] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<{ label: string; onConfirm: () => void } | null>(null)
   const [deviceChangedHint, setDeviceChangedHint] = useState(false)
+  const [hasLegacyData, setHasLegacyData] = useState(false)
+  const [showAccountMenu, setShowAccountMenu] = useState(false)
+  const { data: session } = useSession()
   const [popupQr, setPopupQr] = useState<{ qr: QrResult; description: string } | null>(null)
 
   const requestDelete = useCallback((label: string, onConfirm: () => void) => {
@@ -2128,18 +2154,25 @@ export default function Page() {
   const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
-    const convs = loadConversations()
-    setConversations(convs)
-    setQrHistory(loadHistory())
     initAuth().catch(() => {})
     setSuggestions(getRandomSuggestions())
     document.documentElement.dataset.theme = getTheme()
-    if (convs.length > 0) {
-      const latest = convs[0]
-      setActiveConvId(latest.id)
-      setMessages(latest.messages)
-      setCurrentQr(latest.lastQr)
-    }
+    Promise.all([apiLoadConversations(), apiLoadHistory()]).then(([convs, history]) => {
+      setConversations(convs)
+      setQrHistory(history)
+      if (convs.length > 0) {
+        const latest = convs[0]
+        setActiveConvId(latest.id)
+        setMessages(latest.messages)
+        setCurrentQr(latest.lastQr)
+      }
+      // Detect legacy v1.x localStorage data and offer one-time migration
+      try {
+        const legacyConvs = JSON.parse(localStorage.getItem('maq_conversations') ?? '[]')
+        const legacyHistory = JSON.parse(localStorage.getItem('qr_history') ?? '[]')
+        if (legacyConvs.length > 0 || legacyHistory.length > 0) setHasLegacyData(true)
+      } catch { /* ignore */ }
+    }).catch(() => {})
   }, [])
 
   useEffect(() => { setCurrentDevice(getDefaultDevice()) }, [settingsVersion])
@@ -2159,18 +2192,36 @@ export default function Page() {
     el.style.height = Math.min(el.scrollHeight, 120) + 'px'
   }, [])
 
-  // Persist conversation — reads from localStorage to avoid stale state
+  // Persist conversation — updates server and React state
   const persistConversation = useCallback((id: string, msgs: ChatMessage[], lastQr: QrResult | null, titleOverride?: string) => {
-    const existing = loadConversations().find(c => c.id === id)
-    upsertConversation({
-      id,
-      title: titleOverride ?? existing?.title ?? autoTitle(msgs),
-      messages: msgs,
-      lastQr,
-      createdAt: existing?.createdAt ?? Date.now(),
-      updatedAt: Date.now(),
+    setConversations(prev => {
+      const existing = prev.find(c => c.id === id)
+      const conv: Conversation = {
+        id,
+        title: titleOverride ?? existing?.title ?? autoTitle(msgs),
+        messages: msgs,
+        lastQr,
+        createdAt: existing?.createdAt ?? Date.now(),
+        updatedAt: Date.now(),
+      }
+      apiUpsertConversation(conv).catch(() => {})
+      const rest = prev.filter(c => c.id !== id)
+      return [conv, ...rest].sort((a, b) => b.updatedAt - a.updatedAt)
     })
-    setConversations(loadConversations())
+  }, [])
+
+  const handleMigrateLegacy = useCallback(async () => {
+    try {
+      const legacyConvs = JSON.parse(localStorage.getItem('maq_conversations') ?? '[]')
+      const legacyHistory = JSON.parse(localStorage.getItem('qr_history') ?? '[]')
+      await apiMigrateLegacy(legacyConvs, legacyHistory)
+      localStorage.removeItem('maq_conversations')
+      localStorage.removeItem('qr_history')
+      const [convs, history] = await Promise.all([apiLoadConversations(), apiLoadHistory()])
+      setConversations(convs)
+      setQrHistory(history)
+    } catch { /* ignore */ }
+    setHasLegacyData(false)
   }, [])
 
   // New chat — just resets UI, conversation only persisted after first message
@@ -2189,33 +2240,29 @@ export default function Page() {
   }, [])
 
   const switchConversation = useCallback((id: string) => {
-    const convs = loadConversations()
-    const conv = convs.find(c => c.id === id)
+    const conv = conversations.find(c => c.id === id)
     if (!conv) return
     setActiveConvId(id)
     setMessages(conv.messages)
     setCurrentQr(conv.lastQr)
     setError(null)
     setInput('')
-  }, [])
+  }, [conversations])
 
   const handleDeleteConversation = useCallback((id: string) => {
-    deleteConversation(id)
-    const remaining = loadConversations()
-    setConversations(remaining)
-    if (id === activeConvId) {
-      if (remaining.length > 0) {
-        switchConversation(remaining[0].id)
-      } else {
-        setActiveConvId(null)
-        setMessages([])
-        setCurrentQr(null)
+    apiDeleteConversation(id).catch(() => {})
+    setConversations(prev => {
+      const remaining = prev.filter(c => c.id !== id)
+      if (id === activeConvId) {
+        if (remaining.length > 0) switchConversation(remaining[0].id)
+        else { setActiveConvId(null); setMessages([]); setCurrentQr(null) }
       }
-    }
+      return remaining
+    })
   }, [activeConvId, switchConversation])
 
   const handleDeleteHistoryItem = useCallback((id: string) => {
-    deleteHistoryItem(id)
+    apiDeleteHistoryItem(id).catch(() => {})
     setQrHistory(prev => prev.filter(i => i.id !== id))
     setSelectedHistoryItem(null)
   }, [])
@@ -2238,7 +2285,7 @@ export default function Page() {
   }, [])
 
   const handleRenameHistoryItem = useCallback((id: string, newName: string) => {
-    renameHistoryItem(id, newName)
+    apiRenameHistoryItem(id, newName).catch(() => {})
     setQrHistory(prev => prev.map(i => i.id !== id ? i : { ...i, presetName: newName, qr: { ...i.qr, presetName: newName } }))
     setSelectedHistoryItem(prev => prev?.id !== id ? prev : { ...prev, presetName: newName, qr: { ...prev.qr, presetName: newName } })
   }, [])
@@ -2247,7 +2294,7 @@ export default function Page() {
     setConversations(prev => {
       const updated = prev.map(c => c.id !== id ? c : { ...c, title: newTitle, updatedAt: Date.now() })
       const conv = updated.find(c => c.id === id)
-      if (conv) upsertConversation(conv)
+      if (conv) apiUpsertConversation(conv).catch(() => {})
       return updated
     })
   }, [])
@@ -2269,7 +2316,6 @@ export default function Page() {
     const msgs = [assistantMsg]
     setMessages(msgs)
     persistConversation(convId, msgs, item.qr, item.presetName)
-    setConversations(loadConversations())
     requestAnimationFrame(() => textareaRef.current?.focus())
   }, [persistConversation])
 
@@ -2277,10 +2323,9 @@ export default function Page() {
     if (qr.deviceId && qr.deviceId !== currentDevice) {
       setDeviceMismatchPending({ qr })
     } else {
-      const item = saveToHistory(qr)
-      setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== qr.qrString)].slice(0, 20))
-
-      // Populate the new chat with the imported QR
+      apiSaveToHistory(qr).then(item => {
+        if (item) setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== qr.qrString)].slice(0, 20))
+      }).catch(() => {})
       const convId = uuidv4()
       setActiveConvId(convId)
       setCurrentQr(qr)
@@ -2291,7 +2336,6 @@ export default function Page() {
       const msgs = [assistantMsg]
       setMessages(msgs)
       persistConversation(convId, msgs, qr, qr.presetName)
-      setConversations(loadConversations())
     }
   }, [currentDevice, persistConversation])
 
@@ -2328,7 +2372,6 @@ export default function Page() {
     const msgs = [userMsg, assistantMsg]
     setMessages(msgs)
     persistConversation(convId, msgs, item.qr)
-    setConversations(loadConversations())
     requestAnimationFrame(() => textareaRef.current?.focus())
   }, [persistConversation])
 
@@ -2379,8 +2422,10 @@ export default function Page() {
       })
 
       if (res.qr) {
-        const item = saveToHistory(res.qr)
-        setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== res.qr!.qrString)].slice(0, 20))
+        const savedQr = res.qr
+        apiSaveToHistory(savedQr).then(item => {
+          if (item) setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== savedQr.qrString)].slice(0, 20))
+        }).catch(() => {})
       }
 
       persistConversation(convId!, finalMessages, newQr)
@@ -2403,6 +2448,17 @@ export default function Page() {
     document.addEventListener('visibilitychange', handler)
     return () => document.removeEventListener('visibilitychange', handler)
   }, [])
+
+  // Close account menu when clicking outside
+  useEffect(() => {
+    if (!showAccountMenu) return
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('[data-account-menu]')) setShowAccountMenu(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showAccountMenu])
 
   const toggleListening = useCallback(() => {
     if (isListening) {
@@ -2505,14 +2561,14 @@ export default function Page() {
         }}
         onSettings={() => setShowSettings(true)}
         onDeleteAllChats={() => requestDelete('all conversations', () => {
-          clearAllConversations()
+          apiClearAllConversations().catch(() => {})
           setConversations([])
           setActiveConvId(null)
           setMessages([])
           setCurrentQr(null)
         })}
         onDeleteAllQr={() => requestDelete('all QR codes', () => {
-          clearAllHistory()
+          apiClearAllHistory().catch(() => {})
           setQrHistory([])
           setSelectedHistoryItem(null)
         })}
@@ -2536,6 +2592,21 @@ export default function Page() {
               )}
               <button onClick={startNewChat} title="New chat" className="flex items-center justify-center h-8 w-8 text-fg-3 hover:text-fg transition-colors"><NewChatIcon /></button>
               <button onClick={() => setShowSettings(true)} title="Settings" className="flex items-center justify-center h-8 w-8 rounded-lg text-fg-3 hover:text-fg transition-colors"><GearIcon /></button>
+              <div className="relative" data-account-menu>
+                {session?.user ? (
+                  <button onClick={() => setShowAccountMenu(v => !v)} title="Account" className="flex items-center justify-center h-8 w-8 rounded-full bg-primary text-on-primary text-xs font-bold hover:opacity-90 transition-opacity">
+                    {(session.user.name ?? session.user.email ?? '?').slice(0, 2).toUpperCase()}
+                  </button>
+                ) : (
+                  <a href="/login" title="Sign in" className="flex items-center justify-center h-8 w-8 text-fg-3 hover:text-fg transition-colors"><PersonIcon /></a>
+                )}
+                {showAccountMenu && session?.user && (
+                  <div className="absolute right-0 top-10 z-50 w-48 rounded-xl border border-white/10 bg-surface shadow-lg py-1" onClick={() => setShowAccountMenu(false)}>
+                    <div className="px-4 py-2 text-xs text-fg-4 truncate border-b border-white/10 mb-1">{session.user.email}</div>
+                    <button onClick={() => { signOut(); setShowAccountMenu(false) }} className="w-full text-left px-4 py-2 text-sm text-fg hover:bg-surface-2 transition-colors">Sign out</button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -2552,6 +2623,21 @@ export default function Page() {
               )}
               <button onClick={startNewChat} title="New chat" className="flex items-center justify-center h-9 w-9 text-fg-3 hover:text-fg transition-colors"><NewChatIcon /></button>
               <button onClick={() => setShowSettings(true)} title="Settings" className="flex items-center justify-center h-8 w-8 rounded-lg text-fg-3 hover:text-fg transition-colors"><GearIcon /></button>
+              <div className="relative">
+                {session?.user ? (
+                  <button onClick={() => setShowAccountMenu(v => !v)} title="Account" className="flex items-center justify-center h-9 w-9 rounded-full bg-primary text-on-primary text-xs font-bold hover:opacity-90 transition-opacity">
+                    {(session.user.name ?? session.user.email ?? '?').slice(0, 2).toUpperCase()}
+                  </button>
+                ) : (
+                  <a href="/login" title="Sign in" className="flex items-center justify-center h-9 w-9 text-fg-3 hover:text-fg transition-colors"><PersonIcon /></a>
+                )}
+                {showAccountMenu && session?.user && (
+                  <div className="absolute right-0 top-11 z-50 w-48 rounded-xl border border-white/10 bg-surface shadow-lg py-1" onClick={() => setShowAccountMenu(false)}>
+                    <div className="px-4 py-2 text-xs text-fg-4 truncate border-b border-white/10 mb-1">{session.user.email}</div>
+                    <button onClick={() => { signOut(); setShowAccountMenu(false) }} className="w-full text-left px-4 py-2 text-sm text-fg hover:bg-surface-2 transition-colors">Sign out</button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -2573,6 +2659,12 @@ export default function Page() {
                 <ByokHintBanner
                   onDismiss={() => { saveHintDismissed(true); setHintDismissed(true) }}
                   onOpenSettings={() => setShowSettings(true)}
+                />
+              )}
+              {hasLegacyData && (
+                <LegacyMigrationBanner
+                  onImport={handleMigrateLegacy}
+                  onDismiss={() => setHasLegacyData(false)}
                 />
               )}
               {messages.length === 0 && input.trim() ? (
@@ -2703,20 +2795,25 @@ export default function Page() {
             try {
               const converted = await convertPreset(deviceMismatchPending.qr.qrString, currentDevice, deviceMismatchPending.qr.presetName)
               const qToSave = converted ? { ...deviceMismatchPending.qr, qrString: converted.qrString, imageBase64: converted.imageBase64, deviceName: converted.deviceName, settings: converted.settings } : deviceMismatchPending.qr
-              const item = saveToHistory(qToSave)
-              setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== qToSave.qrString)].slice(0, 20))
-        
-              openHistoryItemInChat(item)
+              apiSaveToHistory(qToSave).then(item => {
+                if (item) {
+                  setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== qToSave.qrString)].slice(0, 20))
+                  openHistoryItemInChat(item)
+                }
+              })
             } catch { setError('Conversion failed — saving original.') } finally {
               setDeviceMismatchConverting(false)
               setDeviceMismatchPending(null)
             }
           }}
           onSaveOriginal={() => {
-            const item = saveToHistory(deviceMismatchPending.qr)
-            setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== deviceMismatchPending.qr.qrString)].slice(0, 20))
-      
-            openHistoryItemInChat(item)
+            const qr = deviceMismatchPending.qr
+            apiSaveToHistory(qr).then(item => {
+              if (item) {
+                setQrHistory(prev => [item, ...prev.filter(h => h.qr.qrString !== qr.qrString)].slice(0, 20))
+                openHistoryItemInChat(item)
+              }
+            })
             setDeviceMismatchPending(null)
           }}
         />
@@ -2730,8 +2827,9 @@ export default function Page() {
           currentDevice={currentDevice}
           onClose={() => { setPopupQr(null); requestAnimationFrame(() => { scrollToBottom(); textareaRef.current?.focus() }) }}
           onConvert={converted => {
-            const newItem = saveToHistory(converted)
-            setQrHistory(prev => [newItem, ...prev.filter(h => h.qr.qrString !== converted.qrString)].slice(0, 20))
+            apiSaveToHistory(converted).then(newItem => {
+              if (newItem) setQrHistory(prev => [newItem, ...prev.filter(h => h.qr.qrString !== converted.qrString)].slice(0, 20))
+            })
             const newMsg: ChatMessage = { id: uuidv4(), role: 'assistant', content: `Converted to ${converted.deviceName}.`, qr: converted }
             setMessages(prev => [...prev, newMsg])
             setPopupQr({ qr: converted, description: '' })
@@ -2761,9 +2859,12 @@ export default function Page() {
           currentDevice={currentDevice}
           onClose={() => setSelectedHistoryItem(null)}
           onConvert={converted => {
-            const newItem = saveToHistory(converted)
-            setQrHistory(prev => [newItem, ...prev.filter(h => h.qr.qrString !== converted.qrString)].slice(0, 20))
-            setSelectedHistoryItem(newItem)
+            apiSaveToHistory(converted).then(newItem => {
+              if (newItem) {
+                setQrHistory(prev => [newItem, ...prev.filter(h => h.qr.qrString !== converted.qrString)].slice(0, 20))
+                setSelectedHistoryItem(newItem)
+              }
+            })
           }}
           onDeleteRequest={() => requestDelete(selectedHistoryItem.presetName, () => handleDeleteHistoryItem(selectedHistoryItem.id))}
           onRename={name => handleRenameHistoryItem(selectedHistoryItem.id, name)}

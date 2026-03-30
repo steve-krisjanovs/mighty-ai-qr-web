@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
-import type { Message, QrResult } from './types'
+import type { Message, QrResult, Conversation, HistoryItem } from './types'
 import { getDefaultDevice } from './storage'
 
 export interface ChatResponse {
@@ -132,6 +132,85 @@ export async function identifyQr(importNote: string): Promise<{ artist: string |
   } catch {
     return { artist: null, song: null }
   }
+}
+
+// ─── Server-side storage ──────────────────────────────────────────────────────
+
+async function authedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  let token = getToken()
+  if (!token) { await authenticate(); token = getToken()! }
+  const res = await fetch(url, {
+    ...init,
+    headers: { ...(init.headers as Record<string, string>), Authorization: `Bearer ${token}` },
+  })
+  if (res.status === 401) {
+    localStorage.removeItem('auth_token')
+    await authenticate()
+    return authedFetch(url, init)
+  }
+  return res
+}
+
+export async function apiLoadConversations(): Promise<Conversation[]> {
+  const res = await authedFetch(`${BASE}/conversations`)
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function apiUpsertConversation(conv: Conversation): Promise<void> {
+  await authedFetch(`${BASE}/conversations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conv),
+  })
+}
+
+export async function apiDeleteConversation(id: string): Promise<void> {
+  await authedFetch(`${BASE}/conversations?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export async function apiClearAllConversations(): Promise<void> {
+  await authedFetch(`${BASE}/conversations`, { method: 'DELETE' })
+}
+
+export async function apiLoadHistory(): Promise<HistoryItem[]> {
+  const res = await authedFetch(`${BASE}/history`)
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function apiSaveToHistory(qr: QrResult): Promise<HistoryItem | null> {
+  const res = await authedFetch(`${BASE}/history`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(qr),
+  })
+  if (!res.ok) return null
+  return res.json()
+}
+
+export async function apiDeleteHistoryItem(id: string): Promise<void> {
+  await authedFetch(`${BASE}/history?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export async function apiRenameHistoryItem(id: string, newName: string): Promise<void> {
+  await authedFetch(`${BASE}/history`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, newName }),
+  })
+}
+
+export async function apiClearAllHistory(): Promise<void> {
+  await authedFetch(`${BASE}/history`, { method: 'DELETE' })
+}
+
+export async function apiMigrateLegacy(conversations: Conversation[], history: HistoryItem[]): Promise<void> {
+  await authedFetch(`${BASE}/migrate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ conversations, history }),
+  })
 }
 
 export async function convertPreset(qrString: string, targetDevice: string, presetName?: string): Promise<import('./types').QrResult | null> {

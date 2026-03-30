@@ -53,6 +53,7 @@ Any change to the SQLite schema (new table, new column, dropped column, index) *
 Existing tags:
 - `1.5.2_baseline` — initial schema (devices, daily_quota, web_search_cache, schema_migrations)
 - `1.6.0_drop_web_search_cache` — dropped web_search_cache table (Tavily replaced by Anthropic native search)
+- `2.0.0_server_side_storage` — added conversations and qr_history tables with owner_id/owner_type columns
 
 ---
 
@@ -71,8 +72,28 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 ## Resume — Next Session
 
 ### Branch state
-- Active branch: `main`
-- Render auto-deploys from `main` — v1.6.3 live at `https://mighty-ai-qr-web.onrender.com`
+- Active branch: `v2.0-auth` (branched from `main` at v1.6.3)
+- `main` — v1.6.3 live at `https://mighty-ai-qr-web.onrender.com` (Render auto-deploys)
+- `v2.0-auth` — user auth + server-side storage, not yet merged
+
+### What shipped in v2.0 (in progress on `v2.0-auth`)
+- **Auth**: `better-auth` with email/password + Google/Microsoft/Facebook OAuth (Apple skipped — $99/year dev account)
+- **Storage**: conversations + QR history moved to server-side SQLite, keyed by owner (user or device)
+- **Owner model**: `{ id, type: 'user' | 'device' }` — anonymous users continue via device JWT, logged-in users use better-auth session
+- **Login/register**: `/login` page (tabs: sign in / sign up, OAuth buttons, forgot password flow), `/reset-password` page
+- **Account button**: person icon in header → `/login` when logged out; initials avatar with dropdown (email + Sign out) when logged in
+- **Legacy migration**: banner shown when v1.x localStorage data detected; one-tap import via `/api/migrate`; clears localStorage after
+- **Email**: Resend integration for password reset + email verification (optional — disabled if `RESEND_API_KEY` not set)
+- **DB**: `better-sqlite3` replacing `node:sqlite`; `conversations` and `qr_history` tables with `owner_id`/`owner_type` columns (migration tag `2.0.0_server_side_storage`)
+- **Env vars added**: `BETTER_AUTH_SECRET`, `NEXT_PUBLIC_APP_URL`, `GOOGLE_CLIENT_ID/SECRET`, `MICROSOFT_CLIENT_ID/SECRET/TENANT_ID`, `FACEBOOK_CLIENT_ID/SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`
+- **Package**: removed `--experimental-sqlite` from dev/start scripts
+
+### TODO before merging v2.0-auth → main
+- [ ] Test locally with Docker
+- [ ] Configure OAuth apps (Google, Microsoft, Facebook) and fill in `.env.local`
+- [ ] Set `BETTER_AUTH_SECRET` to a strong random value (`openssl rand -base64 32`)
+- [ ] Set `NEXT_PUBLIC_APP_URL` to production URL in Render env vars
+- [ ] Account section in settings panel — linked providers, change password, delete account (v2.1 scope)
 
 ### What shipped in v1.6.x
 - Removed all non-Anthropic AI provider support — free tier (server key) is the only path
