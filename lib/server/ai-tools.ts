@@ -355,9 +355,7 @@ export async function runChat(client: Anthropic, messages: ChatMessage[], model 
     if (!toolUse || toolUse.type !== 'tool_use') throw new Error('Expected tool_use block')
 
     // generateQR
-    console.log(`[generateQR] raw input: ${JSON.stringify(toolUse.input)}`)
     const params = coerceParams(toolUse.input as Record<string, unknown>)
-    console.log(`[generateQR] coerced eq: ${JSON.stringify(params.eq)}`)
     const qrResult = await generateQR(params)
 
     const followUp = await client.messages.create({
@@ -371,7 +369,6 @@ export async function runChat(client: Anthropic, messages: ChatMessage[], model 
 
     sources.push(...extractSources(followUp.content as Anthropic.ContentBlock[]))
     const textBlock = followUp.content.find(b => b.type === 'text')
-    console.log(`[followUp] stop_reason=${followUp.stop_reason} has_text=${!!textBlock}`)
     return { message: textBlock?.type === 'text' ? textBlock.text : 'QR code generated.', qr: qrResult, sources: sources.length > 0 ? sources : undefined }
   }
 }
