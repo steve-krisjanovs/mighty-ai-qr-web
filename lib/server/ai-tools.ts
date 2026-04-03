@@ -329,7 +329,9 @@ function extractSources(content: Anthropic.ContentBlock[]): { title: string; url
   return sources
 }
 
-export async function runChat(client: Anthropic, messages: ChatMessage[], model = 'claude-sonnet-4-6', systemPrompt = SYSTEM_PROMPT_FULL): Promise<ChatResult> {
+type SystemInput = string | Array<{ type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }>
+
+export async function runChat(client: Anthropic, messages: ChatMessage[], model = 'claude-sonnet-4-6', systemPrompt: SystemInput = SYSTEM_PROMPT_FULL): Promise<ChatResult> {
   // Native web search is handled server-side by Anthropic — no manual search loop needed.
   // The API executes web_search internally and returns web_search_tool_result blocks alongside the response.
   // We only need to handle generateQR tool_use calls in the loop.

@@ -23,7 +23,12 @@ export async function POST(request: NextRequest) {
 
   const deviceDisplayName = DEVICES[defaultDevice as keyof typeof DEVICES]?.displayName ?? defaultDevice
   const deviceInstruction = `The user's NUX device is "${defaultDevice}" (${deviceDisplayName}). You MUST call the generateQR tool with device="${defaultDevice}". Do NOT use any other device ID — ignore any device mentioned in the conversation history.\n\n`
-  const systemFull = deviceInstruction + SYSTEM_PROMPT_FULL
+  // Device instruction is dynamic (changes per device) — not cached.
+  // SYSTEM_PROMPT_FULL is large and static — cache it with ephemeral to cut input token costs ~90% on repeat turns.
+  const systemFull = [
+    { type: 'text' as const, text: deviceInstruction },
+    { type: 'text' as const, text: SYSTEM_PROMPT_FULL, cache_control: { type: 'ephemeral' as const } },
+  ]
 
   // Rewrite assistant messages: replace any stale device display name with the current one.
   // Sorted longest-first to avoid partial matches (e.g. "Mighty Plug Pro" before "Mighty Plug").
