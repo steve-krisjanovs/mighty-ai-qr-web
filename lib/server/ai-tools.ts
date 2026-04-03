@@ -229,7 +229,7 @@ Bass tone guide — BASS IS NOT GUITAR. When the user asks for a bass tone, appl
 - EQ: bass=62-72 for fullness, mid=45-55 for definition, treble=30-45 for warmth (not brightness).
 - Reverb: use very sparingly for bass. Room (id=1) only, p1 (decay)=15-25, p3 (mix)=12-20 maximum. No plate/hall/shimmer on bass.
 - Effects: no modulation (chorus, flanger, phaser) on bass unless explicitly requested. No delay unless requested. For clean or warm bass tones (gain under 42), do NOT include an EFX slot at all — omit it entirely, do not zero out the parameters.
-- Driven/gritty bass: gain 42-55 + Blues Drive (id=6, p1=30-45) or T Screamer (id=5, p1=25-40) for gentle grit
+- Driven/gritty bass: gain 42-55 + Blues Drive (id=6, p1=level 65, p2=tone 50, p3=gain 30-45) or T Screamer (id=5, p1=drive 25-40, p2=tone 50, p3=level 65) for gentle grit
 - Heavy fuzz bass (Beastie Boys, Muse, Jack White): gain 55-70 + Muff Fuzz (id=11) or Eat Dist (id=8), p1=70-90
 - Punk/aggressive bass: gain 55-70 + Dist One (id=4) or Crunch (id=10)
 
@@ -241,21 +241,22 @@ Default master_db to 0. Enable noise_gate for any gain above 50 — except bass 
 
 export const SYSTEM_PROMPT_FULL = SHARED_HEADER + STANDARD_DEVICE_REFERENCE + `
 
-EFX pedal selection guide:
-- RC Boost / AC Boost / Katana (id=2,3,12): clean boost — push an amp into natural breakup without coloring tone; use p1=60-80 for subtle drive
-- Blues Drive BD-2 (id=6): transparent, dynamic overdrive — blues, light crunch, country; p1=gain 40-65, p2=tone 50-70
-- Morning Drive (id=7): warm transparent overdrive — roots rock, classic rock leads; p1=gain 45-65
-- T Screamer TS-808 (id=5): mid-hump overdrive — blues leads, classic rock; or stack into high-gain amp (p1=gain 30-45) to tighten and focus it
-- Red Dirt (id=9): mid-gain all-rounder overdrive — versatile crunch, country lead
-- Dist One RAT (id=4): aggressive gritty distortion — punk, indie, alternative, hard rock; p1=distortion 60-80
-- Crunch (id=10): natural amp-style crunch — British hard rock
-- Distortion+ (id=1): MXR-style hard clipping — hard rock, heavy crunch
-- Eat Dist Big Muff (id=8): thick sustained fuzz — grunge, stoner rock, shoegaze, heavy fuzz bass; p1=sustain 70-90, p2=tone 40-70
-- Muff Fuzz (id=11): fuzz, slightly brighter voicing — psychedelic rock, Hendrix fuzz, heavy bass; p1=fuzz 70-90
-- ST Singer Zendrive (id=13): smooth vocal overdrive — Santana, smooth woman-tone lead; p1=drive 40-60, p2=tone 50
+EFX pedal selection guide (ALL params listed must be set — omitting any param defaults it to 0):
+- Distortion+ (id=1): p1=output 60-80, p2=sensitivity 55-75; MXR-style hard clipping — hard rock, heavy crunch
+- RC Boost / AC Boost (id=2,3): p1=gain 60-80, p2=volume 70-85, p3=bass 50, p4=treble 50; clean transparent boost — push amp into natural breakup
+- Katana boost (id=12): p1=boost 60-75, p2=volume 70-85; clean transparent boost
+- Dist One RAT (id=4): p1=level 55-75, p2=tone 40-60, p3=drive 55-80; aggressive gritty distortion — punk, indie, alternative, hard rock
+- T Screamer TS-808 (id=5): p1=drive 30-60, p2=tone 40-60, p3=level 60-80; mid-hump overdrive — blues leads, classic rock; stack into high-gain amp (p1=30-45) to tighten
+- Blues Drive BD-2 (id=6): p1=level 60-80, p2=tone 50-70, p3=gain 40-65; transparent dynamic overdrive — blues, country, light crunch
+- Morning Drive (id=7): p1=volume 60-80, p2=drive 45-65, p3=tone 50; warm transparent overdrive — roots rock, classic rock leads
+- Eat Dist Big Muff (id=8): p1=distortion 65-90, p2=filter 40-70, p3=volume 60-80; thick sustained fuzz — grunge, stoner rock, shoegaze
+- Red Dirt (id=9): p1=drive 40-65, p2=tone 45-55, p3=level 60-80; mid-gain all-rounder overdrive — versatile crunch, country lead
+- Crunch (id=10): p1=volume 60-80, p2=tone 50-60, p3=gain 50-65; British amp-style crunch — hard rock
+- Muff Fuzz (id=11): p1=volume 60-80, p2=tone 40-60, p3=sustain 70-90; fuzz, slightly brighter voicing — psychedelic rock, Hendrix fuzz, heavy bass
+- ST Singer Zendrive (id=13): p1=volume 60-80, p2=gain 40-60, p3=filter 50; smooth vocal overdrive — Santana, woman-tone lead
 
 EFX stacking strategy:
-- T Screamer (gain 30-40, tone 50) → high-gain amp = tighter, punchier high gain (classic metal/thrash trick)
+- T Screamer (p1=drive 30-40, p2=tone 50, p3=level 70) → high-gain amp = tighter, punchier high gain (classic metal/thrash trick)
 - Clean boost → edge-of-breakup amp = pushed blues tone with amp character
 - Fuzz (Big Muff/Muff Fuzz) → relatively clean amp = best fuzz tone; do NOT stack fuzz into an already-distorted amp
 
