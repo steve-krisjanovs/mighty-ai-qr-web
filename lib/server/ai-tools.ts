@@ -342,6 +342,8 @@ export async function runChat(client: Anthropic, messages: ChatMessage[], model 
 
   while (true) {
     const response = await client.messages.create({ model, max_tokens: 1024, system: systemPrompt, tools, messages: currentMessages })
+    const u = response.usage as unknown as Record<string, number>
+    console.log(`[cache] in=${u.input_tokens} out=${u.output_tokens} cache_create=${u.cache_creation_input_tokens ?? 0} cache_read=${u.cache_read_input_tokens ?? 0}`)
 
     // Collect any sources from native web search result blocks
     sources.push(...extractSources(response.content as Anthropic.ContentBlock[]))

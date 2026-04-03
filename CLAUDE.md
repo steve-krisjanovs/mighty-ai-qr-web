@@ -6,6 +6,10 @@ Next.js/React app. TypeScript, Tailwind, app router. API routes baked in (auth, 
 
 `VERSION.txt` is the source of truth. `package.json` version must match. When bumping the version, update both.
 
+## Changelogs
+
+The **Welcome modal** and **About modal** in `app/page.tsx` contain per-version changelogs shown to users. **Always update both when shipping new features or fixes.** Search for `WelcomeModal` and `AboutModal` in `page.tsx` to find the relevant sections.
+
 ---
 
 ## NUX Device Support
