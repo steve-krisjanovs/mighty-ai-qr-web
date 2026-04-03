@@ -2,6 +2,10 @@
 
 Next.js/React app. TypeScript, Tailwind, app router. API routes baked in (auth, chat, models, decode, webhooks). SQLite via node:sqlite.
 
+## Versioning
+
+`VERSION.txt` is the source of truth. `package.json` version must match. When bumping the version, update both.
+
 ---
 
 ## NUX Device Support
