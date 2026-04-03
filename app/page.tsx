@@ -1176,6 +1176,14 @@ function DeviceMismatchModal({ qr, targetDevice, onConvert, onSaveOriginal, onCl
 
 const WHATS_NEW: { version: string; items: { text: string; sub?: string }[] }[] = [
   {
+    version: '1.7',
+    items: [
+      { text: 'Faster responses — prompt caching cuts AI processing time on follow-up turns' },
+      { text: 'New QR card style — dark theme with red accents, matches the desktop app look' },
+      { text: 'Cleaner layout — quota and settings moved to the sidebar footer' },
+    ],
+  },
+  {
     version: '1.6',
     items: [
       { text: 'Free tier only — no API keys needed, just open and play' },
@@ -1287,8 +1295,8 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
           <div className="relative bg-primary/10 border-b border-primary/20 px-6 pt-5 pb-4 text-center shrink-0">
             <img src="/icons/icon-192.png" alt="Mighty AI QR" className="h-12 w-12 rounded-xl mx-auto mb-3 shadow-lg" />
             <p className="text-[11px] font-semibold uppercase tracking-widest text-primary mb-0.5">What&apos;s new</p>
-            <h2 className="text-xl font-bold text-fg">Mighty AI QR 1.6</h2>
-            <p className="text-xs text-fg-3 mt-0.5">Simpler, faster, free.</p>
+            <h2 className="text-xl font-bold text-fg">Mighty AI QR 1.7</h2>
+            <p className="text-xs text-fg-3 mt-0.5">Faster, sharper, cleaner.</p>
           </div>
 
           {/* Body */}
@@ -1296,16 +1304,15 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
 
             {/* Highlight */}
             <div className="rounded-2xl border border-primary/30 bg-primary/10 p-3">
-              <p className="text-sm font-semibold text-fg mb-0.5">No setup required</p>
-              <p className="text-[11px] text-fg-3">Just open the app and start generating tones. No API keys, no accounts, no configuration.</p>
+              <p className="text-sm font-semibold text-fg mb-0.5">Faster responses</p>
+              <p className="text-[11px] text-fg-3">Prompt caching means follow-up turns in a conversation are noticeably snappier.</p>
             </div>
 
             {/* Feature list */}
             <ul className="space-y-2">
               {[
-                { icon: '🌐', text: 'Better web search — AI now uses Anthropic\'s own search engine, no third-party dependency' },
-                { icon: '📋', text: 'Copy button on every QR popup — grab the raw preset code with one tap' },
-                { icon: '✨', text: 'Cleaner UI — quota counter in the header, loading indicator says "Thinking…"' },
+                { icon: '🎨', text: 'New QR card style — dark theme with red accents, matches the desktop app look' },
+                { icon: '🗂️', text: 'Cleaner layout — quota and settings moved to the sidebar footer' },
               ].map(({ icon, text }) => (
                 <li key={text} className="flex items-start gap-2.5 text-[11px] text-fg-3 leading-relaxed">
                   <span className="shrink-0 text-sm leading-none mt-px">{icon}</span>
