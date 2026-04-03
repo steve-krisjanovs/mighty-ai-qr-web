@@ -80,7 +80,19 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 ### Branch state
 - Active branch: `main`
-- Render auto-deploys from `main` — v1.6.3 live at `https://mighty-ai-qr-web.onrender.com`
+- Render auto-deploys from `main` — v1.7.1 live at `https://mighty-ai-qr-web.onrender.com`
+
+### What shipped in v1.7.1 (2026-04-03)
+- EFX parameter bug fix — T Screamer p3=level was never set (output was silent at 0); Blues Drive p1/p3 were swapped; Morning Drive, Eat Dist, Red Dirt, Crunch, Muff Fuzz, ST Singer all had missing or incorrect volume/level params. Full p1/p2/p3 rewrite against mightier_amp Dart source. Fixes GitHub issue #2.
+- Bass tone guide updated: Blues Drive and T Screamer bass references now include full param lists
+- EFX stacking strategy updated: T Screamer entry now uses correct param notation
+
+### What shipped in v1.7.0 (2026-04-03)
+- Prompt caching — `cache_control: ephemeral` on static system prompt; ~90% input token savings on follow-up turns
+- Dark QR card style — `#0f0f0f` bg, red `#e63946` header, red dividers, matches desktop app (tnqr) aesthetic
+- Removed debug logging noise from `ai-tools.ts`
+- Cache usage logging: `[cache] in=X out=Y cache_create=Z cache_read=W` per request
+- Welcome modal v1.7 entry added
 
 ### What shipped in v1.6.x
 - Removed all non-Anthropic AI provider support — free tier (server key) is the only path
