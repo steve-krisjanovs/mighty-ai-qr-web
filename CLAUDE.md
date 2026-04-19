@@ -1,3 +1,4 @@
+<!-- parent: librarian -->
 # mighty-ai-qr-web — Claude Instructions
 
 Next.js/React app. TypeScript, Tailwind, app router. API routes baked in (auth, chat, models, decode, webhooks). SQLite via node:sqlite.
