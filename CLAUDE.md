@@ -16,7 +16,9 @@ The **Welcome modal** and **About modal** in `app/page.tsx` contain per-version 
 ## NUX Device Support
 
 ### Pro devices (113-byte format)
-`plugpro`, `space`, `litemk2`, `8btmk2` — full effect chain (Comp, EFX, Amp, EQ, NG, Mod, Delay, Reverb, Cabinet). 29 amp models, 25 cabs.
+`plugpro`, `space`, `litemk2`, `8btmk2`, `20btmk2`, `40btmk2`, `60btmk2` — full effect chain (Comp, EFX, Amp, EQ, NG, Mod, Delay, Reverb, Cabinet). 29 amp models, 25 cabs.
+
+MkII combo amps (NGA-20/40/60): QR IDs 21/22/23, same Pro 113-byte format as Lite MkII and 8BT MkII. Confirmed from official NUX MightyAmp APK Hermes bytecode disassembly (2026-05-04).
 
 ### Standard devices (40-byte format)
 Implemented in `lib/server/qr-encoder.ts`. Each has its own encoder:
@@ -27,9 +29,11 @@ Implemented in `lib/server/qr-encoder.ts`. Each has its own encoder:
 | `plugair_v2` | `buildPlugAirPayload` | 13 (0-indexed, different) | same 19 cabs | EFX slot (13 types) |
 | `mightyair_v1` | `buildPlugAirPayload` | same as plugair_v1 | same 19 cabs | Same format as plugair_v1 (QR ID 11, version 0) |
 | `mightyair_v2` | `buildPlugAirPayload` | same as plugair_v2 | same 19 cabs | Same format as plugair_v2 (QR ID 11, version 2) |
+| `mightygo` | `buildPlugAirPayload` | same as plugair_v2 | same 19 cabs | QR ID 10, version 2. Uses MightyAirMode UI group (confirmed from APK). EFX slot. |
 | `lite` | `buildLitePayload` | 1 (AmpClean, id=0) | none | Single ambience slot (reverb OR delay) |
 | `8bt` | `build8BTPayload` | 1 (AmpClean, id=0) | none | Separate delay + reverb slots |
-| `2040bt` | `build2040BTPayload` | 1 (id=0) | none | Wah pedal, has bass/mid/treble EQ |
+| `2040bt` | `build2040BTPayload` | 1 (id=0) | none | QR ID 7. Wah pedal, has bass/mid/treble EQ |
+| `40bt` | `build2040BTPayload` | 1 (id=0) | none | QR ID 8 (separate from 20BT). Same payload as 2040bt. |
 
 ### Effect ID indexing
 - **Pro devices**: 1-indexed (nuxIndex starts at 1)
@@ -81,15 +85,18 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 ### Branch state
 - Active branch: `main`
-- Render auto-deploys from `main` — v1.7.2 live at `https://mighty-ai-qr-web.onrender.com`
+- Render auto-deploys from `main` — v1.8.0 staged, not yet pushed
+
+### What shipped in v1.8.0 (2026-05-04)
+- MkII combo amps: `20btmk2` (QR ID 21), `40btmk2` (QR ID 22), `60btmk2` (QR ID 23) — Pro 113-byte format, same as Lite MkII / 8BT MkII. Device IDs confirmed from official NUX MightyAmp APK Hermes bytecode disassembly. hwPresetVersion=1 confirmed from Mighty20MKII_CustomData bytecode.
+- Mighty Go: `mightygo` (QR ID 10) — Standard 40-byte PlugAir format (version 2). Confirmed via `MightyAirMode` UI_Group in APK bytecode — same format as MightyPlug/Air.
+- Mighty 40BT: `40bt` (QR ID 8) — now separate entry. Was incorrectly grouped under `2040bt` (QR ID 7) in mightier_amp.
+- MkII picker warning removed from Settings (MkII support is now live).
+- Welcome modal + About modal updated to v1.8.0.
 
 ### What shipped in v1.7.2 (2026-05-03)
-- Device picker disambiguation: "Mighty 20/40BT" relabeled to "Mighty 20BT/40BT (original)" in `lib/storage.ts` `NUX_DEVICES` and `WELCOME_DEVICES` in `app/page.tsx`. Reason: a user with a Mighty 20 MkII picked the only "Mighty 20" entry in the picker (which is `2040bt`, OG 40-byte standard format), generated a QR, and it wouldn't load on their amp because MkII firmware expects a different format (presumed Pro 113-byte same as Lite MkII / 8BT MkII). User-facing label now signals this is the original model only.
-- Picker warning: when `currentDevice === '2040bt'` in the settings device dropdown, an amber-text warning surfaces below the picker explaining MkII variants aren't supported yet and codes generated under the original entry won't load on a MkII amp.
-- Welcome modal header bumped 1.7 → 1.7.2 with new highlight + feature list reflecting the picker change.
-- About modal `WHATS_NEW` gains a v1.7.2 entry at the top.
-- README version badge updated 1.6.3 → 1.7.2 (was two versions stale).
-- **TODO for real MkII support:** add `2040btmk2` in `lib/server/nux.ts` + new payload encoder in `lib/server/qr-encoder.ts`. Likely 113-byte Pro format same shape as Lite MkII / 8BT MkII; needs `deviceQRId` + `deviceQRVersion` confirmed from a known-good reference QR exported from a real Mighty 20BT MkII or 40BT MkII preset. Pattern matches how `litemk2` and `8btmk2` were added in v1.5.x.
+- Device picker disambiguation: "Mighty 20/40BT" relabeled to "Mighty 20BT/40BT (original)". Picker warning for MkII users.
+- Welcome modal header + About modal updated to v1.7.2.
 
 ### What shipped in v1.7.1 (2026-04-03)
 - EFX parameter bug fix — T Screamer p3=level was never set (output was silent at 0); Blues Drive p1/p3 were swapped; Morning Drive, Eat Dist, Red Dirt, Crunch, Muff Fuzz, ST Singer all had missing or incorrect volume/level params. Full p1/p2/p3 rewrite against mightier_amp Dart source. Fixes GitHub issue #2.

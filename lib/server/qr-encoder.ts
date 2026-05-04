@@ -295,12 +295,14 @@ function buildStandardPayload(p: ProPresetParams, device: DeviceType): Buffer {
     case 'plugair_v2':
     case 'mightyair_v1':
     case 'mightyair_v2':
+    case 'mightygo':
       return buildPlugAirPayload(p)
     case 'lite':
       return buildLitePayload(p)
     case '8bt':
       return build8BTPayload(p)
     case '2040bt':
+    case '40bt':
       return build2040BTPayload(p)
     default:
       throw new Error(`Unknown standard device: ${device}`)
@@ -394,8 +396,8 @@ function buildStandardSettings(p: ProPresetParams): SettingRow[] {
 
   // Amp name maps
   const ampNames = (d === 'plugair_v1' || d === 'mightyair_v1') ? PLUG_AIR_V1_AMP_NAMES
-    : (d === 'plugair_v2' || d === 'mightyair_v2') ? PLUG_AIR_V2_AMP_NAMES
-    : d === '2040bt' ? BT2040_AMP_NAMES
+    : (d === 'plugair_v2' || d === 'mightyair_v2' || d === 'mightygo') ? PLUG_AIR_V2_AMP_NAMES
+    : (d === '2040bt' || d === '40bt') ? BT2040_AMP_NAMES
     : LITE_AMP_NAMES
 
   rows.push({
@@ -409,8 +411,8 @@ function buildStandardSettings(p: ProPresetParams): SettingRow[] {
     },
   })
 
-  // Cabinet (PlugAir only)
-  if ((d === 'plugair_v1' || d === 'plugair_v2' || d === 'mightyair_v1' || d === 'mightyair_v2') && p.cabinet) {
+  // Cabinet (PlugAir + MightyGo)
+  if ((d === 'plugair_v1' || d === 'plugair_v2' || d === 'mightyair_v1' || d === 'mightyair_v2' || d === 'mightygo') && p.cabinet) {
     rows.push({
       slot: 'Cabinet', selection: PLUG_AIR_CAB_NAMES[p.cabinet.id] ?? `Cab #${p.cabinet.id}`, enabled: true,
       params: { 'Level (dB)': p.cabinet.level_db },
@@ -423,12 +425,12 @@ function buildStandardSettings(p: ProPresetParams): SettingRow[] {
   })
 
   // Wah (20/40BT only)
-  if (d === '2040bt' && p.wah) {
+  if ((d === '2040bt' || d === '40bt') && p.wah) {
     rows.push({ slot: 'Wah', selection: 'Wah', enabled: p.wah.enabled, params: { Pedal: p.wah.pedal } })
   }
 
-  // EFX (PlugAir only)
-  if ((d === 'plugair_v1' || d === 'plugair_v2' || d === 'mightyair_v1' || d === 'mightyair_v2') && p.efx) {
+  // EFX (PlugAir + MightyGo)
+  if ((d === 'plugair_v1' || d === 'plugair_v2' || d === 'mightyair_v1' || d === 'mightyair_v2' || d === 'mightygo') && p.efx) {
     rows.push({
       slot: 'EFX', selection: PLUG_AIR_EFX_NAMES[p.efx.id] ?? `EFX #${p.efx.id}`, enabled: p.efx.enabled,
       params: { P1: p.efx.p1, P2: p.efx.p2, ...(p.efx.p3 !== undefined ? { P3: p.efx.p3 } : {}) },
@@ -438,8 +440,8 @@ function buildStandardSettings(p: ProPresetParams): SettingRow[] {
   // Modulation
   if (p.modulation) {
     const modNames = (d === 'plugair_v1' || d === 'mightyair_v1') ? PLUG_AIR_V1_MOD_NAMES
-      : d === 'plugair_v2' ? PLUG_AIR_V2_MOD_NAMES
-      : d === '2040bt' ? BT2040_MOD_NAMES
+      : (d === 'plugair_v2' || d === 'mightygo') ? PLUG_AIR_V2_MOD_NAMES
+      : (d === '2040bt' || d === '40bt') ? BT2040_MOD_NAMES
       : LITE_MOD_NAMES
     rows.push({
       slot: 'Modulation', selection: modNames[p.modulation.id] ?? `Mod #${p.modulation.id}`, enabled: p.modulation.enabled,
@@ -449,8 +451,8 @@ function buildStandardSettings(p: ProPresetParams): SettingRow[] {
 
   // Delay
   if (p.delay) {
-    const delayNames = (d === 'plugair_v1' || d === 'plugair_v2' || d === 'mightyair_v1' || d === 'mightyair_v2') ? PLUG_AIR_DELAY_NAMES
-      : d === '2040bt' ? BT2040_DELAY_NAMES
+    const delayNames = (d === 'plugair_v1' || d === 'plugair_v2' || d === 'mightyair_v1' || d === 'mightyair_v2' || d === 'mightygo') ? PLUG_AIR_DELAY_NAMES
+      : (d === '2040bt' || d === '40bt') ? BT2040_DELAY_NAMES
       : LITE_8BT_DELAY_NAMES
     rows.push({
       slot: d === 'lite' ? 'Ambience (Delay)' : 'Delay',
@@ -462,8 +464,8 @@ function buildStandardSettings(p: ProPresetParams): SettingRow[] {
   // Reverb
   if (p.reverb) {
     const reverbNames = (d === 'plugair_v1' || d === 'mightyair_v1') ? PLUG_AIR_V1_REVERB_NAMES
-      : d === 'plugair_v2' ? PLUG_AIR_V2_REVERB_NAMES
-      : d === '2040bt' ? BT2040_REVERB_NAMES
+      : (d === 'plugair_v2' || d === 'mightygo') ? PLUG_AIR_V2_REVERB_NAMES
+      : (d === '2040bt' || d === '40bt') ? BT2040_REVERB_NAMES
       : LITE_8BT_REVERB_NAMES
     rows.push({
       slot: d === 'lite' ? 'Ambience (Reverb)' : 'Reverb',
@@ -496,19 +498,27 @@ function decodeHead(b: number): { id: number; enabled: boolean } {
 }
 
 const QR_ID_DISPLAY: Record<number, string> = {
-  15: 'Mighty Plug Pro', 19: 'Mighty Lite MkII', 20: 'Mighty 8BT MkII',
-  11: 'Mighty Plug / Air', 9: 'Mighty Lite BT', 12: 'Mighty 8BT', 7: 'Mighty 20/40BT',
+  15: 'Mighty Plug Pro / Space', 19: 'Mighty Lite MkII', 20: 'Mighty 8BT MkII',
+  21: 'Mighty 20BT MkII', 22: 'Mighty 40BT MkII', 23: 'Mighty 60BT MkII',
+  11: 'Mighty Plug / Air', 9: 'Mighty Lite BT', 12: 'Mighty 8BT',
+  7: 'Mighty 20/40BT', 8: 'Mighty 40BT', 10: 'Mighty Go',
 }
 
 const QR_ID_VERSION_TO_DEVICE: Record<string, DeviceType> = {
   '15_1': 'plugpro',
   '19_1': 'litemk2',
   '20_1': '8btmk2',
+  '21_1': '20btmk2',
+  '22_1': '40btmk2',
+  '23_1': '60btmk2',
   '11_0': 'plugair_v1',
   '11_2': 'plugair_v2',
   '9_1':  'lite',
   '12_1': '8bt',
   '7_1':  '2040bt',
+  '8_1':  '40bt',
+  '10_2': 'mightygo',
+  '10_0': 'mightygo',
 }
 
 function stdEnabled(b: number): boolean { return b !== 0x00 }
@@ -516,10 +526,11 @@ function stdEnabled(b: number): boolean { return b !== 0x00 }
 function decodeStandardSettings(d: Buffer, deviceId: DeviceType): SettingRow[] {
   const settings: SettingRow[] = []
 
-  if (deviceId === 'plugair_v1' || deviceId === 'plugair_v2' || deviceId === 'mightyair_v1' || deviceId === 'mightyair_v2') {
-    const ampNames = deviceId === 'plugair_v2' ? PLUG_AIR_V2_AMP_NAMES : PLUG_AIR_V1_AMP_NAMES
-    const modNames = deviceId === 'plugair_v2' ? PLUG_AIR_V2_MOD_NAMES : PLUG_AIR_V1_MOD_NAMES
-    const revNames = deviceId === 'plugair_v2' ? PLUG_AIR_V2_REVERB_NAMES : PLUG_AIR_V1_REVERB_NAMES
+  if (deviceId === 'plugair_v1' || deviceId === 'plugair_v2' || deviceId === 'mightyair_v1' || deviceId === 'mightyair_v2' || deviceId === 'mightygo') {
+    const isV2 = deviceId === 'plugair_v2' || deviceId === 'mightyair_v2' || deviceId === 'mightygo'
+    const ampNames = isV2 ? PLUG_AIR_V2_AMP_NAMES : PLUG_AIR_V1_AMP_NAMES
+    const modNames = isV2 ? PLUG_AIR_V2_MOD_NAMES : PLUG_AIR_V1_MOD_NAMES
+    const revNames = isV2 ? PLUG_AIR_V2_REVERB_NAMES : PLUG_AIR_V1_REVERB_NAMES
     settings.push({ slot: 'Amp', enabled: true, selection: ampNames[d[9]] ?? `Amp #${d[9]}`,
       params: { Gain: d[10], Level: d[11], Bass: d[12], Mid: d[13], Treble: d[14], ...(d[15] ? { Tone: d[15] } : {}) } })
     settings.push({ slot: 'Cabinet', enabled: stdEnabled(d[16]), selection: PLUG_AIR_CAB_NAMES[d[17]] ?? `Cab #${d[17]}`,
@@ -566,7 +577,7 @@ function decodeStandardSettings(d: Buffer, deviceId: DeviceType): SettingRow[] {
     if (stdEnabled(d[33])) settings.push({ slot: 'Delay', enabled: true, selection: LITE_8BT_DELAY_NAMES[d[23]] ?? `Delay #${d[23]}`,
       params: { Time: d[24], Feedback: d[25], Mix: d[26] } })
 
-  } else if (deviceId === '2040bt') {
+  } else if (deviceId === '2040bt' || deviceId === '40bt') {
     settings.push({ slot: 'Amp', enabled: true, selection: BT2040_AMP_NAMES[0],
       params: { Gain: d[5], Level: d[6], Bass: d[7], Mid: d[8], Treble: d[9] } })
     settings.push({ slot: 'Noise Gate', enabled: stdEnabled(d[0]), selection: 'Noise Gate',

@@ -7,9 +7,14 @@ export type DeviceType =
   | 'mightyair_v2'
   | 'litemk2'
   | '8btmk2'
+  | '20btmk2'
+  | '40btmk2'
+  | '60btmk2'
   | 'lite'
   | '8bt'
   | '2040bt'
+  | '40bt'
+  | 'mightygo'
 
 export interface DeviceConfig {
   deviceQRId: number
@@ -24,13 +29,18 @@ export const DEVICES: Record<DeviceType, DeviceConfig> = {
   space:      { deviceQRId: 15, deviceQRVersion: 1, payloadBytes: 113, format: 'pro',      displayName: 'Mighty Space' },
   litemk2:    { deviceQRId: 19, deviceQRVersion: 1, payloadBytes: 113, format: 'pro',      displayName: 'Mighty Lite MkII' },
   '8btmk2':   { deviceQRId: 20, deviceQRVersion: 1, payloadBytes: 113, format: 'pro',      displayName: 'Mighty 8BT MkII' },
+  '20btmk2':  { deviceQRId: 21, deviceQRVersion: 1, payloadBytes: 113, format: 'pro',      displayName: 'Mighty 20BT MkII' },
+  '40btmk2':  { deviceQRId: 22, deviceQRVersion: 1, payloadBytes: 113, format: 'pro',      displayName: 'Mighty 40BT MkII' },
+  '60btmk2':  { deviceQRId: 23, deviceQRVersion: 1, payloadBytes: 113, format: 'pro',      displayName: 'Mighty 60BT MkII' },
   plugair_v1:   { deviceQRId: 11, deviceQRVersion: 0, payloadBytes: 40,  format: 'standard', displayName: 'Mighty Plug (v1)' },
   plugair_v2:   { deviceQRId: 11, deviceQRVersion: 2, payloadBytes: 40,  format: 'standard', displayName: 'Mighty Plug (v2)' },
   mightyair_v1: { deviceQRId: 11, deviceQRVersion: 0, payloadBytes: 40,  format: 'standard', displayName: 'Mighty Air (v1)' },
   mightyair_v2: { deviceQRId: 11, deviceQRVersion: 2, payloadBytes: 40,  format: 'standard', displayName: 'Mighty Air (v2)' },
   lite:       { deviceQRId: 9,  deviceQRVersion: 1, payloadBytes: 40,  format: 'standard', displayName: 'Mighty Lite BT' },
   '8bt':      { deviceQRId: 12, deviceQRVersion: 1, payloadBytes: 40,  format: 'standard', displayName: 'Mighty 8BT' },
-  '2040bt':   { deviceQRId: 7,  deviceQRVersion: 1, payloadBytes: 40,  format: 'standard', displayName: 'Mighty 20/40BT' },
+  '2040bt':   { deviceQRId: 7,  deviceQRVersion: 1, payloadBytes: 40,  format: 'standard', displayName: 'Mighty 20/40BT (original)' },
+  '40bt':     { deviceQRId: 8,  deviceQRVersion: 1, payloadBytes: 40,  format: 'standard', displayName: 'Mighty 40BT (original)' },
+  mightygo:   { deviceQRId: 10, deviceQRVersion: 2, payloadBytes: 40,  format: 'standard', displayName: 'Mighty Go' },
 }
 
 export interface AmpParams {

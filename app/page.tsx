@@ -308,9 +308,10 @@ const EyeIcon = ({ show }: { show: boolean }) => show ? (
 // ─── QR Import Helpers ────────────────────────────────────────────────────────
 
 const NUX_DEVICE_NAMES: Record<number, string> = {
-  15: 'Mighty Plug Pro', 19: 'Mighty Lite MkII', 20: 'Mighty 8BT MkII',
-  11: 'Mighty Plug', 9: 'Mighty Lite BT', 12: 'Mighty 8BT',
-  7: 'Mighty 20BT/40BT', 6: 'Mighty Air',
+  15: 'Mighty Plug Pro / Space', 19: 'Mighty Lite MkII', 20: 'Mighty 8BT MkII',
+  21: 'Mighty 20BT MkII', 22: 'Mighty 40BT MkII', 23: 'Mighty 60BT MkII',
+  11: 'Mighty Plug / Air', 9: 'Mighty Lite BT', 12: 'Mighty 8BT',
+  7: 'Mighty 20/40BT', 8: 'Mighty 40BT', 10: 'Mighty Go', 6: 'Mighty Air',
 }
 
 function parseNuxQr(qrString: string): { presetName: string; deviceName: string } | null {
@@ -1176,11 +1177,22 @@ function DeviceMismatchModal({ qr, targetDevice, onConvert, onSaveOriginal, onCl
 
 const WHATS_NEW: { version: string; items: { text: string; sub?: string }[] }[] = [
   {
+    version: '1.8.0',
+    items: [
+      {
+        text: 'MkII amps now supported — 20BT MkII, 40BT MkII, 60BT MkII',
+        sub: 'All three NGA-series MkII combo amps now generate correct 113-byte Pro-format QR codes. Previously users with these amps were getting codes that wouldn\'t load.',
+      },
+      { text: 'Mighty Go support added — NUX NGA-5 portable amp (QR ID 10)' },
+      { text: 'Mighty 40BT gets its own entry — was incorrectly grouped under the 20BT ID' },
+    ],
+  },
+  {
     version: '1.7.2',
     items: [
       {
         text: 'Mighty 20BT/40BT label clarified — original model only',
-        sub: 'Mighty 20BT MkII and 40BT MkII use a different QR format and aren\'t supported yet. Settings now warns when "Mighty 20BT/40BT (original)" is the active device so MkII users don\'t generate a code that won\'t load on their amp.',
+        sub: 'Picker warning added for MkII users. MkII support now ships in v1.8.0.',
       },
     ],
   },
@@ -1291,7 +1303,7 @@ function AboutModal({ onClose }: { onClose: () => void }) {
 
 // ─── Welcome Modal ────────────────────────────────────────────────────────────
 
-const WELCOME_DEVICES = ['Plug Pro', 'Space', 'Lite MkII', '8BT MkII', 'Mighty Air', 'Plug v1', 'Plug v2', 'Lite BT', '8BT', '20BT/40BT (original)']
+const WELCOME_DEVICES = ['Plug Pro', 'Space', 'Lite MkII', '8BT MkII', '20BT MkII', '40BT MkII', '60BT MkII', 'Mighty Air', 'Plug v1', 'Plug v2', 'Lite BT', '8BT', '20BT/40BT', '40BT', 'Mighty Go']
 
 function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
   return (
@@ -1304,8 +1316,8 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
           <div className="relative bg-primary/10 border-b border-primary/20 px-6 pt-5 pb-4 text-center shrink-0">
             <img src="/icons/icon-192.png" alt="Mighty AI QR" className="h-12 w-12 rounded-xl mx-auto mb-3 shadow-lg" />
             <p className="text-[11px] font-semibold uppercase tracking-widest text-primary mb-0.5">What&apos;s new</p>
-            <h2 className="text-xl font-bold text-fg">Mighty AI QR 1.7.2</h2>
-            <p className="text-xs text-fg-3 mt-0.5">MkII-aware device picker.</p>
+            <h2 className="text-xl font-bold text-fg">Mighty AI QR 1.8.0</h2>
+            <p className="text-xs text-fg-3 mt-0.5">MkII amp support + Mighty Go.</p>
           </div>
 
           {/* Body */}
@@ -1313,18 +1325,19 @@ function WelcomeModal({ onDismiss }: { onDismiss: () => void }) {
 
             {/* Highlight */}
             <div className="rounded-2xl border border-primary/30 bg-primary/10 p-3">
-              <p className="text-sm font-semibold text-fg mb-0.5">Mighty 20BT/40BT label clarified</p>
-              <p className="text-[11px] text-fg-3">If you have a Mighty 20BT MkII or 40BT MkII, the QR codes generated for the original Mighty 20BT/40BT won&apos;t load on your amp — different format. Settings now warns you so you don&apos;t spend time on a code that won&apos;t scan. MkII support is on the roadmap.</p>
+              <p className="text-sm font-semibold text-fg mb-0.5">NGA MkII amps now work</p>
+              <p className="text-[11px] text-fg-3">Mighty 20BT MkII, 40BT MkII, and 60BT MkII now generate correct QR codes. Also added Mighty Go (NGA-5) and fixed the Mighty 40BT — it was incorrectly grouped under the 20BT entry.</p>
             </div>
 
             {/* Feature list */}
             <ul className="space-y-2">
               {[
-                { icon: '🎸', text: 'Active-device picker now reads "Mighty 20BT/40BT (original)" — disambiguated from MkII variants' },
-                { icon: '⚠️', text: 'Picker warning under the original 20BT/40BT option pointing MkII owners to wait for MkII support' },
-              ].map(({ icon, text }) => (
+                { text: '20BT MkII, 40BT MkII, 60BT MkII — full Pro-format QR support (IDs 21, 22, 23)' },
+                { text: 'Mighty Go (NGA-5) added — QR ID 10, PlugAir-compatible format' },
+                { text: 'Mighty 40BT (original) gets its own entry — no longer shares ID 7 with the 20BT' },
+              ].map(({ text }) => (
                 <li key={text} className="flex items-start gap-2.5 text-[11px] text-fg-3 leading-relaxed">
-                  <span className="shrink-0 text-sm leading-none mt-px">{icon}</span>
+                  <span className="shrink-0 text-primary leading-none mt-px">+</span>
                   {text}
                 </li>
               ))}
@@ -1506,11 +1519,6 @@ function SettingsPanel({ onClose, hintDismissed, onHintDismissedChange }: { onCl
                 </>
               )}
             </div>
-            {currentDevice === '2040bt' && (
-              <p className="mt-1.5 text-[11px] text-fg-4 leading-relaxed">
-                Original Mighty 20BT/40BT only. <span className="text-amber-400">Mighty 20BT MkII and 40BT MkII use a different QR format and aren&apos;t supported yet</span> — generated codes won&apos;t load on a MkII amp.
-              </p>
-            )}
           </div>
 
           {/* Free tier hint */}
