@@ -1,10 +1,10 @@
 # Mighty AI QR — Web Client
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.7.2-informational)](package.json)
+[![Version](https://img.shields.io/badge/version-1.8.0-informational)](package.json)
 [![Live](https://img.shields.io/badge/Live-mighty--ai--qr--web.onrender.com-blue)](https://mighty-ai-qr-web.onrender.com)
 
-Describe a guitar or bass tone in natural language and get a scannable NUX MightyAmp QR code back. Chat with an AI, tap a suggestion, import an existing QR to decode and refine it, or convert a preset between devices — all in the browser. All 10 NUX MightyAmp models supported.
+Describe a guitar or bass tone in natural language and get a scannable NUX MightyAmp QR code back. Chat with an AI, tap a suggestion, import an existing QR to decode and refine it, or convert a preset between devices — all in the browser. All 16 NUX MightyAmp models supported.
 
 Installable as a PWA on mobile and desktop.
 
@@ -59,6 +59,9 @@ Installable as a PWA on mobile and desktop.
 | Mighty Space | `space` |
 | Mighty Lite MkII | `litemk2` |
 | Mighty 8BT MkII | `8btmk2` |
+| Mighty 20BT MkII | `20btmk2` |
+| Mighty 40BT MkII | `40btmk2` |
+| Mighty 60BT MkII | `60btmk2` |
 
 29 amp models, 25 cabinets, compressor, EFX, modulation, delay, reverb, 5-band EQ.
 
@@ -69,9 +72,11 @@ Installable as a PWA on mobile and desktop.
 | Mighty Air (v2 firmware) | `mightyair_v2` | Updated amps/effects (same format as Plug v2) |
 | Mighty Plug (v1) | `plugair_v1` | 13 amps, 19 cabs, EFX slot |
 | Mighty Plug (v2) | `plugair_v2` | Updated amp/mod/reverb set, 19 cabs |
+| Mighty Go | `mightygo` | Same format as Plug v2 |
 | Mighty Lite BT | `lite` | 1 amp, single ambience slot (delay OR reverb) |
 | Mighty 8BT | `8bt` | 1 amp, separate delay + reverb |
-| Mighty 20/40BT | `2040bt` | 1 amp with full EQ, wah pedal |
+| Mighty 20/40BT (original) | `2040bt` | 1 amp with full EQ, wah pedal |
+| Mighty 40BT (original) | `40bt` | 1 amp with full EQ, wah pedal |
 
 ## Requirements
 
