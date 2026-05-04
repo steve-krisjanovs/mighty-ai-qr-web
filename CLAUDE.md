@@ -81,7 +81,15 @@ Docker Compose does **not** pick up `.env.local` automatically — only `.env`. 
 
 ### Branch state
 - Active branch: `main`
-- Render auto-deploys from `main` — v1.7.1 live at `https://mighty-ai-qr-web.onrender.com`
+- Render auto-deploys from `main` — v1.7.2 live at `https://mighty-ai-qr-web.onrender.com`
+
+### What shipped in v1.7.2 (2026-05-03)
+- Device picker disambiguation: "Mighty 20/40BT" relabeled to "Mighty 20BT/40BT (original)" in `lib/storage.ts` `NUX_DEVICES` and `WELCOME_DEVICES` in `app/page.tsx`. Reason: a user with a Mighty 20 MkII picked the only "Mighty 20" entry in the picker (which is `2040bt`, OG 40-byte standard format), generated a QR, and it wouldn't load on their amp because MkII firmware expects a different format (presumed Pro 113-byte same as Lite MkII / 8BT MkII). User-facing label now signals this is the original model only.
+- Picker warning: when `currentDevice === '2040bt'` in the settings device dropdown, an amber-text warning surfaces below the picker explaining MkII variants aren't supported yet and codes generated under the original entry won't load on a MkII amp.
+- Welcome modal header bumped 1.7 → 1.7.2 with new highlight + feature list reflecting the picker change.
+- About modal `WHATS_NEW` gains a v1.7.2 entry at the top.
+- README version badge updated 1.6.3 → 1.7.2 (was two versions stale).
+- **TODO for real MkII support:** add `2040btmk2` in `lib/server/nux.ts` + new payload encoder in `lib/server/qr-encoder.ts`. Likely 113-byte Pro format same shape as Lite MkII / 8BT MkII; needs `deviceQRId` + `deviceQRVersion` confirmed from a known-good reference QR exported from a real Mighty 20BT MkII or 40BT MkII preset. Pattern matches how `litemk2` and `8btmk2` were added in v1.5.x.
 
 ### What shipped in v1.7.1 (2026-04-03)
 - EFX parameter bug fix — T Screamer p3=level was never set (output was silent at 0); Blues Drive p1/p3 were swapped; Morning Drive, Eat Dist, Red Dirt, Crunch, Muff Fuzz, ST Singer all had missing or incorrect volume/level params. Full p1/p2/p3 rewrite against mightier_amp Dart source. Fixes GitHub issue #2.

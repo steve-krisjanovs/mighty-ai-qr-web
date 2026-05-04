@@ -103,7 +103,7 @@ export const NUX_DEVICES: { id: NuxDevice; label: string }[] = [
   { id: 'plugair_v2',  label: 'Mighty Plug (v2)' },
   { id: 'lite',       label: 'Mighty Lite BT' },
   { id: '8bt',        label: 'Mighty 8BT' },
-  { id: '2040bt',     label: 'Mighty 20/40BT' },
+  { id: '2040bt',     label: 'Mighty 20BT/40BT (original)' },
 ]
 
 const DEVICE_KEY = 'maq_default_device'
